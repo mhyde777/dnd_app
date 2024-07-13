@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 kivy = "*"
 pandas = "*"
+pyqt5 = "*"
 
 [dev-packages]
 
