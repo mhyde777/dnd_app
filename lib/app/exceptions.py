@@ -1,0 +1,2 @@
+class CreatureTypeError(TypeError):
+    pass
