@@ -36,6 +36,9 @@ class WidgetLogic:
     def load_encounter(self):
         pass
 
+    def build_encounter(self):
+        pass
+
     def add_combat(self):
         dialog = AddCombatants(self)
         if dialog.exec_() == QDialog.Accepted:
@@ -91,3 +94,20 @@ class AddCombatants(QDialog):
                     'AC': int(ac.text())
                 })
         return data
+
+class BooleanButton(QPushButton):
+    def __init__(self, text, parent=None):
+        super().__init__(text, parent)
+        self.state = False
+        self.update_color()
+        self.clicked.connect(self.toggle_state)
+
+    def toggle_state(self):
+        self.state = not self.state
+        self.update_color()
+
+    def update_color(self):
+        if self.state:
+            self.setStyleSheet("background-color: green")
+        else:
+            self.setStyleSheet("background-color: red")
