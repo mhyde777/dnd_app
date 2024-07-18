@@ -1,0 +1,11 @@
+{
+    "Creatures": {
+        "Nunya": {
+            "type": "I_Creature",
+            "name": ""
+        }
+    },
+    "Application": {
+        "current turn": 12
+    }
+}
