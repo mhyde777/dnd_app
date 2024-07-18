@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum
 from dataclasses import dataclass, field
 
-from exceptions import CreatureTypeError
+from app.exceptions import CreatureTypeError
 
 
 class CreatureType(Enum):
@@ -48,6 +48,14 @@ class I_Creature:
         if not isinstance(other, I_Creature):
             raise CreatureTypeError
         return self._init == other._init
+    
+    @property
+    def name(self) -> str:
+        return self._name
+    
+    @name.setter
+    def name(self, name: str) -> None:
+        self._name = name
     
     @property
     def initiative(self) -> int:
@@ -142,13 +150,18 @@ class Player(I_Creature):
     def __init__(
         self,
         name,
+        init=0,
+        max_hp=0,
+        curr_hp=0,
+        armor_class=0,
+        movement=0,
     ) -> None:
         super().__init__(
             _type=CreatureType.PLAYER,
             _name=name,
-            _init=0,
-            _max_hp=0,
-            _curr_hp=0,
-            _armor_class=0,
-            _movement=0,
+            _init=init,
+            _max_hp=max_hp,
+            _curr_hp=curr_hp,
+            _armor_class=armor_class,
+            _movement=movement,
         )

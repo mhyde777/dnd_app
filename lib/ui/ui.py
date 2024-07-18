@@ -1,7 +1,9 @@
 import os
-import pandas as pd
-from ui.logic import *
 from PyQt5.QtGui import QPixmap
+
+from ui.logic import *
+from app.creature import Player
+from app.manager import CreatureManager
 
 
 class InitiativeTracker(QMainWindow, WidgetLogic): 
@@ -9,13 +11,53 @@ class InitiativeTracker(QMainWindow, WidgetLogic):
         super().__init__()
 
         self.setWindowTitle("DnD Combat Tracker")
+        # TODO: manager should be wrapped in an application
+        #   We can track ui relevant stats on creature number/number attributes
+        #   etc... so that constructing ui is easier
+        self.manager = CreatureManager()
+        chitra = Player(
+            name="Chitra",
+            init=16,
+            max_hp=27,
+            curr_hp=27,
+            armor_class=16
+        )
+        echo = Player(
+            name="Echo",
+            init=20,
+            max_hp=21,
+            curr_hp=21,
+            armor_class=17
+        )
+        jorji = Player(
+            name="Jorji",
+            init=8,
+            max_hp=21,
+            curr_hp=21,
+            armor_class=15
+        )
+        surina = Player(
+            name="Surina",
+            init=4,
+            max_hp=28,
+            curr_hp=28,
+            armor_class=16
+        )
+        val = Player(
+            name="Val",
+            init=12,
+            max_hp=25,
+            curr_hp=25,
+            armor_class=16
+        )
+        self.manager.add_creature([chitra, echo, jorji, surina, val])
         
-        self.data = pd.DataFrame({
-            'Name': ['Chitra', 'Echo', 'Jorji', 'Surina', 'Val'],
-            'Init': [16, 20, 8, 4, 12],
-            'HP': [27, 21, 21, 28, 25],
-            'AC': [16, 17, 15, 16, 16]
-        }).sort_values(by='Init', ascending=False).reset_index(drop=True)
+        # self.data = pd.DataFrame({
+        #     'Name': ['Chitra', 'Echo', 'Jorji', 'Surina', 'Val'],
+        #     'Init': [16, 20, 8, 4, 12],
+        #     'HP': [27, 21, 21, 28, 25],
+        #     'AC': [16, 17, 15, 16, 16]
+        # }).sort_values(by='Init', ascending=False).reset_index(drop=True)
 
         self.current_turn = 0
         self.round_counter = 1
@@ -32,17 +74,19 @@ class InitiativeTracker(QMainWindow, WidgetLogic):
         self.setCentralWidget(self.central_widget)
 
         self.mainlayout = QGridLayout(self.central_widget)
-        
         # Table Widget 
         self.table = QTableWidget(self)
-        self.table.setRowCount(len(self.data))
-        self.table.setColumnCount(len(self.data.columns))
-#       self.table.setHorizontalHeaderLabels(self.data.columns) + ['A', 'BA', 'R', 'OI']
-
-
-        for i in range(len(self.data)):
-            for j in range(len(self.data.columns)):
-                self.table.setItem(i, j, QTableWidgetItem(str(self.data.iat[i,j])))
+        self.table.setRowCount(len(self.manager.creatures))
+        # TODO: Fix this logic
+        self.table.setColumnCount(11)
+        # self.table.setHorizontalHeaderLabels(self.data.columns) + ['A', 'BA', 'R', 'OI']
+        
+        for i, name in enumerate(self.manager.creatures.keys()):
+            for j, attr in enumerate(self.manager.creatures[name].__dataclass_fields__):
+                self.table.setItem(i, j, QTableWidgetItem(str(getattr(self.manager.creatures[name], attr))))
+        # for i in range(len(self.manager.creatures)):
+        #     for j in range(11):
+        #         self.table.setItem(i, j, QTableWidgetItem(str(self.data.iat[i,j])))
 
             # for k, header in enumerate(['A', 'BA', 'R', 'OI']):
             #    button = BooleanButton(header)
@@ -89,7 +133,7 @@ class InitiativeTracker(QMainWindow, WidgetLogic):
         self.lar_layout.addWidget(self.load_enc_button, 1)
 
         self.add_button = QPushButton("Add Combatant", self)
-        self.add_button.clicked.connect(self.add_combat)
+        # self.add_button.clicked.connect(self.add_combat)
         self.lar_layout.addWidget(self.add_button, 2)
 
         self.rmv_button = QPushButton("Remove Combatants", self)

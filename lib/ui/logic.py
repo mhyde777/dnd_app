@@ -3,15 +3,15 @@ from PyQt5.QtWidgets import *
 
 class WidgetLogic:
     def update_active_init(self):
-        current_name = self.data.at[self.current_turn, 'Name']
-        self.active_init_label.setText(f"Active: {current_name}")
+        # current_name = self.data.at[self.current_turn, 'Name']
+        # self.active_init_label.setText(f"Active: {current_name}")
 
         self.table.selectRow(self.current_turn)
 
 
     def next_turn(self):
         self.current_turn += 1
-        if self.current_turn >= len(self.data):
+        if self.current_turn >= len(self.creatures):
             self.current_turn = 0
             self.round_counter += 1
             self.time_counter += 6
@@ -22,7 +22,7 @@ class WidgetLogic:
     def prev_turn(self):
         if self.current_turn == 0:
             if self.round_counter > 1:
-                self.current_turn = len(self.data) - 1
+                self.current_turn = len(self.creatures) - 1
                 self.round_counter -= 1
                 self.time_counter -= 6
                 self.round_counter_label.setText(f"Round: {self.round_counter}")
@@ -37,23 +37,23 @@ class WidgetLogic:
     def build_encounter(self):
         pass
 
-    def add_combat(self):
-        dialog = AddCombatants(self)
-        if dialog.exec_() == QDialog.Accepted:
-            new_data_list = dialog.get_data()
-            for new_data in new_data_list:
-                self.data = self.data.append(new_data, ignore_index=True)
-            self.data = self.data.sort_values(by='Init', ascending=False).reset_index(drop=True)
-            self.update_table()
+    # def add_combat(self):
+    #     dialog = AddCombatants(self)
+    #     if dialog.exec_() == QDialog.Accepted:
+    #         new_data_list = dialog.get_data()
+    #         for new_data in new_data_list:
+    #             self.data = self.data.append(new_data, ignore_index=True)
+    #         self.data = self.data.sort_values(by='Init', ascending=False).reset_index(drop=True)
+    #         self.update_table()
 
     def rmv_combat(self):
         pass
 
     def update_table(self):
-        self.table.setRowCount(len(self.data))
-        for i in range(len(self.data)):
-            for j in range(len(self.data.columns)):
-                self.table.setItem(i, j, QTableWidgetItem(str(self.data.iat[i,j])))
+        self.table.setRowCount(len(self.creatures))
+        for i, name in enumerate(self.manager.creatures.keys()):
+            for j, attr in enumerate(self.manager.creatures[name].__dataclass_fields__):
+                self.table.setItem(i, j, QTableWidgetItem(str(attr)))
         self.update_active_init()
 
 
