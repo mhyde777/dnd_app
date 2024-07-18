@@ -17,7 +17,16 @@ class CreatureManager:
                 self.creatures[c.name] = c
             return
         self.creatures[creature.name] = creature
-     
+    
+    def rm_creatures(self, creature: Union[I_Creature, Iterable[I_Creature]]) -> None:
+        if isinstance(creature, list) or isinstance(creature, tuple):
+            for c in creature:
+                if c in self.creatures:
+                    del self.creatures[c]
+        elif isinstance(creature, str):
+            if creature in self.creatures:
+                del self.creatures[creature]
+
     def sort_creatures(self) -> None:
         self.creatures = dict(sorted(self.creatures.items(), key=lambda item: item[1], reverse=True))
 

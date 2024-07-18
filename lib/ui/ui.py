@@ -1,12 +1,12 @@
 import os
 from PyQt5.QtGui import QPixmap
 
-from ui.logic import *
+from app.app import *
 from app.creature import Player
 from app.manager import CreatureManager
 
 
-class InitiativeTracker(QMainWindow, WidgetLogic): 
+class InitiativeTracker(QMainWindow, Application): 
     def __init__(self):
         super().__init__()
 
