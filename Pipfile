@@ -4,9 +4,8 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-kivy = "*"
-pandas = "*"
 pyqt5 = "*"
+pandas = "*"
 
 [dev-packages]
 

@@ -1,7 +1,5 @@
-from typing import List
-from PyQt5.QtGui import QPixmap 
 from PyQt5.QtWidgets import *
-import pandas as pd
+
 
 class WidgetLogic:
     def update_active_init(self):
@@ -94,6 +92,7 @@ class AddCombatants(QDialog):
                     'AC': int(ac.text())
                 })
         return data
+
 
 class BooleanButton(QPushButton):
     def __init__(self, text, parent=None):

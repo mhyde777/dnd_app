@@ -1,9 +1,8 @@
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
-from ui.logic import *
-import pandas as pd
 import os
+import pandas as pd
+from ui.logic import *
+from PyQt5.QtGui import QPixmap
+
 
 class InitiativeTracker(QMainWindow, WidgetLogic): 
     def __init__(self):
@@ -22,8 +21,8 @@ class InitiativeTracker(QMainWindow, WidgetLogic):
         self.round_counter = 1
         self.time_counter = 0
 
-#        self.toolbar = QToolBar("Main Toolbar")
-#        self.addToolBar(self.toolbar)
+        self.toolbar = QToolBar("Main Toolbar")
+        self.addToolBar(self.toolbar)
         self.initUI()
         self.update_active_init()
 
@@ -38,16 +37,16 @@ class InitiativeTracker(QMainWindow, WidgetLogic):
         self.table = QTableWidget(self)
         self.table.setRowCount(len(self.data))
         self.table.setColumnCount(len(self.data.columns))
- #       self.table.setHorizontalHeaderLabels(self.data.columns) + ['A', 'BA', 'R', 'OI']
+#       self.table.setHorizontalHeaderLabels(self.data.columns) + ['A', 'BA', 'R', 'OI']
 
 
         for i in range(len(self.data)):
             for j in range(len(self.data.columns)):
                 self.table.setItem(i, j, QTableWidgetItem(str(self.data.iat[i,j])))
 
- #           for k, header in enumerate(['A', 'BA', 'R', 'OI']):
- #               button = BooleanButton(header)
- #               self.table.setCellWidget(i, len(self.data.columns) + k, button)
+            # for k, header in enumerate(['A', 'BA', 'R', 'OI']):
+            #    button = BooleanButton(header)
+            #    self.table.setCellWidget(i, len(self.data.columns) + k, button)
 
         self.mainlayout.addWidget(self.table, 1 , 1)
 
@@ -105,16 +104,13 @@ class InitiativeTracker(QMainWindow, WidgetLogic):
         self.statblock.setPixmap(self.img)
         self.mainlayout.addWidget(self.statblock, 1, 2)
 
-#       # Toolbar
-#        self.load_encounter_tb = QAction("Load Encounter", self)
-#        self.load_encounter_tb.setStatusTip("Encounter")
-#        self.load_encounter_tb.triggered.connect(self.load_encounter)
-#        self.toolbar.addAction(self.load_encounter_tb)
-#
-#        self.build_encounter_tb = QAction("Build Encounter", self)
-#        self.build_encounter_tb.setStatusTip("Build")
-#        self.build_encounter_tb.trigger.connect(self.build_encounter)
-#        self.toolbar.addAction(self.build_encounter_tb)
+        # Toolbar
+        self.load_encounter_tb = QAction("Load Encounter", self)
+        self.load_encounter_tb.setStatusTip("Encounter")
+        self.load_encounter_tb.triggered.connect(self.load_encounter)
+        self.toolbar.addAction(self.load_encounter_tb)
 
-
-
+        self.build_encounter_tb = QAction("Build Encounter", self)
+        self.build_encounter_tb.setStatusTip("Build")
+        self.build_encounter_tb.trigger.connect(self.build_encounter)
+        self.toolbar.addAction(self.build_encounter_tb)
