@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from ui.logic import *
+from logic import *
 from PyQt5.QtGui import QPixmap
 
 
@@ -104,13 +104,13 @@ class InitiativeTracker(QMainWindow, WidgetLogic):
         self.statblock.setPixmap(self.img)
         self.mainlayout.addWidget(self.statblock, 1, 2)
 
-        # Toolbar
-        self.load_encounter_tb = QAction("Load Encounter", self)
-        self.load_encounter_tb.setStatusTip("Encounter")
-        self.load_encounter_tb.triggered.connect(self.load_encounter)
-        self.toolbar.addAction(self.load_encounter_tb)
-
-        self.build_encounter_tb = QAction("Build Encounter", self)
-        self.build_encounter_tb.setStatusTip("Build")
-        self.build_encounter_tb.trigger.connect(self.build_encounter)
-        self.toolbar.addAction(self.build_encounter_tb)
+        # # Toolbar
+        # self.load_encounter_tb = QAction("Load Encounter", self)
+        # self.load_encounter_tb.setStatusTip("Encounter")
+        # self.load_encounter_tb.triggered.connect(self.load_encounter)
+        # self.toolbar.addAction(self.load_encounter_tb)
+        #
+        # self.build_encounter_tb = QAction("Build Encounter", self)
+        # self.build_encounter_tb.setStatusTip("Build")
+        # self.build_encounter_tb.trigger.connect(self.build_encounter)
+        # self.toolbar.addAction(self.build_encounter_tb)
