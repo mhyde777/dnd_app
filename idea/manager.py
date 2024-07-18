@@ -47,3 +47,13 @@ if __name__ == "__main__":
     manager.sort_creatures()
     for k, v in manager.creatures.items():
         print(f"{k}: {v}")
+
+    manager.rm_creatures([jorji])
+
+    for k, v in manager.creatures.items():
+        print(f"{k}: {v}")
+    print("\n\n") 
+    manager.sort_creatures()
+    for k, v in manager.creatures.items():
+        print(f"{k}: {v}")
+        
