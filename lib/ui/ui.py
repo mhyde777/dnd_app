@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from logic import *
+from ui.logic import *
 from PyQt5.QtGui import QPixmap
 
 
