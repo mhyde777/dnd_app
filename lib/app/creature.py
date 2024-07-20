@@ -33,6 +33,8 @@ class I_Creature:
     _bonus_action: bool = field(default=False)
     _reaction: bool = field(default=False)
     _object_interaction: bool = field(default=False)
+    _notes: str = field(default="")
+    _status_time: str = field(default="")
 
     def __gt__(self, other: I_Creature) -> bool:
         if not isinstance(other, I_Creature):
@@ -128,6 +130,22 @@ class I_Creature:
     @object_interaction.setter
     def object_interaction(self, obj_int_done: bool) -> None:
         self._object_interaction = obj_int_done
+    
+    @property
+    def notes(self) -> str:
+        return self._notes
+    
+    @name.setter
+    def notes(self, notes: str) -> None:
+        self._notes = notes
+
+    @property
+    def status_time(self) -> str:
+        return self._status_time
+    
+    @status_time.setter
+    def status_time(self, status_time: str) -> None:
+        self._status_time = status_time
 
 
 class Monster(I_Creature):
