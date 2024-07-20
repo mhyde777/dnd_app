@@ -48,12 +48,8 @@ if __name__ == "__main__":
     for k, v in manager.creatures.items():
         print(f"{k}: {v}")
 
-    manager.rm_creatures([jorji])
-
+    manager.rm_creatures([chitra, surina])
+    print("\n\n")
     for k, v in manager.creatures.items():
         print(f"{k}: {v}")
     print("\n\n") 
-    manager.sort_creatures()
-    for k, v in manager.creatures.items():
-        print(f"{k}: {v}")
-        

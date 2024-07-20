@@ -1,5 +1,6 @@
 import os
 from PyQt5.QtGui import QPixmap
+from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton, QToolBar, QWidget, QGridLayout, QHBoxLayout, QGridLayout, QMainWindow, QTableWidget, QTableWidgetItem
 
 from app.app import *
 from app.creature import Player
@@ -51,22 +52,22 @@ class InitiativeTracker(QMainWindow, Application):
             armor_class=16
         )
         self.manager.add_creature([chitra, echo, jorji, surina, val])
-        
-        # self.data = pd.DataFrame({
-        #     'Name': ['Chitra', 'Echo', 'Jorji', 'Surina', 'Val'],
-        #     'Init': [16, 20, 8, 4, 12],
-        #     'HP': [27, 21, 21, 28, 25],
-        #     'AC': [16, 17, 15, 16, 16]
-        # }).sort_values(by='Init', ascending=False).reset_index(drop=True)
-
-        self.current_turn = 0
-        self.round_counter = 1
-        self.time_counter = 0
+        # 
+        # # self.data = pd.DataFrame({
+        # #     'Name': ['Chitra', 'Echo', 'Jorji', 'Surina', 'Val'],
+        # #     'Init': [16, 20, 8, 4, 12],
+        # #     'HP': [27, 21, 21, 28, 25],
+        # #     'AC': [16, 17, 15, 16, 16]
+        # # }).sort_values(by='Init', ascending=False).reset_index(drop=True)
+        #
+        # self.current_turn = 0
+        # self.round_counter = 1
+        # self.time_counter = 0
 
         self.toolbar = QToolBar("Main Toolbar")
         self.addToolBar(self.toolbar)
         self.initUI()
-        self.update_active_init()
+        # self.update_active_init()
 
 
     def initUI(self):
@@ -76,14 +77,8 @@ class InitiativeTracker(QMainWindow, Application):
         self.mainlayout = QGridLayout(self.central_widget)
         # Table Widget 
         self.table = QTableWidget(self)
-        self.table.setRowCount(len(self.manager.creatures))
-        # TODO: Fix this logic
-        self.table.setColumnCount(11)
-        # self.table.setHorizontalHeaderLabels(self.data.columns) + ['A', 'BA', 'R', 'OI']
-        
-        for i, name in enumerate(self.manager.creatures.keys()):
-            for j, attr in enumerate(self.manager.creatures[name].__dataclass_fields__):
-                self.table.setItem(i, j, QTableWidgetItem(str(getattr(self.manager.creatures[name], attr))))
+        self.mainlayout.addWidget(self.table, 1, 1)
+        self.update_table()
         # for i in range(len(self.manager.creatures)):
         #     for j in range(11):
         #         self.table.setItem(i, j, QTableWidgetItem(str(self.data.iat[i,j])))
@@ -137,7 +132,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.lar_layout.addWidget(self.add_button, 2)
 
         self.rmv_button = QPushButton("Remove Combatants", self)
-        self.rmv_button.clicked.connect(self.rmv_combat)
+        # self.rmv_button.clicked.connect(self.rmv_combat)
         self.lar_layout.addWidget(self.rmv_button, 3)
 
         self.mainlayout.addLayout(self.lar_layout, 2, 1)
@@ -158,3 +153,6 @@ class InitiativeTracker(QMainWindow, Application):
         # self.build_encounter_tb.setStatusTip("Build")
         # self.build_encounter_tb.trigger.connect(self.build_encounter)
         # self.toolbar.addAction(self.build_encounter_tb)
+
+    def AddCreatureDialog(QDialog):
+        pass
