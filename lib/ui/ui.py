@@ -67,8 +67,6 @@ class InitiativeTracker(QMainWindow, Application):
         self.toolbar = QToolBar("Main Toolbar")
         self.addToolBar(self.toolbar)
         self.initUI()
-        # self.update_active_init()
-
 
     def initUI(self):
         self.central_widget = QWidget()
@@ -94,6 +92,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.active_init_label = QLabel(self)
         self.active_init_label.setStyleSheet("font-size: 16px;")
         self.label_layout.addWidget(self.active_init_label, 1)
+        self.update_active_init()
 
         # Round counter label 
         self.round_counter_label = QLabel(f"Round: {self.round_counter}", self)
@@ -128,7 +127,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.lar_layout.addWidget(self.load_enc_button, 1)
 
         self.add_button = QPushButton("Add Combatant", self)
-        # self.add_button.clicked.connect(self.add_combat)
+        self.add_button.clicked.connect(self.add_combatant)
         self.lar_layout.addWidget(self.add_button, 2)
 
         self.rmv_button = QPushButton("Remove Combatants", self)
@@ -154,5 +153,3 @@ class InitiativeTracker(QMainWindow, Application):
         # self.build_encounter_tb.trigger.connect(self.build_encounter)
         # self.toolbar.addAction(self.build_encounter_tb)
 
-    def AddCreatureDialog(QDialog):
-        pass
