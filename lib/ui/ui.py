@@ -15,6 +15,10 @@ class InitiativeTracker(QMainWindow, Application):
         # TODO: manager should be wrapped in an application
         #   We can track ui relevant stats on creature number/number attributes
         #   etc... so that constructing ui is easier
+        width = 1115
+        height = 300
+        self.setMinimumSize(width, height)
+
         self.manager = CreatureManager()
         chitra = Player(
             name="Chitra",
@@ -73,9 +77,10 @@ class InitiativeTracker(QMainWindow, Application):
         self.setCentralWidget(self.central_widget)
 
         self.mainlayout = QGridLayout(self.central_widget)
-        # Table Widget 
+        # Table Widget
+        self.table_layout = QHBoxLayout()
         self.table = QTableWidget(self)
-        self.mainlayout.addWidget(self.table, 1, 1)
+        self.table_layout.addWidget(self.table)
         self.update_table()
         # for i in range(len(self.manager.creatures)):
         #     for j in range(11):
@@ -104,7 +109,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.time_counter_label.setStyleSheet("font-size: 16px;")
         self.label_layout.addWidget(self.time_counter_label, 3)
         
-        self.mainlayout.addLayout(self.label_layout, 0, 1)
+        # self.mainlayout.addLayout(self.label_layout, 0, 1)
 
         #Buttons
         self.nextprev_layout = QVBoxLayout()
@@ -117,7 +122,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.next_button.clicked.connect(self.next_turn)
         self.nextprev_layout.addWidget(self.next_button, 2)
         
-        self.mainlayout.addLayout(self.nextprev_layout, 1, 0)
+        # self.mainlayout.addLayout(self.nextprev_layout, 1, 0)
 
         # Load, Add, Remove Buttons
         self.lar_layout = QHBoxLayout()
@@ -131,25 +136,23 @@ class InitiativeTracker(QMainWindow, Application):
         self.lar_layout.addWidget(self.add_button, 2)
 
         self.rmv_button = QPushButton("Remove Combatants", self)
-        # self.rmv_button.clicked.connect(self.rmv_combat)
+        self.rmv_button.clicked.connect(self.remove_combatant)
         self.lar_layout.addWidget(self.rmv_button, 3)
 
-        self.mainlayout.addLayout(self.lar_layout, 2, 1)
+        # self.mainlayout.addLayout(self.lar_layout, 2, 1)
 
         # Image Window 
+        self.stat_layout = QHBoxLayout()
         self.statblock = QLabel(self)
         self.img = QPixmap(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../images/bean.jpeg')))
         self.statblock.setPixmap(self.img)
-        self.mainlayout.addWidget(self.statblock, 1, 2)
+        self.stat_layout.addWidget(self.statblock)
 
-        # # Toolbar
-        # self.load_encounter_tb = QAction("Load Encounter", self)
-        # self.load_encounter_tb.setStatusTip("Encounter")
-        # self.load_encounter_tb.triggered.connect(self.load_encounter)
-        # self.toolbar.addAction(self.load_encounter_tb)
-        #
-        # self.build_encounter_tb = QAction("Build Encounter", self)
-        # self.build_encounter_tb.setStatusTip("Build")
-        # self.build_encounter_tb.trigger.connect(self.build_encounter)
-        # self.toolbar.addAction(self.build_encounter_tb)
+        self.mainlayout.addLayout(self.table_layout, 1, 1)
+        self.mainlayout.addLayout(self.label_layout, 0, 1)
+        self.mainlayout.addLayout(self.nextprev_layout, 1, 0)
+        self.mainlayout.addLayout(self.lar_layout, 2, 1)
+        self.mainlayout.addLayout(self.stat_layout, 1, 2)
+        self.adjust_table_size()
+
 
