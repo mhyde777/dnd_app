@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QColor
+from PyQt5.QtCore import Qt, QSize
 from app.manager import CreatureManager, Player, Monster
 
 class Application:
@@ -9,8 +10,6 @@ class Application:
         self.round_counter = 1
         self.time_counter = 0
         
-        # self.update_active_init()
-    #
     def update_active_init(self):
         self.sorted_creatures = list(self.manager.creatures.values())
         self.current_creature = self.sorted_creatures[self.current_turn]
@@ -42,11 +41,17 @@ class Application:
                     armor_class=creature_data['AC']
                 )
                 self.manager.add_creature(creature)
-        self.update_table()
-        self.update_active_init()
+            self.update_table()
+            self.update_active_init()
 
     def remove_combatant(self):
-        pass
+        dialog = RemoveCombatant(self.manager, self)
+        if dialog.exec_() == QDialog.Accepted:
+            selected_creatures = dialog.get_selected_creatures()
+            for name in selected_creatures:
+                self.manager.rm_creatures(name)
+            self.update_table()
+            self.update_active_init()
 
     def next_turn(self):
         self.current_turn += 1
@@ -77,32 +82,38 @@ class Application:
         self.table.setColumnCount(len(headers))
         self.table.setHorizontalHeaderLabels(headers)
         self.table.setColumnHidden(0, True)
-        self.table.resizeColumnsToContents()
         for i, name in enumerate(self.manager.creatures.keys()):
             for j, attr in enumerate(self.manager.creatures[name].__dataclass_fields__):
                 self.table.setItem(i, j, QTableWidgetItem(str(getattr(self.manager.creatures[name], attr))))
+        self.adjust_table_size()
+
+    def adjust_table_size(self):
+        self.table.resizeColumnsToContents()
+        self.table.resizeRowsToContents()
+        self.resize(self.sizeHint().width() + self.table.sizeHint().width(), self.table.sizeHint().height())
 
 class AddCombatant(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Add Combatants")
 
-        self.layout = QVBoxLayout()
+        self.add_layout = QVBoxLayout()
 
         self.add_table = QTableWidget(self)
         self.add_table.setRowCount(5)
         self.add_table.setColumnCount(4)
         self.add_table.setHorizontalHeaderLabels(['Name', 'Init', 'HP', 'AC'])
 
-        self.layout.addWidget(self.add_table, 1)
+        self.add_layout.addWidget(self.add_table, 1)
 
         self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
 
-        self.layout.addWidget(self.button_box, 2)
-        self.setLayout(self.layout)
-
+        self.add_layout.addWidget(self.button_box, 2)
+        self.setLayout(self.add_layout)
+        self.resize(self.add_table.sizeHint().width() + 185, self.sizeHint().height())
+        
 
     def get_data(self):
         data = []
@@ -112,10 +123,37 @@ class AddCombatant(QDialog):
             hp = self.add_table.item(row, 2)
             ac = self.add_table.item(row, 3)
             if name and init and hp and ac:
-                data.appen({
+                data.append({
                     'Name': name.text(),
                     'Init': int(init.text()),
                     'HP': int(hp.text()),
                     'AC': int(ac.text())
                 })
         return data
+
+class RemoveCombatant(QDialog):
+    def __init__(self, manager, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Remove Combatants")
+        self.manager = manager
+        self.rmv_layout = QVBoxLayout()
+
+        self.rmv_list = QListWidget(self)
+        self.rmv_list.setSelectionMode(QListWidget.MultiSelection)
+
+        for creature in self.manager.creatures.values():
+            item = QListWidgetItem(creature.name)
+            self.rmv_list.addItem(item)
+
+        self.rmv_layout.addWidget(self.rmv_list, 1)
+
+        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+
+        self.rmv_layout.addWidget(self.button_box, 2)
+        self.setLayout(self.rmv_layout)
+
+    def get_selected_creatures(self):
+        selected_items = self.rmv_list.selectedItems()
+        return [item.text() for item in selected_items]
