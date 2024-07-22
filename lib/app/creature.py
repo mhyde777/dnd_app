@@ -152,15 +152,20 @@ class Monster(I_Creature):
     def __init__(
         self,
         name,
+        init=0,
+        max_hp=0,
+        curr_hp=0,
+        armor_class=0,
+        movement=0,
     ) -> None:
         super().__init__(
             _type=CreatureType.MONSTER,
             _name=name,
-            _init=0,
-            _max_hp=0,
-            _curr_hp=0,
-            _armor_class=0,
-            _movement=0,
+            _init=init,
+            _max_hp=max_hp,
+            _curr_hp=curr_hp,
+            _armor_class=armor_class,
+            _movement=movement,
         )
 
 

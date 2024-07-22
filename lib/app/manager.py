@@ -1,11 +1,7 @@
 from typing import Dict, Union, Iterable
 
-from app.creature import (
-    I_Creature,
-    MonsterType,
-    Monster,
-    Player
-)
+from app.creature import I_Creature
+
 
 class CreatureManager:
     def __init__(self):
@@ -18,14 +14,14 @@ class CreatureManager:
             return
         self.creatures[creature.name] = creature
     
-    def rm_creatures(self, creature: Union[I_Creature, Iterable[I_Creature]]) -> None:
-        if isinstance(creature, (list, tuple)):
-            for c in creature:
-                if c.name in self.creatures:
-                    del self.creatures[c.name]
-        elif isinstance(creature, I_Creature):
-            if creature.name in self.creatures:
-                del self.creatures[creature.name]
+    def rm_creatures(self, creature_names: Union[str, Iterable[str]]) -> None:
+        if isinstance(creature_names, (list, tuple)):
+            for c in creature_names:
+                if c in self.creatures.keys() and isinstance(c, str):
+                    del self.creatures[c]
+            return
+        if creature_names in self.creatures.keys() and isinstance(creature_names, str):
+                del self.creatures[creature_names]
 
     def sort_creatures(self) -> None:
         self.creatures = dict(sorted(self.creatures.items(), key=lambda item: item[1], reverse=True))
@@ -41,4 +37,3 @@ class CreatureManager:
     
     def set_creature_armor_class(self, creature: str, ac: int) -> None:
         self.creatures[creature].armor_class = ac
-        

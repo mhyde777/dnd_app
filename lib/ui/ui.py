@@ -1,5 +1,5 @@
 import os
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QFont
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton, QToolBar, QWidget, QGridLayout, QHBoxLayout, QGridLayout, QMainWindow, QTableWidget, QTableWidgetItem
 
 from app.app import *
@@ -15,64 +15,52 @@ class InitiativeTracker(QMainWindow, Application):
         # TODO: manager should be wrapped in an application
         #   We can track ui relevant stats on creature number/number attributes
         #   etc... so that constructing ui is easier
+
+        self.manager = CreatureManager()
+        # chitra = Player(
+        #     name="Chitra",
+        #     init=16,
+        #     max_hp=27,
+        #     curr_hp=27,
+        #     armor_class=16
+        # )
+        # echo = Player(
+        #     name="Echo",
+        #     init=20,
+        #     max_hp=21,
+        #     curr_hp=21,
+        #     armor_class=17
+        # )
+        # jorji = Player(
+        #     name="Jorji",
+        #     init=8,
+        #     max_hp=21,
+        #     curr_hp=21,
+        #     armor_class=15
+        # )
+        # surina = Player(
+        #     name="Surina",
+        #     init=4,
+        #     max_hp=28,
+        #     curr_hp=28,
+        #     armor_class=16
+        # )
+        # val = Player(
+        #     name="Val",
+        #     init=12,
+        #     max_hp=25,
+        #     curr_hp=25,
+        #     armor_class=16
+        # )
+        # self.manager.add_creature([chitra, echo, jorji, surina, val])
+        self.initUI()
+        self.load_state()
+
+    def initUI(self):
         width = 1115
         height = 300
         self.setMinimumSize(width, height)
 
-        self.manager = CreatureManager()
-        chitra = Player(
-            name="Chitra",
-            init=16,
-            max_hp=27,
-            curr_hp=27,
-            armor_class=16
-        )
-        echo = Player(
-            name="Echo",
-            init=20,
-            max_hp=21,
-            curr_hp=21,
-            armor_class=17
-        )
-        jorji = Player(
-            name="Jorji",
-            init=8,
-            max_hp=21,
-            curr_hp=21,
-            armor_class=15
-        )
-        surina = Player(
-            name="Surina",
-            init=4,
-            max_hp=28,
-            curr_hp=28,
-            armor_class=16
-        )
-        val = Player(
-            name="Val",
-            init=12,
-            max_hp=25,
-            curr_hp=25,
-            armor_class=16
-        )
-        self.manager.add_creature([chitra, echo, jorji, surina, val])
-        # 
-        # # self.data = pd.DataFrame({
-        # #     'Name': ['Chitra', 'Echo', 'Jorji', 'Surina', 'Val'],
-        # #     'Init': [16, 20, 8, 4, 12],
-        # #     'HP': [27, 21, 21, 28, 25],
-        # #     'AC': [16, 17, 15, 16, 16]
-        # # }).sort_values(by='Init', ascending=False).reset_index(drop=True)
-        #
-        # self.current_turn = 0
-        # self.round_counter = 1
-        # self.time_counter = 0
-
-        self.toolbar = QToolBar("Main Toolbar")
-        self.addToolBar(self.toolbar)
-        self.initUI()
-
-    def initUI(self):
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
 
@@ -80,36 +68,25 @@ class InitiativeTracker(QMainWindow, Application):
         # Table Widget
         self.table_layout = QHBoxLayout()
         self.table = QTableWidget(self)
+        self.table.setFont(QFont('Arial', 18))
         self.table_layout.addWidget(self.table)
         self.update_table()
-        # for i in range(len(self.manager.creatures)):
-        #     for j in range(11):
-        #         self.table.setItem(i, j, QTableWidgetItem(str(self.data.iat[i,j])))
-
-            # for k, header in enumerate(['A', 'BA', 'R', 'OI']):
-            #    button = BooleanButton(header)
-            #    self.table.setCellWidget(i, len(self.data.columns) + k, button)
-
-        self.mainlayout.addWidget(self.table, 1 , 1)
 
         self.label_layout = QHBoxLayout()
         # Active Init Label 
         self.active_init_label = QLabel(self)
-        self.active_init_label.setStyleSheet("font-size: 16px;")
+        self.active_init_label.setStyleSheet("font-size: 18px;")
         self.label_layout.addWidget(self.active_init_label, 1)
-        self.update_active_init()
 
         # Round counter label 
         self.round_counter_label = QLabel(f"Round: {self.round_counter}", self)
-        self.round_counter_label.setStyleSheet("font-size: 16px;")
+        self.round_counter_label.setStyleSheet("font-size: 18px;")
         self.label_layout.addWidget(self.round_counter_label, 2)
 
         # Time counter label 
         self.time_counter_label = QLabel(f"Time: {self.time_counter} seconds", self)
-        self.time_counter_label.setStyleSheet("font-size: 16px;")
+        self.time_counter_label.setStyleSheet("font-size: 18px;")
         self.label_layout.addWidget(self.time_counter_label, 3)
-        
-        # self.mainlayout.addLayout(self.label_layout, 0, 1)
 
         #Buttons
         self.nextprev_layout = QVBoxLayout()
@@ -121,8 +98,6 @@ class InitiativeTracker(QMainWindow, Application):
         self.next_button = QPushButton("Next", self)
         self.next_button.clicked.connect(self.next_turn)
         self.nextprev_layout.addWidget(self.next_button, 2)
-        
-        # self.mainlayout.addLayout(self.nextprev_layout, 1, 0)
 
         # Load, Add, Remove Buttons
         self.lar_layout = QHBoxLayout()
@@ -139,8 +114,6 @@ class InitiativeTracker(QMainWindow, Application):
         self.rmv_button.clicked.connect(self.remove_combatant)
         self.lar_layout.addWidget(self.rmv_button, 3)
 
-        # self.mainlayout.addLayout(self.lar_layout, 2, 1)
-
         # Image Window 
         self.stat_layout = QHBoxLayout()
         self.statblock = QLabel(self)
@@ -150,9 +123,21 @@ class InitiativeTracker(QMainWindow, Application):
 
         self.mainlayout.addLayout(self.table_layout, 1, 1)
         self.mainlayout.addLayout(self.label_layout, 0, 1)
-        self.mainlayout.addLayout(self.nextprev_layout, 1, 0)
+        self.mainlayout.addLayout(self.nextprev_layout, 2, 0)
         self.mainlayout.addLayout(self.lar_layout, 2, 1)
         self.mainlayout.addLayout(self.stat_layout, 1, 2)
         self.adjust_table_size()
 
+        # File menu
+        self.menu_bar = QMenuBar(self)
+        self.setMenuBar(self.menu_bar)
 
+        self.file_menu = self.menu_bar.addMenu("&File")
+        self.save_action = QAction("Save", self)
+        self.save_action.triggered.connect(self.save_state)
+        self.file_menu.addAction(self.save_action)
+
+        self.initialize_players_action = QAction("Initialize", self)
+        self.initialize_players_action.triggered.connect(self.init_players)
+        self.file_menu.addAction(self.initialize_players_action)
+        
