@@ -1,0 +1,10 @@
+{
+    "players": [
+        "{\n    \"_type\": 2,\n    \"_name\": \"Chitra\",\n    \"_init\": 16,\n    \"_max_hp\": 27,\n    \"_curr_hp\": 27,\n    \"_armor_class\": 16,\n    \"_movement\": 0,\n    \"_action\": false,\n    \"_bonus_action\": false,\n    \"_reaction\": false,\n    \"_object_interaction\": false,\n    \"_notes\": \"\",\n    \"_status_time\": \"\"\n}",
+        "{\n    \"_type\": 2,\n    \"_name\": \"Echo\",\n    \"_init\": 20,\n    \"_max_hp\": 21,\n    \"_curr_hp\": 21,\n    \"_armor_class\": 17,\n    \"_movement\": 0,\n    \"_action\": false,\n    \"_bonus_action\": false,\n    \"_reaction\": false,\n    \"_object_interaction\": false,\n    \"_notes\": \"\",\n    \"_status_time\": \"\"\n}",
+        "{\n    \"_type\": 2,\n    \"_name\": \"Jorji\",\n    \"_init\": 8,\n    \"_max_hp\": 21,\n    \"_curr_hp\": 21,\n    \"_armor_class\": 15,\n    \"_movement\": 0,\n    \"_action\": false,\n    \"_bonus_action\": false,\n    \"_reaction\": false,\n    \"_object_interaction\": false,\n    \"_notes\": \"\",\n    \"_status_time\": \"\"\n}"
+    ],
+    "current_turn": 100,
+    "round_counter": 1,
+    "time_counter": 7
+}
