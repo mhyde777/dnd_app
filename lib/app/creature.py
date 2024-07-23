@@ -1,16 +1,29 @@
 from __future__ import annotations
+# from _typeshed import OptExcInfo
 
+from typing import Any, Dict
+import json
 from enum import Enum
 from dataclasses import dataclass, field
 
 from app.exceptions import CreatureTypeError
 
+class CustomEncoder(json.JSONEncoder):
+    def defualt(self, obj):
+        if isinstance(obj, Enum):
+            return obj.value
+        if hasattr(obj, '__dict__'):
+            return obj.__dict__
+        return json.JSONEncoder.default(self, obj)
+
 
 class CreatureType(Enum):
     BASE = 0
     MONSTER = 1
-    PLAYER = 3
+    PLAYER = 2
 
+    def __repr__(self) -> str:
+        return str(self.name)
 
 class MonsterType(Enum):
     pass
@@ -50,7 +63,46 @@ class I_Creature:
         if not isinstance(other, I_Creature):
             raise CreatureTypeError
         return self._init == other._init
-    
+   
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "_type": self._type,
+            "_name": self.name,
+            "_init": self.initiative,
+            "_max_hp": self.max_hp,
+            "_curr_hp": self.curr_hp,
+            "_armor_class": self.armor_class,
+            "_movement": self.movement,
+            "_action": self.action,
+            "_bonus_action": self.bonus_action,
+            "_reaction": self.reaction,
+            "_object_interaction": self.object_interaction,
+            "_notes": self.notes,
+            "_status_time": self.status_time
+            }
+
+    @staticmethod
+    def from_dict(data: Dict[str, Any]) -> I_Creature:
+        match CreatureType(data["_type"]):
+            case CreatureType.PLAYER:
+                return Player(
+                    name=data["_name"],
+                    init=data["_init"],
+                    max_hp=data["_max_hp"],
+                    curr_hp=data["_curr_hp"],
+                    armor_class=data["_armor_class"],
+                    movement=data["_movement"]
+                )
+            case CreatureType.MONSTER:
+                return Monster(
+                    name=data["_name"],
+                    init=data["_init"],
+                    max_hp=data["_max_hp"],
+                    curr_hp=data["_curr_hp"],
+                    armor_class=data["_armor_class"],
+                    movement=data["_movement"]
+                )
+
     @property
     def name(self) -> str:
         return self._name
@@ -135,7 +187,7 @@ class I_Creature:
     def notes(self) -> str:
         return self._notes
     
-    @name.setter
+    @notes.setter
     def notes(self, notes: str) -> None:
         self._notes = notes
 

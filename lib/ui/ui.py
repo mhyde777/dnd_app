@@ -100,19 +100,19 @@ class InitiativeTracker(QMainWindow, Application):
         self.nextprev_layout.addWidget(self.next_button, 2)
 
         # Load, Add, Remove Buttons
-        self.lar_layout = QHBoxLayout()
-        
-        self.load_enc_button = QPushButton("Load Encounter", self)
-        self.load_enc_button.clicked.connect(self.load_encounter)
-        self.lar_layout.addWidget(self.load_enc_button, 1)
-
-        self.add_button = QPushButton("Add Combatant", self)
-        self.add_button.clicked.connect(self.add_combatant)
-        self.lar_layout.addWidget(self.add_button, 2)
-
-        self.rmv_button = QPushButton("Remove Combatants", self)
-        self.rmv_button.clicked.connect(self.remove_combatant)
-        self.lar_layout.addWidget(self.rmv_button, 3)
+        # self.lar_layout = QHBoxLayout()
+        # 
+        # self.load_enc_button = QPushButton("Load Encounter", self)
+        # self.load_enc_button.clicked.connect(self.load_encounter)
+        # self.lar_layout.addWidget(self.load_enc_button, 1)
+        #
+        # self.add_button = QPushButton("Add Combatant", self)
+        # self.add_button.clicked.connect(self.add_combatant)
+        # self.lar_layout.addWidget(self.add_button, 2)
+        #
+        # self.rmv_button = QPushButton("Remove Combatants", self)
+        # self.rmv_button.clicked.connect(self.remove_combatant)
+        # self.lar_layout.addWidget(self.rmv_button, 3)
 
         # Image Window 
         self.stat_layout = QHBoxLayout()
@@ -124,15 +124,22 @@ class InitiativeTracker(QMainWindow, Application):
         self.mainlayout.addLayout(self.table_layout, 1, 1)
         self.mainlayout.addLayout(self.label_layout, 0, 1)
         self.mainlayout.addLayout(self.nextprev_layout, 2, 0)
-        self.mainlayout.addLayout(self.lar_layout, 2, 1)
+        # self.mainlayout.addLayout(self.lar_layout, 2, 1)
         self.mainlayout.addLayout(self.stat_layout, 1, 2)
         self.adjust_table_size()
 
-        # File menu
+        # Menu Bar
         self.menu_bar = QMenuBar(self)
         self.setMenuBar(self.menu_bar)
 
         self.file_menu = self.menu_bar.addMenu("&File")
+        self.edit_menu = self.menu_bar.addMenu("&Edit")
+        
+        # Toolbar
+        self.filetool_bar = QToolBar("File", self)
+        self.addToolBar(self.filetool_bar)
+
+        # Actions
         self.save_action = QAction("Save", self)
         self.save_action.triggered.connect(self.save_state)
         self.file_menu.addAction(self.save_action)
@@ -140,4 +147,21 @@ class InitiativeTracker(QMainWindow, Application):
         self.initialize_players_action = QAction("Initialize", self)
         self.initialize_players_action.triggered.connect(self.init_players)
         self.file_menu.addAction(self.initialize_players_action)
+
+
+        self.load_enc_button = QAction("Load Encounter", self)
+        self.load_enc_button.triggered.connect(self.load_encounter)
+        self.filetool_bar.addAction(self.load_enc_button)
+
+        self.add_button = QAction("Add Combatant", self)
+        self.add_button.triggered.connect(self.add_combatant)
+        self.filetool_bar.addAction(self.add_button)
+
+        self.rmv_button = QAction("Remove Combatants", self)
+        self.rmv_button.triggered.connect(self.remove_combatant)
+        self.filetool_bar.addAction(self.rmv_button)
+                       
+        self.file_menu.addAction(self.load_enc_button)
+        self.file_menu.addAction(self.add_button)
+        self.file_menu.addAction(self.rmv_button)
         
