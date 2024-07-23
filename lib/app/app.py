@@ -7,9 +7,9 @@ from PyQt5.QtGui import QColor
 from PyQt5.QtCore import Qt, QSize
 
 from app.manager import CreatureManager
-from app.creature import Player, Monster
+from app.creature import Player, Monster, CustomEncoder
 from ui.windows import AddCombatantWindow, RemoveCombatantWindow
-
+from app.save_json import GameState
 
 class Application:
 
@@ -44,15 +44,21 @@ class Application:
 
     def save_state(self):
         file_path = self.get_data_path("last_state.json")
-        state = {
-            'creatures': {name: creature.__dict__ for name, creature in self.manager.creatures.items()},
-            'current_turn': self.current_turn,
-            'round_counter': self.round_counter,
-            'time_counter': self.time_counter
-        }
-        
+        # state = {
+        #     'creatures': {name: creature.__dict__ for name, creature in self.manager.creatures.items()},
+        #     'current_turn': self.current_turn,
+        #     'round_counter': self.round_counter,
+        #     'time_counter': self.time_counter
+        # }
+        state = GameState()
+        state.players = self.manager.creatures.values()
+        state.current_turn = self.current_turn
+        state.round_counter = self.round_counter
+        state.time_counter = self.time_counter
+        save = state.to_dict()
+
         with open(file_path, 'w') as file:
-            json.dump(state, file, indent=4)
+            json.dump(save, file, cls=CustomEncoder, indent=4)
 
     def load_state(self):
         file_path = self.get_data_path("last_state.json")

@@ -5,5 +5,5 @@ from ui.ui import InitiativeTracker
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     mainWin = InitiativeTracker()
-    mainWin.show()
+    mainWin.showMaximized()
     sys.exit(app.exec_())

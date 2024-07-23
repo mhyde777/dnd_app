@@ -1,4 +1,37 @@
 {
-    "creatures": {
-        "Chitra": {
-            "_type": 
+    "Chitra": {
+        "name": "Chitra",
+        "init": 16,
+        "max_hp": 27,
+        "curr_hp": 27,
+        "armor_class": 16
+    },
+    "Echo": {
+        "name": "Echo",
+        "init": 20,
+        "max_hp": 21,
+        "curr_hp": 21,
+        "armor_class": 17
+    },
+    "Jorji": {
+        "name": "Jorji",
+        "init": 8,
+        "max_hp": 21,
+        "curr_hp": 21,
+        "armor_class": 15
+    },
+    "Surina": {
+        "name": "Surina",
+        "init": 4,
+        "max_hp": 28,
+        "curr_hp": 28,
+        "armor_class": 16
+    },
+    "Val": {
+        "name": "Val",
+        "init": 12,
+        "max_hp": 25,
+        "curr_hp": 25,
+        "armor_class": 16
+    }
+}
