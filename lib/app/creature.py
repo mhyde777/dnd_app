@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from app.exceptions import CreatureTypeError
 
 class CustomEncoder(json.JSONEncoder):
-    def defualt(self, obj):
+    def default(self, obj):
         if isinstance(obj, Enum):
             return obj.value
         if hasattr(obj, '__dict__'):
@@ -91,7 +91,12 @@ class I_Creature:
                     max_hp=data["_max_hp"],
                     curr_hp=data["_curr_hp"],
                     armor_class=data["_armor_class"],
-                    movement=data["_movement"]
+                    movement=data["_movement"],
+                    action=data["_action"],
+                    bonus_action=data["_bonus_action"],
+                    object_interaction=data["_object_interaction"],
+                    notes=data["_notes"],
+                    status_time=data["_status_time"]
                 )
             case CreatureType.MONSTER:
                 return Monster(
@@ -100,7 +105,11 @@ class I_Creature:
                     max_hp=data["_max_hp"],
                     curr_hp=data["_curr_hp"],
                     armor_class=data["_armor_class"],
-                    movement=data["_movement"]
+                    movement=data["_movement"],
+                    action=data["_action"],
+                    bonus_action=data["_bonus_action"],
+                    notes=data["_notes"],
+                    status_time=data["_status_time"]
                 )
 
     @property
@@ -196,7 +205,7 @@ class I_Creature:
         return self._status_time
     
     @status_time.setter
-    def status_time(self, status_time: str) -> None:
+    def status_time(self, status_time: int) -> None:
         self._status_time = status_time
 
 
@@ -209,6 +218,11 @@ class Monster(I_Creature):
         curr_hp=0,
         armor_class=0,
         movement=0,
+        action=False,
+        bonus_action=False,
+        reaction=False,
+        notes='',
+        status_time=0
     ) -> None:
         super().__init__(
             _type=CreatureType.MONSTER,
@@ -218,6 +232,11 @@ class Monster(I_Creature):
             _curr_hp=curr_hp,
             _armor_class=armor_class,
             _movement=movement,
+            _action=action,
+            _bonus_action=bonus_action,
+            _reaction=reaction,
+            _notes=notes,
+            _status_time=status_time
         )
 
 
@@ -230,6 +249,12 @@ class Player(I_Creature):
         curr_hp=0,
         armor_class=0,
         movement=0,
+        action=False,
+        bonus_action=False,
+        reaction=False,
+        object_interaction=False,
+        notes='',
+        status_time=0
     ) -> None:
         super().__init__(
             _type=CreatureType.PLAYER,
@@ -239,4 +264,10 @@ class Player(I_Creature):
             _curr_hp=curr_hp,
             _armor_class=armor_class,
             _movement=movement,
+            _action=action,
+            _bonus_action=bonus_action,
+            _reaction=reaction,
+            _object_interaction=object_interaction,
+            _notes=notes,
+            _status_time=status_time
         )

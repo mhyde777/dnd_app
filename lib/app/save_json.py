@@ -1,7 +1,7 @@
 import json
 from typing import Dict, List
 
-from app.creature import Player, Monster
+from app.creature import Player, Monster, I_Creature
 
 class GameState:
     players: List[Player]
@@ -18,6 +18,3 @@ class GameState:
             "round_counter": self.round_counter,
             "time_counter": self.time_counter
         }
-
-    def from_dict(self) -> Dict:
-        pass

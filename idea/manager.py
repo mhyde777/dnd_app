@@ -1,7 +1,7 @@
 import os
 import json
 from app.manager import CreatureManager
-from app.creature import Player
+from app.creature import Player, I_Creature
 
 if __name__ == "__main__":
     chitra = Player(
@@ -44,13 +44,12 @@ if __name__ == "__main__":
     manager.add_creature([chitra, echo, jorji, surina, val])
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     file_path = os.path.join(base_dir, 'data', 'players.json')
-    state = {
-        'creatures': {name: creature.__dict__ for name, creature in manager.creatures.items()}
-    } 
-    with open(file_path, 'w') as file:
-        json.dump(state, file, indent=4)
-    
-
+    # state = {
+    #     'creatures': {name: creature.__dict__ for name, creature in manager.creatures.items()}
+    # } 
+    # with open(file_path, 'w') as file:
+    #     json.dump(state, file, indent=4)
+        
 
 
     # for k, v in manager.creatures.items():
