@@ -20,7 +20,6 @@ class InitiativeTracker(QMainWindow, Application):
         self.manager = CreatureManager()
         self.initUI()
         self.load_state()
-        self.update_table()
         self.update_active_init()
         self.populate_creature_list()
 
@@ -37,9 +36,8 @@ class InitiativeTracker(QMainWindow, Application):
         self.table_layout = QHBoxLayout()
         self.table = QTableWidget(self)
         self.table.setFont(QFont('Arial', 18))
-        # self.table.itemChanged.connect(self.manipulate_manager)
+        self.table.itemChanged.connect(self.manipulate_manager)
         self.table_layout.addWidget(self.table)
-        self.update_table()
 
         self.label_layout = QHBoxLayout()
         # Active Init Label 
@@ -155,4 +153,3 @@ class InitiativeTracker(QMainWindow, Application):
         self.edit_menu.addAction(self.load_enc_button)
         self.edit_menu.addAction(self.add_button)
         self.edit_menu.addAction(self.rmv_button)
-        

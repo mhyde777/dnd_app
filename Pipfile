@@ -6,7 +6,7 @@ name = "pypi"
 [packages]
 pyqt5 = "*"
 pandas = "*"
-pyqtdarktheme = {ref = "main", git = "git+https://github.com/5yutan5/PyQtDarkTheme.git"}
+pyqtdarktheme = "*"
 
 [dev-packages]
 
