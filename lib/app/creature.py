@@ -1,11 +1,21 @@
 from __future__ import annotations
+# from _typeshed import OptExcInfo
 
+from typing import Any, Dict
 import json
 from enum import Enum
 from typing import Any, Dict
 from dataclasses import dataclass, field
 
 from app.exceptions import CreatureTypeError
+
+class CustomEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Enum):
+            return obj.value
+        if hasattr(obj, '__dict__'):
+            return obj.__dict__
+        return json.JSONEncoder.default(self, obj)
 
 
 class CustomEncoder(json.JSONEncoder):
@@ -22,6 +32,8 @@ class CreatureType(Enum):
     MONSTER = 1
     PLAYER = 2
 
+    def __repr__(self) -> str:
+        return str(self.name)
 
 class MonsterType(Enum):
     pass
@@ -64,7 +76,7 @@ class I_Creature:
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            "_type": self.type,
+            "_type": self._type,
             "_name": self.name,
             "_init": self.initiative,
             "_max_hp": self.max_hp,
@@ -89,7 +101,12 @@ class I_Creature:
                     max_hp=data["_max_hp"],
                     curr_hp=data["_curr_hp"],
                     armor_class=data["_armor_class"],
-                    movement=data["_movement"]
+                    movement=data["_movement"],
+                    action=data["_action"],
+                    bonus_action=data["_bonus_action"],
+                    object_interaction=data["_object_interaction"],
+                    notes=data["_notes"],
+                    status_time=data["_status_time"]
                 )
             case CreatureType.MONSTER:
                 return Monster(
@@ -98,9 +115,13 @@ class I_Creature:
                     max_hp=data["_max_hp"],
                     curr_hp=data["_curr_hp"],
                     armor_class=data["_armor_class"],
-                    movement=data["_movement"]
+                    movement=data["_movement"],
+                    action=data["_action"],
+                    bonus_action=data["_bonus_action"],
+                    notes=data["_notes"],
+                    status_time=data["_status_time"]
                 )
-    
+
     @property
     def name(self) -> str:
         return self._name
@@ -185,7 +206,7 @@ class I_Creature:
     def notes(self) -> str:
         return self._notes
     
-    @name.setter
+    @notes.setter
     def notes(self, notes: str) -> None:
         self._notes = notes
 
@@ -194,7 +215,7 @@ class I_Creature:
         return self._status_time
     
     @status_time.setter
-    def status_time(self, status_time: str) -> None:
+    def status_time(self, status_time: int) -> None:
         self._status_time = status_time
 
 
@@ -207,6 +228,11 @@ class Monster(I_Creature):
         curr_hp=0,
         armor_class=0,
         movement=0,
+        action=False,
+        bonus_action=False,
+        reaction=False,
+        notes='',
+        status_time=0
     ) -> None:
         super().__init__(
             _type=CreatureType.MONSTER,
@@ -216,6 +242,11 @@ class Monster(I_Creature):
             _curr_hp=curr_hp,
             _armor_class=armor_class,
             _movement=movement,
+            _action=action,
+            _bonus_action=bonus_action,
+            _reaction=reaction,
+            _notes=notes,
+            _status_time=status_time
         )
 
 
@@ -228,6 +259,12 @@ class Player(I_Creature):
         curr_hp=0,
         armor_class=0,
         movement=0,
+        action=False,
+        bonus_action=False,
+        reaction=False,
+        object_interaction=False,
+        notes='',
+        status_time=0
     ) -> None:
         super().__init__(
             _type=CreatureType.PLAYER,
@@ -237,4 +274,10 @@ class Player(I_Creature):
             _curr_hp=curr_hp,
             _armor_class=armor_class,
             _movement=movement,
+            _action=action,
+            _bonus_action=bonus_action,
+            _reaction=reaction,
+            _object_interaction=object_interaction,
+            _notes=notes,
+            _status_time=status_time
         )
