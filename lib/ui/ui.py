@@ -1,6 +1,11 @@
 import os
 from PyQt5.QtGui import QPixmap, QFont
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton, QToolBar, QWidget, QGridLayout, QHBoxLayout, QGridLayout, QMainWindow, QTableWidget, QTableWidgetItem
+from PyQt5.QtWidgets import (
+    QDialog, QVBoxLayout, QLabel, QLineEdit, 
+    QPushButton, QToolBar, QWidget, QGridLayout, 
+    QHBoxLayout, QGridLayout, QMainWindow, QTableWidget, 
+    QTableWidgetItem, QListWidget, QListWidgetItem, QLineEdit
+)
 
 from app.app import *
 from app.creature import Player
@@ -12,49 +17,12 @@ class InitiativeTracker(QMainWindow, Application):
         super().__init__()
 
         self.setWindowTitle("DnD Combat Tracker")
-        # TODO: manager should be wrapped in an application
-        #   We can track ui relevant stats on creature number/number attributes
-        #   etc... so that constructing ui is easier
-
         self.manager = CreatureManager()
-        # chitra = Player(
-        #     name="Chitra",
-        #     init=16,
-        #     max_hp=27,
-        #     curr_hp=27,
-        #     armor_class=16
-        # )
-        # echo = Player(
-        #     name="Echo",
-        #     init=20,
-        #     max_hp=21,
-        #     curr_hp=21,
-        #     armor_class=17
-        # )
-        # jorji = Player(
-        #     name="Jorji",
-        #     init=8,
-        #     max_hp=21,
-        #     curr_hp=21,
-        #     armor_class=15
-        # )
-        # surina = Player(
-        #     name="Surina",
-        #     init=4,
-        #     max_hp=28,
-        #     curr_hp=28,
-        #     armor_class=16
-        # )
-        # val = Player(
-        #     name="Val",
-        #     init=12,
-        #     max_hp=25,
-        #     curr_hp=25,
-        #     armor_class=16
-        # )
-        # self.manager.add_creature([chitra, echo, jorji, surina, val])
         self.initUI()
         self.load_state()
+        self.update_table()
+        self.update_active_init()
+        self.populate_creature_list()
 
     def initUI(self):
         width = 1115
@@ -69,6 +37,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.table_layout = QHBoxLayout()
         self.table = QTableWidget(self)
         self.table.setFont(QFont('Arial', 18))
+        # self.table.itemChanged.connect(self.manipulate_manager)
         self.table_layout.addWidget(self.table)
         self.update_table()
 
@@ -99,20 +68,37 @@ class InitiativeTracker(QMainWindow, Application):
         self.next_button.clicked.connect(self.next_turn)
         self.nextprev_layout.addWidget(self.next_button, 2)
 
-        # Load, Add, Remove Buttons
-        self.lar_layout = QHBoxLayout()
+        # self.sort_button = QPushButton("Sort", self)
+        # self.sort_button.clicked.connect(self.sort_creatures)
+        # self.nextprev_layout.addWidget(self.sort_button, 3)
+
+        # Damage/Health Box
+
+        self.dam_layout = QVBoxLayout()
+
+        self.creature_list = QListWidget(self)
+        self.creature_list.setSelectionMode(QListWidget.MultiSelection)
+
+        self.value_input = QLineEdit(self)
+
+        self.heal_button = QPushButton("Heal", self)
+        self.heal_button.clicked.connect(self.heal_selected_creatures)
+
+        self.dam_button = QPushButton("Damage", self)
+        self.dam_button.clicked.connect(self.damage_selected_creatures)
+
+        self.heal_dam_layout = QHBoxLayout()
+        self.heal_dam_layout.addWidget(self.heal_button)
+        self.heal_dam_layout.addWidget(self.dam_button)
         
-        self.load_enc_button = QPushButton("Load Encounter", self)
-        self.load_enc_button.clicked.connect(self.load_encounter)
-        self.lar_layout.addWidget(self.load_enc_button, 1)
-
-        self.add_button = QPushButton("Add Combatant", self)
-        self.add_button.clicked.connect(self.add_combatant)
-        self.lar_layout.addWidget(self.add_button, 2)
-
-        self.rmv_button = QPushButton("Remove Combatants", self)
-        self.rmv_button.clicked.connect(self.remove_combatant)
-        self.lar_layout.addWidget(self.rmv_button, 3)
+        self.creature_list.setFixedSize(200, 300)
+        self.value_input.setFixedWidth(200)
+        self.heal_button.setFixedWidth(90)
+        self.dam_button.setFixedWidth(90)
+        self.dam_layout.addLayout(self.nextprev_layout, 1)
+        self.dam_layout.addWidget(self.creature_list, 2)
+        self.dam_layout.addWidget(self.value_input, 3)
+        self.dam_layout.addLayout(self.heal_dam_layout, 4)
 
         # Image Window 
         self.stat_layout = QHBoxLayout()
@@ -120,19 +106,31 @@ class InitiativeTracker(QMainWindow, Application):
         self.img = QPixmap(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../images/bean.jpeg')))
         self.statblock.setPixmap(self.img)
         self.stat_layout.addWidget(self.statblock)
+       
+        for widget in [self.creature_list, self.value_input, self.heal_button, self.dam_button]:
+            widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
+        # Grid Layout
         self.mainlayout.addLayout(self.table_layout, 1, 1)
         self.mainlayout.addLayout(self.label_layout, 0, 1)
-        self.mainlayout.addLayout(self.nextprev_layout, 2, 0)
-        self.mainlayout.addLayout(self.lar_layout, 2, 1)
+        # self.mainlayout.addLayout(self.nextprev_layout, 2, 0)
+        # self.mainlayout.addLayout(self.lar_layout, 2, 1)
         self.mainlayout.addLayout(self.stat_layout, 1, 2)
+        self.mainlayout.addLayout(self.dam_layout, 2, 0)
         self.adjust_table_size()
 
-        # File menu
+        # Menu Bar
         self.menu_bar = QMenuBar(self)
         self.setMenuBar(self.menu_bar)
 
         self.file_menu = self.menu_bar.addMenu("&File")
+        self.edit_menu = self.menu_bar.addMenu("&Edit")
+        
+        # Toolbar
+        self.filetool_bar = QToolBar("File", self)
+        self.addToolBar(self.filetool_bar)
+
+        # Actions
         self.save_action = QAction("Save", self)
         self.save_action.triggered.connect(self.save_state)
         self.file_menu.addAction(self.save_action)
@@ -140,4 +138,21 @@ class InitiativeTracker(QMainWindow, Application):
         self.initialize_players_action = QAction("Initialize", self)
         self.initialize_players_action.triggered.connect(self.init_players)
         self.file_menu.addAction(self.initialize_players_action)
+
+
+        self.load_enc_button = QAction("Load Encounter", self)
+        self.load_enc_button.triggered.connect(self.load_encounter)
+        self.filetool_bar.addAction(self.load_enc_button)
+
+        self.add_button = QAction("Add Combatant", self)
+        self.add_button.triggered.connect(self.add_combatant)
+        self.filetool_bar.addAction(self.add_button)
+
+        self.rmv_button = QAction("Remove Combatants", self)
+        self.rmv_button.triggered.connect(self.remove_combatant)
+        self.filetool_bar.addAction(self.rmv_button)
+                       
+        self.edit_menu.addAction(self.load_enc_button)
+        self.edit_menu.addAction(self.add_button)
+        self.edit_menu.addAction(self.rmv_button)
         

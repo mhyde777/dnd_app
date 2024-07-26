@@ -37,3 +37,25 @@ class CreatureManager:
     
     def set_creature_armor_class(self, creature: str, ac: int) -> None:
         self.creatures[creature].armor_class = ac
+
+    def set_creature_movement(self, creature: str, movement: int) -> None:
+        self.creatures[creature].movement = movement
+
+    def set_creature_action(self, creature: str, action: bool) -> None:
+        self.creatures[creature].action = action
+
+    def set_creature_bonus_action(self, creature: str, bonus_action: bool) -> None:
+        self.creatures[creature].bonus_action = bonus_action
+
+    def set_creature_reaction(self, creature: str, reaction: bool) -> None:
+        self.creatures[creature].reaction = reaction
+
+    def set_creature_object_interaction(self, creature: str, object_interaction: bool) -> None:
+        self.creatures[creature].object_interaction = object_interaction
+    
+    def set_creature_notes(self, creature: str, notes: str) -> None:
+        self.creatures[creature].notes = notes
+
+    def set_creature_status_time(self, creature: str, status_time: int) -> None:
+        self.creatures[creature].status_time = status_time
+
