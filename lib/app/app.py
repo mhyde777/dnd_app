@@ -17,7 +17,6 @@ class Application:
         self.current_turn = 0
         self.round_counter = 1
         self.time_counter = 0
-        
     
     # JSON Manipulation
     def init_players(self):
@@ -55,8 +54,8 @@ class Application:
             self.time_counter = state['time_counter']
             self.current_turn = state['current_turn']
             self.update_table()
-            self.update_active_init()
-            self.populate_creature_list()
+            # self.update_active_init()
+            # self.populate_creature_list()
         else:
             return
     
@@ -135,7 +134,7 @@ class Application:
                     armor_class=creature_data['AC']
                 )
                 self.manager.add_creature(creature)
-            self.update_table()
+            # self.update_table()
             self.update_active_init()
             self.populate_creature_list()
 
@@ -194,31 +193,34 @@ class Application:
     def manipulate_manager(self, item):
         row = item.row()
         col = item.column()
-        creature_name = self.table.item(row, 0).text()
+        try:
+            creature_name = self.table.item(row, 1).data(0)
+        except:
+            return
 
         if creature_name in self.manager.creatures:
-            if col == 1:
-                self.manager.set_creature_init(creature_name, int(item.text()))
-            elif col == 2:
-                self.manager.set_creature_max_hp(creature_name, int(item.text()))
+            if col == 2:
+                self.manager.set_creature_init(creature_name, int(item.data(0)))
             elif col == 3:
-                self.manager.set_creature_curr_hp(creature_name, int(item.text()))
+                self.manager.set_creature_max_hp(creature_name, int(item.data(0)))
             elif col == 4:
-                self.manager.set_creature_armor_class(creature_name, int(item.text()))
+                self.manager.set_creature_curr_hp(creature_name, int(item.data(0)))
             elif col == 5:
-                self.manager.set_creature_movement(creature_name, int(item.text()))
+                self.manager.set_creature_armor_class(creature_name, int(item.data(0)))
             elif col == 6:
-                self.manager.set_creature_action(creature_name, bool(item.text()))
+                self.manager.set_creature_movement(creature_name, int(item.data(0)))
             elif col == 7:
-                self.manager.set_creature_bonus_action(creature_name, bool(item.text()))
+                self.manager.set_creature_action(creature_name, bool(item.data(0)))
             elif col == 8:
-                self.manager.set_creature_reaction(creature_name, bool(item.text()))
+                self.manager.set_creature_bonus_action(creature_name, bool(item.data(0)))
             elif col == 9:
-                self.manager.set_creature_object_interaction(creature_name, bool(item.text()))
+                self.manager.set_creature_reaction(creature_name, bool(item.data(0)))
             elif col == 10:
-                self.manager.set_creature_notes(creature_name, str(item.text()))
+                self.manager.set_creature_object_interaction(creature_name, bool(item.data(0)))
             elif col == 11:
-                self.manager.set_creature_status_time(creature_name, int(item.text()))
+                self.manager.set_creature_notes(creature_name, str(item.data(0)))
+            # elif col == 12:
+            #     self.manager.set_creature_status_time(creature_name, int(item.data(0)))
             
             # self.manager.sort_creatures()
             # self.update_table()
@@ -255,26 +257,3 @@ class Application:
                     creature.curr_hp -= value
                     creature.curr_hp = max(0, creature.curr_hp)
         self.populate_creature_list()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        

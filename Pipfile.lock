@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "97f9815cd8833e395eb17fc0a6c54e516e6c934456b78d9b22da7baa6fb3426c"
+            "sha256": "79a4d5cd1499bfa55262ccc7edb6db387db7bd66f43af4446ccb7df7801a9846"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -159,9 +159,13 @@
             "version": "==12.15.0"
         },
         "pyqtdarktheme": {
-            "git": "git+https://github.com/5yutan5/PyQtDarkTheme.git",
+            "hashes": [
+                "sha256:5f8274ddfa3a5481ed9743cdb0f9debfeb7ff695b3a0d202a8104361d17dadb8",
+                "sha256:8739d99502230fbaca42551ea033c9ae31c81c4ebfec2f1ffde38f32a18bea7a"
+            ],
+            "index": "pypi",
             "markers": "python_version < '3.12' and python_version >= '3.7'",
-            "ref": "96eb7e368039ab446952573bafc17d54b7ef5123"
+            "version": "==2.1.0"
         },
         "python-dateutil": {
             "hashes": [
