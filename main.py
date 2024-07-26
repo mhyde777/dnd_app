@@ -6,7 +6,7 @@ import qdarktheme
 if __name__ == "__main__":
     qdarktheme.enable_hi_dpi()
     app = QApplication(sys.argv)
-    qdarktheme.setup_theme()
+    qdarktheme.setup_theme("auto")
     mainWin = InitiativeTracker()
     mainWin.showMaximized()
     sys.exit(app.exec_())
