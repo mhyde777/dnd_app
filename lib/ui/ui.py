@@ -4,11 +4,11 @@ from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QLineEdit, 
     QPushButton, QToolBar, QWidget, QGridLayout, 
     QHBoxLayout, QGridLayout, QMainWindow, QTableWidget, 
-    QTableWidgetItem, QListWidget, QListWidgetItem, QLineEdit
+    QTableWidgetItem, QListWidget, QListWidgetItem, QLineEdit,
+    QAction, QMenuBar
 )
 
-from app.app import *
-from app.creature import Player
+from app.app import Application
 from app.manager import CreatureManager
 
 
@@ -20,18 +20,13 @@ class InitiativeTracker(QMainWindow, Application):
         self.manager = CreatureManager()
         self.initUI()
         self.load_state()
-        self.update_active_init()
-        self.populate_creature_list()
 
     def initUI(self):
-        width = 1115
-        height = 300
-        self.setMinimumSize(width, height)
-
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
 
         self.mainlayout = QGridLayout(self.central_widget)
+
         # Table Widget
         self.table_layout = QHBoxLayout()
         self.table = QTableWidget(self)
@@ -40,6 +35,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.table_layout.addWidget(self.table)
 
         self.label_layout = QHBoxLayout()
+        
         # Active Init Label 
         self.active_init_label = QLabel(self)
         self.active_init_label.setStyleSheet("font-size: 18px;")
@@ -54,6 +50,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.time_counter_label = QLabel(f"Time: {self.time_counter} seconds", self)
         self.time_counter_label.setStyleSheet("font-size: 18px;")
         self.label_layout.addWidget(self.time_counter_label, 3)
+        self.label_layout.addStretch()
 
         #Buttons
         self.nextprev_layout = QVBoxLayout()
@@ -97,6 +94,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.dam_layout.addWidget(self.creature_list, 2)
         self.dam_layout.addWidget(self.value_input, 3)
         self.dam_layout.addLayout(self.heal_dam_layout, 4)
+        self.dam_layout.addStretch()
 
         # Image Window 
         self.stat_layout = QHBoxLayout()
@@ -105,17 +103,11 @@ class InitiativeTracker(QMainWindow, Application):
         self.statblock.setPixmap(self.img)
         self.stat_layout.addWidget(self.statblock)
        
-        for widget in [self.creature_list, self.value_input, self.heal_button, self.dam_button]:
-            widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-
         # Grid Layout
         self.mainlayout.addLayout(self.table_layout, 1, 1)
         self.mainlayout.addLayout(self.label_layout, 0, 1)
-        # self.mainlayout.addLayout(self.nextprev_layout, 2, 0)
-        # self.mainlayout.addLayout(self.lar_layout, 2, 1)
         self.mainlayout.addLayout(self.stat_layout, 1, 2)
-        self.mainlayout.addLayout(self.dam_layout, 2, 0)
-        self.adjust_table_size()
+        self.mainlayout.addLayout(self.dam_layout, 1, 0)
 
         # Menu Bar
         self.menu_bar = QMenuBar(self)

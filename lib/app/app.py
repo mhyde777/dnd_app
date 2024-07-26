@@ -2,11 +2,11 @@ from typing import List, Dict, Any
 import json
 import os
 
-from PyQt5.QtWidgets import *
+from PyQt5.QtWidgets import(
+   QDialog, QMessageBox, QTableWidgetItem
+) 
 from PyQt5.QtGui import QColor
-from PyQt5.QtCore import Qt, QSize
 
-from app.manager import CreatureManager
 from app.creature import I_Creature, Player, Monster, CustomEncoder
 from ui.windows import AddCombatantWindow, RemoveCombatantWindow
 from app.save_json import GameState
@@ -17,7 +17,7 @@ class Application:
         self.current_turn = 0
         self.round_counter = 1
         self.time_counter = 0
-    
+
     # JSON Manipulation
     def init_players(self):
         self.load_file_to_manager("players.json")
@@ -42,7 +42,6 @@ class Application:
             with open(file_path, 'r') as file:
                 state = json.load(file, object_hook=self.custom_decoder)
 
-
             self.manager.creatures.clear()
             players = state.get('players', [])
             monsters = state.get('monsters', [])
@@ -54,8 +53,8 @@ class Application:
             self.time_counter = state['time_counter']
             self.current_turn = state['current_turn']
             self.update_table()
-            # self.update_active_init()
-            # self.populate_creature_list()
+            self.update_active_init()
+            self.populate_creature_list()
         else:
             return
     
@@ -171,10 +170,9 @@ class Application:
             self.current_turn -= 1
         self.update_active_init()
     
-    def sort_creatures(self):
-        self.manager.sort_creatures()
-        self.update_table()
-        self.update_active_init()
+    # def sort_creatures(self):
+    #     self.update_table()
+    #     self.update_active_init()
 
     # Path Functions
     def get_image_path(self, filename):
@@ -197,33 +195,39 @@ class Application:
             creature_name = self.table.item(row, 1).data(0)
         except:
             return
+   
+        self.column_method_mapping = {
+            2: (self.manager.set_creature_init, int),
+            3: (self.manager.set_creature_max_hp, int),
+            4: (self.manager.set_creature_curr_hp, int),
+            5: (self.manager.set_creature_armor_class, int),
+            6: (self.manager.set_creature_movement, int),
+            7: (self.manager.set_creature_action, bool),
+            8: (self.manager.set_creature_bonus_action, bool),
+            9: (self.manager.set_creature_reaction, bool),
+            10: (self.manager.set_creature_object_interaction, bool),
+            11: (self.manager.set_creature_notes, str),
+            12: (self.manager.set_creature_status_time, int)
+        }
 
         if creature_name in self.manager.creatures:
-            if col == 2:
-                self.manager.set_creature_init(creature_name, int(item.data(0)))
-            elif col == 3:
-                self.manager.set_creature_max_hp(creature_name, int(item.data(0)))
-            elif col == 4:
-                self.manager.set_creature_curr_hp(creature_name, int(item.data(0)))
-            elif col == 5:
-                self.manager.set_creature_armor_class(creature_name, int(item.data(0)))
-            elif col == 6:
-                self.manager.set_creature_movement(creature_name, int(item.data(0)))
-            elif col == 7:
-                self.manager.set_creature_action(creature_name, bool(item.data(0)))
-            elif col == 8:
-                self.manager.set_creature_bonus_action(creature_name, bool(item.data(0)))
-            elif col == 9:
-                self.manager.set_creature_reaction(creature_name, bool(item.data(0)))
-            elif col == 10:
-                self.manager.set_creature_object_interaction(creature_name, bool(item.data(0)))
-            elif col == 11:
-                self.manager.set_creature_notes(creature_name, str(item.data(0)))
-            # elif col == 12:
-            #     self.manager.set_creature_status_time(creature_name, int(item.data(0)))
-            
-            # self.manager.sort_creatures()
-            # self.update_table()
+            if col in self.column_method_mapping:
+                method, data_type = self.column_method_mapping[col]
+                try:
+                    value = self.get_value(item, data_type)
+                    method(creature_name, value)
+                except ValueError:
+                    return
+
+            self.table.blockSignals(True)
+            self.update_table()
+            self.table.blockSignals(False)
+
+    def get_value(self, item, data_type):
+        text = item.text()
+        if data_type == bool:
+            return text.lower() in ['true', '1', 'yes']
+        return data_type(text)
 
     def populate_creature_list(self):
         self.creature_list.clear()
@@ -249,7 +253,7 @@ class Application:
 
         for item in selected_items:
             creature_name = item.text()
-            creature = self.manager.creatures.get(creature_name)
+            creature = self.manager.creatures[creature_name]
             if creature:
                 if positive:
                     creature.curr_hp += value
