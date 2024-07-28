@@ -1,5 +1,4 @@
-import os
-from PyQt5.QtGui import QPixmap, QFont
+from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QLineEdit, 
     QPushButton, QToolBar, QWidget, QGridLayout, 
@@ -31,6 +30,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.table_layout = QHBoxLayout()
         self.table = QTableWidget(self)
         self.table.setFont(QFont('Arial', 18))
+        self.table.itemClicked.connect(self.handle_clicked_item)
         self.table.itemChanged.connect(self.manipulate_manager)
         self.table_layout.addWidget(self.table)
 
@@ -97,11 +97,17 @@ class InitiativeTracker(QMainWindow, Application):
         self.dam_layout.addStretch()
 
         # Image Window 
-        self.stat_layout = QHBoxLayout()
+        self.stat_layout = QVBoxLayout()
         self.statblock = QLabel(self)
-        self.img = QPixmap(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../images/bean.jpeg')))
-        self.statblock.setPixmap(self.img)
+
+        self.monster_list = QListWidget(self)
+        self.monster_list.setSelectionMode(QListWidget.SingleSelection)
+        self.monster_list.itemSelectionChanged.connect(self.update_statblock_image)
+        self.monster_list.setFixedSize(400, 100)
+
         self.stat_layout.addWidget(self.statblock)
+        self.stat_layout.addWidget(self.monster_list)
+        self.stat_layout.addStretch()
        
         # Grid Layout
         self.mainlayout.addLayout(self.table_layout, 1, 1)

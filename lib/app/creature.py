@@ -57,7 +57,7 @@ class I_Creature:
     _reaction: bool = field(default=False)
     _object_interaction: bool = field(default=False)
     _notes: str = field(default="")
-    _status_time: str = field(default="")
+    _status_time: int = field(default=-1)
 
     def __gt__(self, other: I_Creature) -> bool:
         if not isinstance(other, I_Creature):
@@ -211,7 +211,7 @@ class I_Creature:
         self._notes = notes
 
     @property
-    def status_time(self) -> str:
+    def status_time(self) -> int:
         return self._status_time
     
     @status_time.setter
@@ -232,7 +232,7 @@ class Monster(I_Creature):
         bonus_action=False,
         reaction=False,
         notes='',
-        status_time=0
+        status_time=''
     ) -> None:
         super().__init__(
             _type=CreatureType.MONSTER,
@@ -264,7 +264,7 @@ class Player(I_Creature):
         reaction=False,
         object_interaction=False,
         notes='',
-        status_time=0
+        status_time=''
     ) -> None:
         super().__init__(
             _type=CreatureType.PLAYER,

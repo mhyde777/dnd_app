@@ -28,7 +28,6 @@ class CreatureManager:
 
     def set_creature_init(self, creature: str, init: int) -> None:
         self.creatures[creature].initiative = init
-        print(f"Bitch")
 
     def set_creature_max_hp(self, creature: str, max_hp: int) -> None:
         self.creatures[creature].max_hp = max_hp
