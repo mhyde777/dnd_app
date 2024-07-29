@@ -82,17 +82,15 @@ class InitiativeTracker(QMainWindow, Application):
         self.dam_button = QPushButton("Damage", self)
         self.dam_button.clicked.connect(self.damage_selected_creatures)
 
-        self.heal_dam_layout = QHBoxLayout()
-        self.heal_dam_layout.addWidget(self.heal_button)
-        self.heal_dam_layout.addWidget(self.dam_button)
+        self.heal_dam_layout = QVBoxLayout()
+        self.heal_dam_layout.addWidget(self.heal_button, 1)
+        self.heal_dam_layout.addWidget(self.value_input, 2)
+        self.heal_dam_layout.addWidget(self.dam_button, 3)
         
         self.creature_list.setFixedSize(200, 300)
         self.value_input.setFixedWidth(200)
-        self.heal_button.setFixedWidth(90)
-        self.dam_button.setFixedWidth(90)
         self.dam_layout.addLayout(self.nextprev_layout, 1)
         self.dam_layout.addWidget(self.creature_list, 2)
-        self.dam_layout.addWidget(self.value_input, 3)
         self.dam_layout.addLayout(self.heal_dam_layout, 4)
         self.dam_layout.addStretch()
 
