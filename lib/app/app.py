@@ -13,8 +13,11 @@ from PyQt5.QtCore import (
 from app.creature import (
     I_Creature, Player, Monster, CustomEncoder, CreatureType
 )
-from ui.windows import AddCombatantWindow, RemoveCombatantWindow
+from ui.windows import (
+    AddCombatantWindow, RemoveCombatantWindow, BuildEncounterWindow, LoadEncounterWindow
+)
 from app.save_json import GameState
+from app.manager import CreatureManager
 
 class Application:
 
@@ -29,11 +32,11 @@ class Application:
 
     # JSON Manipulation
     def init_players(self):
-        self.load_file_to_manager("players.json")
+        self.load_file_to_manager("players.json", self.manager)
         self.statblock.clear()
 
     def load_state(self):
-            self.load_file_to_manager("last_state.json")
+            self.load_file_to_manager("last_state.json", self.manager)
 
     def save_state(self):
         file_path = self.get_data_path("last_state.json")
@@ -46,17 +49,17 @@ class Application:
         with open(file_path, 'w') as f:
             json.dump(save, f, cls=CustomEncoder, indent=4)
 
-    def load_file_to_manager(self, file_name):
+    def load_file_to_manager(self, file_name, manager):
         file_path = self.get_data_path(file_name)
         if os.path.exists(file_path):
             with open(file_path, 'r') as file:
                 state = json.load(file, object_hook=self.custom_decoder)
 
-            self.manager.creatures.clear()
+            manager.creatures.clear()
             players = state.get('players', [])
             monsters = state.get('monsters', [])
             for creature in players + monsters:
-                self.manager.add_creature(creature)
+                manager.add_creature(creature)
 
             self.current_turn = state['current_turn']
             self.round_counter = state['round_counter']
@@ -120,7 +123,6 @@ class Application:
                             else:
                                 item.setBackground(QColor('#006400'))
                                 item.setForeground(QColor('#006400'))
-                        
 
     def set_row_color(self, row, color):
         for column in range(self.table.columnCount()):
@@ -228,9 +230,6 @@ class Application:
         return base_name
 
     # Edit Menu Actions
-    def load_encounter(self):
-        pass
-
     def add_combatant(self):
         self.init_tracking_mode(True)
         dialog = AddCombatantWindow(self)
@@ -413,3 +412,36 @@ class Application:
                     creature.curr_hp = max(0, creature.curr_hp)
         self.pop_lists()
         self.update_table()
+
+    # Encounter Builder
+    def save_encounter(self):
+        dialog = BuildEncounterWindow(self)
+        if dialog.exec_() == QDialog.Accepted:
+            data = dialog.get_data()
+            encounter_manager = CreatureManager()
+            self.load_file_to_manager('players.json', encounter_manager)
+            for creature_data in data:
+                creature = Monster(
+                    name=creature_data['Name'],
+                    init=creature_data['Init'],
+                    max_hp=creature_data['HP'],
+                    curr_hp=creature_data['HP'],
+                    armor_class=creature_data['AC']
+                )
+                encounter_manager.add_creature(creature)
+            state = GameState()
+            state.players = encounter_manager.creatures.values()
+            state.current_turn = 0
+            state.round_counter = 1
+            state.time_counter = 0
+            save = state.to_dict()
+            filename = dialog.filename_input.text().strip()
+            filename = filename.replace(' ', '_')
+            file_path = self.get_data_path(f"{filename}.json")
+            with open(file_path, 'w') as f:
+                json.dump(save, f, cls=CustomEncoder, indent=4)
+
+    def load_encounter(self):
+        dialog = LoadEncounterWindow(self)
+        if dialog.exec_() == QDialog.Accepted:
+            self.load_file_to_manager(f'{dialog.selected_file}.json')
