@@ -145,7 +145,11 @@ class InitiativeTracker(QMainWindow, Application):
         self.rmv_button = QAction("Remove Combatants", self)
         self.rmv_button.triggered.connect(self.remove_combatant)
         self.filetool_bar.addAction(self.rmv_button)
-                       
+
+        self.build_encounter = QAction("Build Encounter", self)
+        self.build_encounter.triggered.connect(self.save_encounter)
+        self.file_menu.addAction(self.build_encounter)
+
         self.edit_menu.addAction(self.load_enc_button)
         self.edit_menu.addAction(self.add_button)
         self.edit_menu.addAction(self.rmv_button)
