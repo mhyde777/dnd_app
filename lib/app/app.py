@@ -23,6 +23,7 @@ class Application:
         self.round_counter = 1
         self.time_counter = 0
         self.tracking_by_name = False
+        # TODO: I don't like this but it works for now. 
         self.boolean_columns = {7, 8, 9, 10}
 
 
@@ -89,6 +90,13 @@ class Application:
             self.current_creature = self.sorted_creatures[self.current_turn]
             self.current_name = self.current_creature.name
             self.active_init_label.setText(f"Active: {self.current_name}")
+        # TODO: Once again... how?
+        self.boolean_attributes = {
+            7: 'action',
+            8: 'bonus_action',
+            9: 'reaction',
+            10: 'object_interaction'
+        }
             
         for row in range(self.table.rowCount()):
             if row == self.current_turn:
@@ -98,14 +106,21 @@ class Application:
             self.set_row_color(row, color)
 
             for col in range(self.table.columnCount()):
-                item = self.table.item(row, col)
                 if col in self.boolean_columns:
-                    current_value = item.text().lower()
-                    if current_value == 'false':
-                        item.setBackground(QColor('red'))
-                        item.setText("")
-                    elif current_value != 'false':
-                        item.setBackground(QColor('green'))
+                    item = self.table.item(row, col)
+                    if item:
+                        creature_name = self.table.item(row, 1).text()
+                        creature = self.manager.creatures.get(creature_name)
+                        if creature:
+                            attribute_name = self.boolean_attributes.get(col)
+                            value = getattr(creature, attribute_name, False) if attribute_name else False
+                            if not value:
+                                item.setBackground(QColor('red'))
+                                item.setForeground(QColor('red'))
+                            else:
+                                item.setBackground(QColor('#006400'))
+                                item.setForeground(QColor('#006400'))
+                        
 
     def set_row_color(self, row, color):
         for column in range(self.table.columnCount()):
@@ -114,6 +129,35 @@ class Application:
     def init_tracking_mode(self, by_name):
         self.tracking_by_name = by_name
     
+    def toggle_bool_value(self, row, col):
+        if col not in self.boolean_columns:
+                    return
+
+        item = self.table.item(row, col)
+        if item:
+            current_text = item.text()
+            new_text = "True" if current_text == "False" else "False"
+            item.setText(new_text)
+            creature_name = self.table.item(row, 1).text()
+            if creature_name in self.manager.creatures:
+                # TODO: How the fuck do I do this without mapping?
+                method_mapping = {
+                    7: self.manager.set_creature_action,
+                    8: self.manager.set_creature_bonus_action,
+                    9: self.manager.set_creature_reaction,
+                    10: self.manager.set_creature_object_interaction
+                }
+                if col in method_mapping:
+                    method = method_mapping[col]
+                    method(creature_name, new_text == 'True')
+        self.update_active_init()
+
+    def handle_clicked_item(self, item: QTableWidgetItem):
+        row = item.row()
+        col = item.column()
+        self.toggle_bool_value(row, col)
+
+
     def update_table(self):
         headers = self.get_headers_from_dataclass()
         self.manager.sort_creatures()
@@ -126,12 +170,13 @@ class Application:
                 value = getattr(self.manager.creatures[name], attr, None)
                 item = QTableWidgetItem(str(value))
                 if j in self.boolean_columns:
+                    item.setFlags(item.flags() & ~Qt.ItemIsSelectable)
                     item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
                     item.setCheckState(Qt.Checked if value else Qt.Unchecked)
                 self.table.setItem(i, j, item)
-        # self.adjust_table_size()
         self.pop_lists()
         self.update_active_init()
+        self.adjust_table_size()
 
     def get_headers_from_dataclass(self) -> List[str]:
         field_to_header = {
@@ -155,7 +200,6 @@ class Application:
     def adjust_table_size(self):
         self.table.resizeColumnsToContents()
         self.table.resizeRowsToContents()
-        self.resize(self.sizeHint().width() + self.table.sizeHint().width(), self.table.sizeHint().height())
 
     def pop_lists(self):
         self.populate_monster_list()
@@ -225,8 +269,15 @@ class Application:
             self.time_counter += 6
             self.round_counter_label.setText(f"Round: {self.round_counter}")
             self.time_counter_label.setText(f"Time: {self.time_counter} seconds")
+            for creature in self.manager.creatures.values():
+                creature.action = False
+                creature.bonus_action = False
+                creature.object_interaction = False
+            self.update_table()
+
         
         self.current_creature_name = self.sorted_creatures[self.current_turn].name
+        self.manager.creatures[self.current_creature_name].reaction = False
         self.update_active_init()
 
         if self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
@@ -249,11 +300,6 @@ class Application:
         if self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
             self.active_statblock_image(self.sorted_creatures[self.current_turn])
 
-    
-    # def sort_creatures(self):
-    #     self.update_table()
-    #     self.update_active_init()
-
     # Path Functions
     def get_image_path(self, filename):
         return os.path.join(self.get_parent_dir(), 'images', filename)
@@ -275,7 +321,7 @@ class Application:
             creature_name = self.table.item(row, 1).data(0)
         except:
             return
-
+        # TODO: How do I do this without mapping?
         self.column_method_mapping = {
             2: (self.manager.set_creature_init, int),
             3: (self.manager.set_creature_max_hp, int),
@@ -338,7 +384,7 @@ class Application:
                 self.statblock.resize(pixmap.size())
                 return
 
-    # WIP
+    # Damage/Healing 
     def heal_selected_creatures(self):
         self.apply_to_selected_creatures(positive=True)
 
@@ -366,31 +412,4 @@ class Application:
                     creature.curr_hp -= value
                     creature.curr_hp = max(0, creature.curr_hp)
         self.pop_lists()
-    
-    def toggle_bool_value(self, row, col):
-        if col not in self.boolean_columns:
-                    return
-
-        item = self.table.item(row, col)
-        if item:
-            current_text = item.text()
-            new_text = "True" if current_text == "False" else "False"
-            item.setText(new_text)
-            # item.setCheckState(Qt.Checked if new_text == "True" else Qt.Unchecked)
-            # Update manager if necessary
-            creature_name = self.table.item(row, 1).text()
-            if creature_name in self.manager.creatures:
-                method_mapping = {
-                    7: self.manager.set_creature_action,
-                    8: self.manager.set_creature_bonus_action,
-                    9: self.manager.set_creature_reaction,
-                    10: self.manager.set_creature_object_interaction
-                }
-                if col in method_mapping:
-                    method_mapping[col](creature_name, new_text == "True")
-        self.update_active_init()
-
-    def handle_clicked_item(self, item):
-        row = item.row()
-        col = item.column()
-        self.toggle_bool_value(row, col)
+        self.update_table()
