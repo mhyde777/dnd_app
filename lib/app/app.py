@@ -14,7 +14,8 @@ from app.creature import (
     I_Creature, Player, Monster, CustomEncoder, CreatureType
 )
 from ui.windows import (
-    AddCombatantWindow, RemoveCombatantWindow, BuildEncounterWindow, LoadEncounterWindow
+    AddCombatantWindow, RemoveCombatantWindow, BuildEncounterWindow, LoadEncounterWindow,
+    UpdatePlayerWindow
 )
 from app.save_json import GameState
 from app.manager import CreatureManager
@@ -26,17 +27,16 @@ class Application:
         self.round_counter = 1
         self.time_counter = 0
         self.tracking_by_name = False
-        self.current_creature_name = ''
         self.boolean_columns = {7, 8, 9, 10}
 
 
     # JSON Manipulation
     def init_players(self):
-        self.load_file_to_manager("players.json")
+        self.load_file_to_manager("players.json", self.manager)
         self.statblock.clear()
 
     def load_state(self):
-            self.load_file_to_manager("last_state.json")
+            self.load_file_to_manager("last_state.json", self.manager)
 
     def save_state(self):
         file_path = self.get_data_path("last_state.json")
@@ -49,23 +49,23 @@ class Application:
         with open(file_path, 'w') as f:
             json.dump(save, f, cls=CustomEncoder, indent=4)
 
-    def load_file_to_manager(self, file_name):
+    def load_file_to_manager(self, file_name, manager):
         file_path = self.get_data_path(file_name)
         if os.path.exists(file_path):
             with open(file_path, 'r') as file:
                 state = json.load(file, object_hook=self.custom_decoder)
 
-            self.manager.creatures.clear()
+            manager.creatures.clear()
             players = state.get('players', [])
             monsters = state.get('monsters', [])
             for creature in players + monsters:
-                self.manager.add_creature(creature)
+                manager.add_creature(creature)
 
             self.current_turn = state['current_turn']
             self.round_counter = state['round_counter']
             self.time_counter = state['time_counter']
             self.current_turn = state['current_turn']
-            self.sorted_creatures = list(self.manager.creatures.values())
+            self.sorted_creatures = list(manager.creatures.values())
             if self.sorted_creatures:
                 self.current_creature_name = self.sorted_creatures[0].name
             else:
@@ -104,7 +104,18 @@ class Application:
         }
 
         for row in range(self.table.rowCount()):
-            color = QColor('#006400') if row == self.current_turn else QColor('#333')
+            # color = QColor('#006400') if row == self.current_turn  else QColor('#333')
+            color = QColor('#333')
+            creature_name = self.table.item(row, 1).text()
+            creature = self.manager.creatures.get(creature_name)
+        
+            if row == self.current_turn and creature.curr_hp != 0:
+                color = QColor('#006400')
+            elif row == self.current_turn and creature.curr_hp == 0:
+                color = QColor('red')
+            else:
+                if creature and creature.curr_hp == 0:
+                    color = QColor('darkRed')
             self.set_row_color(row, color)
             
             for col in range(self.table.columnCount()):
@@ -121,7 +132,9 @@ class Application:
 
     def set_row_color(self, row, color):
         for column in range(self.table.columnCount()):
-            self.table.item(row, column).setBackground(color)
+            item = self.table.item(row, column)
+            if item:
+                item.setBackground(color)
     
     def init_tracking_mode(self, by_name):
         self.tracking_by_name = by_name
@@ -347,10 +360,6 @@ class Application:
                 except ValueError:
                     return
 
-            self.table.blockSignals(True)
-            self.update_table()
-            self.table.blockSignals(False)
-
     def get_value(self, item, data_type):
         text = item.text()
         if data_type == bool:
@@ -447,4 +456,9 @@ class Application:
     def load_encounter(self):
         dialog = LoadEncounterWindow(self)
         if dialog.exec_() == QDialog.Accepted:
-            self.load_file_to_manager(f'{dialog.selected_file}.json')
+            self.load_file_to_manager(f'{dialog.selected_file}.json', self.manager)
+
+    def update_players(self):
+        dialog = UpdatePlayerWindow(self)
+        if dialog.exec_() == QDialog.Accepted:
+            pass
