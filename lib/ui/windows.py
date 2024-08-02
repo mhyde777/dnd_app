@@ -6,7 +6,8 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt
 from app.manager import CreatureManager
-import os
+from app.creature import I_Creature
+import os, json
 
 # class CustomTableWidget(QTableWidget):
 #     def __init__(self, *args, **kwargs):
@@ -188,3 +189,17 @@ class LoadEncounterWindow(QDialog):
     def get_parent_dir(self):
         return os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 
+
+class UpdatePlayerWindow(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle('Update Player Stats')
+
+        self.layout = QVBoxLayout()
+
+        self.player_table = QTableWidget()
+        self.layout.addWidget(self.player_table)
+
+        self.decision_buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel, self)
+        self.decision_buttons.accepted.connect(self.accept)
+        self.decision_buttons.rejected.connect(self.reject)

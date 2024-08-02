@@ -133,7 +133,6 @@ class InitiativeTracker(QMainWindow, Application):
         self.initialize_players_action.triggered.connect(self.init_players)
         self.file_menu.addAction(self.initialize_players_action)
 
-
         self.load_enc_button = QAction("Load Encounter", self)
         self.load_enc_button.triggered.connect(self.load_encounter)
         self.filetool_bar.addAction(self.load_enc_button)
@@ -149,6 +148,10 @@ class InitiativeTracker(QMainWindow, Application):
         self.build_encounter = QAction("Build Encounter", self)
         self.build_encounter.triggered.connect(self.save_encounter)
         self.file_menu.addAction(self.build_encounter)
+
+        self.update_player_file = QAction('Update Player Stats', self)
+        self.update_player_file.triggered.connect(self.update_players)
+        self.file_menu.addAction(self.update_player_file)
 
         self.edit_menu.addAction(self.load_enc_button)
         self.edit_menu.addAction(self.add_button)
