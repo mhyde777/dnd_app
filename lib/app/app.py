@@ -26,17 +26,17 @@ class Application:
         self.round_counter = 1
         self.time_counter = 0
         self.tracking_by_name = False
-        # TODO: I don't like this but it works for now. 
+        self.current_creature_name = ''
         self.boolean_columns = {7, 8, 9, 10}
 
 
     # JSON Manipulation
     def init_players(self):
-        self.load_file_to_manager("players.json", self.manager)
+        self.load_file_to_manager("players.json")
         self.statblock.clear()
 
     def load_state(self):
-            self.load_file_to_manager("last_state.json", self.manager)
+            self.load_file_to_manager("last_state.json")
 
     def save_state(self):
         file_path = self.get_data_path("last_state.json")
@@ -49,22 +49,27 @@ class Application:
         with open(file_path, 'w') as f:
             json.dump(save, f, cls=CustomEncoder, indent=4)
 
-    def load_file_to_manager(self, file_name, manager):
+    def load_file_to_manager(self, file_name):
         file_path = self.get_data_path(file_name)
         if os.path.exists(file_path):
             with open(file_path, 'r') as file:
                 state = json.load(file, object_hook=self.custom_decoder)
 
-            manager.creatures.clear()
+            self.manager.creatures.clear()
             players = state.get('players', [])
             monsters = state.get('monsters', [])
             for creature in players + monsters:
-                manager.add_creature(creature)
+                self.manager.add_creature(creature)
 
             self.current_turn = state['current_turn']
             self.round_counter = state['round_counter']
             self.time_counter = state['time_counter']
             self.current_turn = state['current_turn']
+            self.sorted_creatures = list(self.manager.creatures.values())
+            if self.sorted_creatures:
+                self.current_creature_name = self.sorted_creatures[0].name
+            else:
+                self.current_creature_name = None
             self.update_table()
         else:
             return
@@ -77,37 +82,31 @@ class Application:
     # UI Manipulation
     def update_active_init(self):
         self.sorted_creatures = list(self.manager.creatures.values())
-        if self.tracking_by_name:
-            if not self.sorted_creatures:
-                self.active_init_label.setText("Active: None")
-                return
+        if not self.sorted_creatures:
+            self.active_init_label.setText("Active: None")
+            return
 
+        if self.tracking_by_name:
             if not self.current_creature_name:
                 self.current_creature_name = self.sorted_creatures[0].name
 
             self.current_turn = next((i for i, creature in enumerate(self.sorted_creatures) if creature.name == self.current_creature_name), 0)
-            self.current_creature = self.sorted_creatures[self.current_turn]
-            self.current_name = self.current_creature.name
-            self.active_init_label.setText(f"Active: {self.current_name}")
-        else:
-            self.current_creature = self.sorted_creatures[self.current_turn]
-            self.current_name = self.current_creature.name
-            self.active_init_label.setText(f"Active: {self.current_name}")
-        # TODO: Once again... how?
+
+        self.current_creature = self.sorted_creatures[self.current_turn]
+        self.current_name = self.current_creature.name
+        self.active_init_label.setText(f"Active: {self.current_name}")
+
         self.boolean_attributes = {
             7: 'action',
             8: 'bonus_action',
             9: 'reaction',
             10: 'object_interaction'
         }
-            
-        for row in range(self.table.rowCount()):
-            if row == self.current_turn:
-                color = QColor('#006400')
-            else:
-                color = QColor('#333')
-            self.set_row_color(row, color)
 
+        for row in range(self.table.rowCount()):
+            color = QColor('#006400') if row == self.current_turn else QColor('#333')
+            self.set_row_color(row, color)
+            
             for col in range(self.table.columnCount()):
                 if col in self.boolean_columns:
                     item = self.table.item(row, col)
@@ -117,12 +116,8 @@ class Application:
                         if creature:
                             attribute_name = self.boolean_attributes.get(col)
                             value = getattr(creature, attribute_name, False) if attribute_name else False
-                            if not value:
-                                item.setBackground(QColor('red'))
-                                item.setForeground(QColor('red'))
-                            else:
-                                item.setBackground(QColor('#006400'))
-                                item.setForeground(QColor('#006400'))
+                            item.setBackground(QColor('red') if not value else QColor('#006400'))
+                            item.setForeground(QColor('red') if not value else QColor('#006400'))
 
     def set_row_color(self, row, color):
         for column in range(self.table.columnCount()):
@@ -244,8 +239,8 @@ class Application:
                     armor_class=creature_data['AC']
                 )
                 self.manager.add_creature(creature)
-            self.update_table()
             self.pop_lists()
+            self.update_table()
         self.init_tracking_mode(False)
 
     def remove_combatant(self):
@@ -269,6 +264,8 @@ class Application:
             self.round_counter_label.setText(f"Round: {self.round_counter}")
             self.time_counter_label.setText(f"Time: {self.time_counter} seconds")
             for creature in self.manager.creatures.values():
+                if creature.status_time:
+                    creature.status_time -= 6
                 creature.action = False
                 creature.bonus_action = False
                 creature.object_interaction = False
@@ -290,6 +287,9 @@ class Application:
                 self.time_counter -= 6
                 self.round_counter_label.setText(f"Round: {self.round_counter}")
                 self.time_counter_label.setText(f"Time: {self.time_counter} seconds")
+                for creature in self.manager.creatures.values():
+                    if creature.status_time:
+                        creature.status_time += 6
         else:
             self.current_turn -= 1
         
@@ -339,7 +339,10 @@ class Application:
             if col in self.column_method_mapping:
                 method, data_type = self.column_method_mapping[col]
                 try:
-                    value = self.get_value(item, data_type)
+                    if col == 12 and (item.text().strip() == "" or item.text() is None):
+                        value = ""
+                    else:
+                        value = self.get_value(item, data_type)
                     method(creature_name, value)
                 except ValueError:
                     return
