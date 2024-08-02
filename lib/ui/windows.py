@@ -150,9 +150,10 @@ class LoadEncounterWindow(QDialog):
         self.load_layout = QVBoxLayout()
 
         self.file_list = QListWidget()
+        self.file_list.itemClicked.connect(self.on_item_clicked)
         self.populate_file_list()
 
-        self.load_button = QDialogButtonBox(QDialogButtonBox.Load | QDialogButtonBox.Cancel, self)
+        self.load_button = QDialogButtonBox(QDialogButtonBox.Open | QDialogButtonBox.Cancel, self)
         self.load_button.accepted.connect(self.accept)
         self.load_button.rejected.connect(self.reject)
 
@@ -164,7 +165,7 @@ class LoadEncounterWindow(QDialog):
     def populate_file_list(self):
         exceptions = {'players', 'last_state'}
         try:
-            files = os.listdir(self.get_data_path())
+            files = os.listdir(self.get_data_dict())
         except FileNotFoundError:
             print(f'Directory {self.get_data_path()} not found.')
             return
@@ -172,8 +173,18 @@ class LoadEncounterWindow(QDialog):
         for file in files:
             name, ext = os.path.splitext(file)
             if name not in exceptions and os.path.isfile(self.get_data_path(file)):
+                name = name.replace('_', ' ')
                 self.file_list.addItem(name)
 
     def on_item_clicked(self, item):
-        self.selected_file = item.text()
+        self.selected_file = item.text().replace(' ','_')
+
+    def get_data_dict(self):
+        return os.path.join(self.get_parent_dir(), 'data')
+
+    def get_data_path(self, filename):
+        return os.path.join(self.get_parent_dir(), 'data', filename)
+    
+    def get_parent_dir(self):
+        return os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 
