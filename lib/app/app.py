@@ -28,7 +28,7 @@ class Application:
         self.time_counter = 0
         self.tracking_by_name = False
         self.boolean_columns = {7, 8, 9, 10}
-
+        self.base_dir = os.path.dirname(__file__)
 
     # JSON Manipulation
     def init_players(self):
@@ -64,7 +64,6 @@ class Application:
             self.current_turn = state['current_turn']
             self.round_counter = state['round_counter']
             self.time_counter = state['time_counter']
-            self.current_turn = state['current_turn']
             self.sorted_creatures = list(manager.creatures.values())
             if self.sorted_creatures:
                 self.current_creature_name = self.sorted_creatures[0].name
@@ -80,6 +79,27 @@ class Application:
         return data
 
     # UI Manipulation
+    def update_table(self):
+        headers = self.get_headers_from_dataclass()
+        self.manager.sort_creatures()
+        self.table.setRowCount(len(self.manager.creatures))
+        self.table.setColumnCount(len(headers))
+        self.table.setHorizontalHeaderLabels(headers)
+        self.table.setColumnHidden(0, True)
+        self.table.setWordWrap(True)
+        for i, name in enumerate(self.manager.creatures.keys()):
+            for j, attr in enumerate(self.manager.creatures[name].__dataclass_fields__):
+                value = getattr(self.manager.creatures[name], attr, None)
+                item = QTableWidgetItem(str(value))
+                if j in self.boolean_columns:
+                    item.setFlags(item.flags() & ~Qt.ItemIsSelectable)
+                    item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+                    item.setCheckState(Qt.Checked if value else Qt.Unchecked)
+                self.table.setItem(i, j, item)
+        self.pop_lists()
+        self.update_active_init()
+        self.adjust_table_size()
+
     def update_active_init(self):
         self.sorted_creatures = list(self.manager.creatures.values())
         if not self.sorted_creatures:
@@ -95,6 +115,8 @@ class Application:
         self.current_creature = self.sorted_creatures[self.current_turn]
         self.current_name = self.current_creature.name
         self.active_init_label.setText(f"Active: {self.current_name}")
+        self.round_counter_label.setText(f'Round: {self.round_counter}')
+        self.time_counter_label.setText(f'Time: {self.time_counter} seconds')
 
         self.boolean_attributes = {
             7: 'action',
@@ -167,27 +189,6 @@ class Application:
         col = item.column()
         self.toggle_bool_value(row, col)
 
-
-    def update_table(self):
-        headers = self.get_headers_from_dataclass()
-        self.manager.sort_creatures()
-        self.table.setRowCount(len(self.manager.creatures))
-        self.table.setColumnCount(len(headers))
-        self.table.setHorizontalHeaderLabels(headers)
-        self.table.setColumnHidden(0, True)
-        for i, name in enumerate(self.manager.creatures.keys()):
-            for j, attr in enumerate(self.manager.creatures[name].__dataclass_fields__):
-                value = getattr(self.manager.creatures[name], attr, None)
-                item = QTableWidgetItem(str(value))
-                if j in self.boolean_columns:
-                    item.setFlags(item.flags() & ~Qt.ItemIsSelectable)
-                    item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-                    item.setCheckState(Qt.Checked if value else Qt.Unchecked)
-                self.table.setItem(i, j, item)
-        self.pop_lists()
-        self.update_active_init()
-        self.adjust_table_size()
-
     def get_headers_from_dataclass(self) -> List[str]:
         field_to_header = {
             '_type': 'CreatureType',
@@ -208,8 +209,18 @@ class Application:
         return [field_to_header[field] for field in self.fields]
 
     def adjust_table_size(self):
-        self.table.resizeColumnsToContents()
-        self.table.resizeRowsToContents()
+        total_width = self.table.verticalHeader().width()
+        for column in range(self.table.columnCount()):
+            self.table.resizeColumnToContents(column)
+            total_width += self.table.columnWidth(column)
+
+        total_height = self.table.horizontalHeader().height()
+        for row in range(self.table.rowCount()):
+            self.table.resizeRowToContents(row)
+            total_height += self.table.rowHeight(row)
+
+        self.table.setFixedWidth(total_width + self.table.frameWidth() * 2)
+        self.table.setFixedHeight(total_height + self.table.frameWidth() * 2)
 
     def pop_lists(self):
         self.populate_monster_list()
@@ -320,7 +331,7 @@ class Application:
         return os.path.join(self.get_parent_dir(), 'data', filename)
     
     def get_parent_dir(self):
-        return os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
+        return os.path.abspath(os.path.join(self.base_dir, '../../'))
 
     def get_extensions(self):
         return ('png', 'jpg', 'jpeg', 'gif')
@@ -359,6 +370,7 @@ class Application:
                     method(creature_name, value)
                 except ValueError:
                     return
+        self.adjust_table_size()
 
     def get_value(self, item, data_type):
         text = item.text()
@@ -394,6 +406,12 @@ class Application:
                 self.statblock.setPixmap(pixmap)
                 self.statblock.resize(pixmap.size())
                 return
+
+    def hide_statblock(self):
+        self.statblock.hide()
+
+    def show_statblock(self):
+        self.statblock.show()
 
     # Damage/Healing 
     def heal_selected_creatures(self):

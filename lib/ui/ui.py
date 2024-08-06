@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import (
     QTableWidgetItem, QListWidget, QListWidgetItem, QLineEdit,
     QAction, QMenuBar
 )
-
+from PyQt5.QtCore import Qt
 from app.app import Application
 from app.manager import CreatureManager
 
@@ -24,33 +24,38 @@ class InitiativeTracker(QMainWindow, Application):
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
 
-        self.mainlayout = QGridLayout(self.central_widget)
-
-        # Table Widget
-        self.table_layout = QHBoxLayout()
-        self.table = QTableWidget(self)
-        self.table.setFont(QFont('Arial', 18))
-        self.table.itemClicked.connect(self.handle_clicked_item)
-        self.table.itemChanged.connect(self.manipulate_manager)
-        self.table_layout.addWidget(self.table)
+        # self.mainlayout = QGridLayout(self.central_widget)
+        self.mainlayout = QHBoxLayout(self.central_widget)
 
         self.label_layout = QHBoxLayout()
+        # self.label_layout.setSpacing(1)
+        # self.label_layout.setContentsMargins(0, 0, 0, 0)
         
         # Active Init Label 
         self.active_init_label = QLabel(self)
         self.active_init_label.setStyleSheet("font-size: 18px;")
-        self.label_layout.addWidget(self.active_init_label, 1)
+        self.label_layout.addWidget(self.active_init_label, 0)
 
         # Round counter label 
-        self.round_counter_label = QLabel(f"Round: {self.round_counter}", self)
+        self.round_counter_label = QLabel(self)
         self.round_counter_label.setStyleSheet("font-size: 18px;")
-        self.label_layout.addWidget(self.round_counter_label, 2)
+        self.label_layout.addWidget(self.round_counter_label, 0)
 
         # Time counter label 
-        self.time_counter_label = QLabel(f"Time: {self.time_counter} seconds", self)
+        self.time_counter_label = QLabel(self)
         self.time_counter_label.setStyleSheet("font-size: 18px;")
-        self.label_layout.addWidget(self.time_counter_label, 3)
-        self.label_layout.addStretch()
+        self.label_layout.addWidget(self.time_counter_label, 0)
+        # self.label_layout.addStretch()
+
+        # Table Widget
+        self.table_layout = QVBoxLayout()
+        self.table = QTableWidget(self)
+        self.table.setFont(QFont('Arial', 18))
+        self.table.itemClicked.connect(self.handle_clicked_item)
+        self.table.itemChanged.connect(self.manipulate_manager)
+        self.table_layout.addLayout(self.label_layout, 0)
+        self.table_layout.addWidget(self.table, 0)
+        self.table_layout.addStretch()
 
         #Buttons
         self.nextprev_layout = QVBoxLayout()
@@ -98,20 +103,43 @@ class InitiativeTracker(QMainWindow, Application):
         self.stat_layout = QVBoxLayout()
         self.statblock = QLabel(self)
 
+        self.list_buttons = QHBoxLayout()
         self.monster_list = QListWidget(self)
         self.monster_list.setSelectionMode(QListWidget.SingleSelection)
         self.monster_list.itemSelectionChanged.connect(self.update_statblock_image)
-        self.monster_list.setFixedSize(400, 100)
+        self.monster_list.setFixedSize(200, 100)
+
+        self.show_hide_butts = QVBoxLayout()
+        self.hide_img = QPushButton("Hide Image", self)
+        self.hide_img.clicked.connect(self.hide_statblock)
+
+        self.show_img = QPushButton("Show Image", self)
+        self.show_img.clicked.connect(self.show_statblock)
+        self.show_hide_butts.addWidget(self.show_img, 0)
+        self.show_hide_butts.addWidget(self.hide_img, 0)
+
+        self.list_buttons.addWidget(self.monster_list, 0)
+        self.list_buttons.addLayout(self.show_hide_butts, 0)
+        self.list_buttons.addStretch()
 
         self.stat_layout.addWidget(self.statblock)
-        self.stat_layout.addWidget(self.monster_list)
+        self.stat_layout.addLayout(self.list_buttons)
         self.stat_layout.addStretch()
        
-        # Grid Layout
-        self.mainlayout.addLayout(self.table_layout, 1, 1)
-        self.mainlayout.addLayout(self.label_layout, 0, 1)
-        self.mainlayout.addLayout(self.stat_layout, 1, 2)
-        self.mainlayout.addLayout(self.dam_layout, 1, 0)
+        # Widgets allow for alignment
+        self.dam_widget = QWidget()
+        self.dam_widget.setLayout(self.dam_layout)
+        
+        self.table_widget = QWidget()
+        self.table_widget.setLayout(self.table_layout)
+
+        self.stat_widget = QWidget()
+        self.stat_widget.setLayout(self.stat_layout)
+
+        self.mainlayout.addWidget(self.dam_widget, alignment=Qt.AlignLeft)
+        self.mainlayout.addWidget(self.table_widget, alignment=Qt.AlignLeft)
+        self.mainlayout.addStretch()
+        self.mainlayout.addWidget(self.stat_widget, alignment=Qt.AlignRight)
 
         # Menu Bar
         self.menu_bar = QMenuBar(self)
