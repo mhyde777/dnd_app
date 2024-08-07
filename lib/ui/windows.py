@@ -96,7 +96,7 @@ class BuildEncounterWindow(QDialog):
         self.builder_layout.addWidget(self.save_button, 3)
 
         self.setLayout(self.builder_layout)
-        self.resize(self.encounter_table.sizeHint().width() + 183, self.sizeHint().height())
+        self.resize_table()
 
 
     def get_data(self):
@@ -114,6 +114,14 @@ class BuildEncounterWindow(QDialog):
                     'AC': int(ac.text())
                 })
         return data
+
+    def resize_table(self):
+        self.total_width = self.encounter_table.verticalHeader().width()
+        for column in range(self.encounter_table.columnCount()):
+            self.encounter_table.resizeColumnToContents(column)
+            self.total_width += self.encounter_table.columnWidth(column)
+
+        self.encounter_table.setFixedWidth(self.total_width + self.encounter_table.verticalScrollBar().width() + self.encounter_table.frameWidth()*2)
 
 
 class LoadEncounterWindow(QDialog):
