@@ -9,33 +9,6 @@ from app.manager import CreatureManager
 from app.creature import I_Creature
 import os, json
 
-# class CustomTableWidget(QTableWidget):
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-#         self.setEditTriggers(QTableWidget.AllEditTriggers)
-#         self.setItemDelegate(CustomItemDelegate(self))
-#
-#     def editNext(self):
-#         current_row = self.currentRow()
-#         current_col = self.currentColumn()
-#         row_count = self.rowCount()
-#         col_count = self.columnCount()
-#
-#         if current_row == row_count - 1 and current_col == col_count - 1:
-#             self.insertRow(row_count)
-#             for col in range(col_count):
-#                 self.setItem(row_count, col, QTableWidgetItem(""))
-#
-#         super().editNext()
-#
-# class CustomItemDelegate(QItemDelegate):
-#     def __init__(self, parent=None):
-#         super().__init__(parent)
-#
-#     def createEditor(self, parent, option, index):
-#         return QLineEdit(parent)
-
-
 class AddCombatantWindow(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
