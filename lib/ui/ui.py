@@ -23,13 +23,9 @@ class InitiativeTracker(QMainWindow, Application):
     def initUI(self):
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
-
-        # self.mainlayout = QGridLayout(self.central_widget)
         self.mainlayout = QHBoxLayout(self.central_widget)
 
         self.label_layout = QHBoxLayout()
-        # self.label_layout.setSpacing(1)
-        # self.label_layout.setContentsMargins(0, 0, 0, 0)
         
         # Active Init Label 
         self.active_init_label = QLabel(self)
@@ -45,7 +41,6 @@ class InitiativeTracker(QMainWindow, Application):
         self.time_counter_label = QLabel(self)
         self.time_counter_label.setStyleSheet("font-size: 18px;")
         self.label_layout.addWidget(self.time_counter_label, 0)
-        # self.label_layout.addStretch()
 
         # Table Widget
         self.table_layout = QVBoxLayout()
@@ -68,12 +63,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.next_button.clicked.connect(self.next_turn)
         self.nextprev_layout.addWidget(self.next_button, 2)
 
-        # self.sort_button = QPushButton("Sort", self)
-        # self.sort_button.clicked.connect(self.sort_creatures)
-        # self.nextprev_layout.addWidget(self.sort_button, 3)
-
         # Damage/Health Box
-
         self.dam_layout = QVBoxLayout()
 
         self.creature_list = QListWidget(self)

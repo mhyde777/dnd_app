@@ -126,11 +126,10 @@ class Application:
         }
 
         for row in range(self.table.rowCount()):
-            # color = QColor('#006400') if row == self.current_turn  else QColor('#333')
             color = QColor('#333')
             creature_name = self.table.item(row, 1).text()
             creature = self.manager.creatures.get(creature_name)
-        
+
             if row == self.current_turn and creature.curr_hp != 0:
                 color = QColor('#006400')
             elif row == self.current_turn and creature.curr_hp == 0:
@@ -140,17 +139,17 @@ class Application:
                     color = QColor('darkRed')
             self.set_row_color(row, color)
             
-            for col in range(self.table.columnCount()):
-                if col in self.boolean_columns:
-                    item = self.table.item(row, col)
-                    if item:
-                        creature_name = self.table.item(row, 1).text()
-                        creature = self.manager.creatures.get(creature_name)
-                        if creature:
-                            attribute_name = self.boolean_attributes.get(col)
-                            value = getattr(creature, attribute_name, False) if attribute_name else False
-                            item.setBackground(QColor('red') if not value else QColor('#006400'))
-                            item.setForeground(QColor('red') if not value else QColor('#006400'))
+            for col in self.boolean_columns:
+                item = self.table.item(row, col)
+                if item:
+                    creature_name = self.table.item(row, 1).text()
+                    creature = self.manager.creatures.get(creature_name)
+                    if creature:
+                        attribute_name = self.boolean_attributes.get(col)
+                        value = getattr(creature, attribute_name, False) if attribute_name else False
+                        item.setBackground(QColor('red') if not value else QColor('#006400'))
+                        item.setForeground(QColor('red') if not value else QColor('#006400'))
+
 
     def set_row_color(self, row, color):
         for column in range(self.table.columnCount()):
@@ -295,9 +294,15 @@ class Application:
                 creature.object_interaction = False
             self.update_table()
 
-        
         self.current_creature_name = self.sorted_creatures[self.current_turn].name
         self.manager.creatures[self.current_creature_name].reaction = False
+        for col in self.boolean_columns:
+            attribute_name = self.boolean_attributes.get(col)
+            if attribute_name:
+                value = getattr(self.manager.creatures[self.current_creature_name], attribute_name, False)
+                item = self.table.item(self.current_turn, col)
+                if item:
+                    item.setText('True' if value else 'False')
         self.update_active_init()
 
         if self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
@@ -371,6 +376,9 @@ class Application:
                 except ValueError:
                     return
         self.adjust_table_size()
+        self.table.blockSignals(True)
+        self.update_table()
+        self.table.blockSignals(False)
 
     def get_value(self, item, data_type):
         text = item.text()
@@ -440,6 +448,7 @@ class Application:
                 else:
                     creature.curr_hp -= value
                     creature.curr_hp = max(0, creature.curr_hp)
+        self.value_input.clear()
         self.pop_lists()
         self.update_table()
 
