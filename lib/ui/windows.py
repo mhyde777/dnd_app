@@ -174,13 +174,29 @@ class LoadEncounterWindow(QDialog):
 class UpdatePlayerWindow(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle('Update Player Stats')
+        self.setWindowTitle("Update Player Stats")
+        self.update_layout = QVBoxLayout()
 
-        self.layout = QVBoxLayout()
-
+        # Custom Table Widget
         self.player_table = QTableWidget()
-        self.layout.addWidget(self.player_table)
 
         self.decision_buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel, self)
         self.decision_buttons.accepted.connect(self.accept)
         self.decision_buttons.rejected.connect(self.reject)
+        
+        self.update_layout.addWidget(self.player_table)
+        self.update_layout.addWidget(self.decision_buttons)
+        self.setLayout(self.update_layout)
+        self.resize_table()
+    
+    def populate_manager(self):
+        pass
+
+    def resize_table(self):
+        self.total_width = self.player_table.verticalHeader().width()
+        for column in range(self.player_table.columnCount()):
+            self.player_table.resizeColumnToContents(column)
+            self.total_width += self.player_table.columnWidth(column)
+
+        self.player_table.setFixedWidth(self.total_width + self.player_table.verticalScrollBar().width() + self.player_table.frameWidth()*2)
+

@@ -230,6 +230,11 @@ class Application:
         for creature in self.manager.creatures.values():
             self.creature_list.addItem(creature.name)
 
+        list_height = self.creature_list.count() * self.creature_list.sizeHintForRow(0)
+        list_height += self.creature_list.frameWidth()*2
+        self.creature_list.setFixedHeight(list_height)
+        
+
     def populate_monster_list(self):
         self.monster_list.clear()
         unique_monster_names = set()
@@ -241,6 +246,19 @@ class Application:
 
         for name in unique_monster_names:
             self.monster_list.addItem(name)
+
+        list_height = self.monster_list.count() * self.monster_list.sizeHintForRow(0)
+        list_height += self.monster_list.frameWidth()*2
+        self.monster_list.setFixedHeight(list_height)
+
+        if self.monster_list.count() == 0:
+            self.hide_img.hide()
+            self.show_img.hide()
+            self.monster_list.hide()
+        else:
+            self.hide_img.show()
+            self.show_img.show()
+            self.monster_list.show()
 
     def get_base_name(self, creature):
         non_num_name = re.sub(r'\d+$', '', creature.name)
@@ -275,6 +293,10 @@ class Application:
                 self.manager.rm_creatures(name)
             self.update_table()
             self.pop_lists()
+            if self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
+                self.active_statblock_image(self.sorted_creatures[self.current_turn])
+            else:
+                self.statblock.clear()
         self.init_tracking_mode(False)
 
     # Button Logic
@@ -487,5 +509,7 @@ class Application:
 
     def update_players(self):
         dialog = UpdatePlayerWindow(self)
+        headers = ['Name', 'Max HP', 'AC']
+        dialog.player_table.setHorizontalHeaderLabels(headers)
         if dialog.exec_() == QDialog.Accepted:
             pass
