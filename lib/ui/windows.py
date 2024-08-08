@@ -187,16 +187,17 @@ class UpdatePlayerWindow(QDialog):
         self.update_layout.addWidget(self.player_table)
         self.update_layout.addWidget(self.decision_buttons)
         self.setLayout(self.update_layout)
-        self.resize_table()
     
-    def populate_manager(self):
-        pass
-
     def resize_table(self):
-        self.total_width = self.player_table.verticalHeader().width()
+        total_width = self.player_table.verticalHeader().width()
         for column in range(self.player_table.columnCount()):
             self.player_table.resizeColumnToContents(column)
-            self.total_width += self.player_table.columnWidth(column)
+            total_width += self.player_table.columnWidth(column)
 
-        self.player_table.setFixedWidth(self.total_width + self.player_table.verticalScrollBar().width() + self.player_table.frameWidth()*2)
+        total_height = self.player_table.horizontalHeader().height()
+        for row in range(self.player_table.rowCount()):
+            self.player_table.resizeRowToContents(row)
+            total_height += self.player_table.rowHeight(row)
 
+        self.player_table.setFixedWidth(total_width + self.player_table.frameWidth() * 2)
+        self.player_table.setFixedHeight(total_height + self.player_table.frameWidth() * 2)
