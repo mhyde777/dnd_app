@@ -39,9 +39,12 @@ class Application:
             self.load_file_to_manager("last_state.json", self.manager)
 
     def save_state(self):
-        file_path = self.get_data_path("last_state.json")
+        self.save_to_json('last_state.json', self.manager)
+
+    def save_to_json(self, file, manager):
+        file_path = self.get_data_path(file)
         state = GameState()
-        state.players = self.manager.creatures.values()
+        state.players = manager.creatures.values()
         state.current_turn = self.current_turn
         state.round_counter = self.round_counter
         state.time_counter = self.time_counter
@@ -510,6 +513,13 @@ class Application:
     def update_players(self):
         dialog = UpdatePlayerWindow(self)
         headers = ['Name', 'Max HP', 'AC']
+        self.player_manager = CreatureManager()
+        self.load_file_to_manager('players.json', self.player_manager)
+        dialog.player_table.setRowCount(len(self.player_manager.creatures.keys()))
+        dialog.player_table.setColumnCount(len(headers))
         dialog.player_table.setHorizontalHeaderLabels(headers)
+        
+        dialog.resize_table()
+
         if dialog.exec_() == QDialog.Accepted:
             pass
