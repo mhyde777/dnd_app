@@ -82,7 +82,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.heal_dam_layout.addWidget(self.value_input, 2)
         self.heal_dam_layout.addWidget(self.dam_button, 3)
         
-        self.creature_list.setFixedSize(200, 300)
+        self.creature_list.setFixedWidth(200)
         self.value_input.setFixedWidth(200)
         self.dam_layout.addLayout(self.nextprev_layout, 1)
         self.dam_layout.addWidget(self.creature_list, 2)
