@@ -2,13 +2,14 @@ from typing import List, Dict, Any
 import json, os, re
 
 from PyQt5.QtWidgets import(
-   QDialog, QMessageBox, QTableWidgetItem
+   QDialog, QMessageBox, QTableWidgetItem, QDesktopWidget,
+    QApplication, QFileDialog
 ) 
 from PyQt5.QtGui import (
-        QColor, QPixmap
+        QColor, QPixmap, QFont
 )
 from PyQt5.QtCore import (
-    Qt
+    Qt, QSize
 )
 from app.creature import (
     I_Creature, Player, Monster, CustomEncoder, CreatureType
@@ -37,9 +38,14 @@ class Application:
 
     def load_state(self):
             self.load_file_to_manager("last_state.json", self.manager)
-
+    
     def save_state(self):
         self.save_to_json('last_state.json', self.manager)
+
+    def save_as(self):
+        options = QFileDialog.Options()
+        file_path, _ = QFileDialog.getSaveFileName(self, "Save File", self.get_data_dir(), "All Files (*);;JSON Files (*.json)", options=options)
+        self.save_to_json(file_path, self.manager)
 
     def save_to_json(self, file, manager):
         file_path = self.get_data_path(file)
@@ -72,6 +78,8 @@ class Application:
                 self.current_creature_name = self.sorted_creatures[0].name
             else:
                 self.current_creature_name = None
+            if self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
+                self.active_statblock_image(self.sorted_creatures[self.current_turn])
             self.update_table()
         else:
             return
@@ -112,8 +120,10 @@ class Application:
         if self.tracking_by_name:
             if not self.current_creature_name:
                 self.current_creature_name = self.sorted_creatures[0].name
-
-            self.current_turn = next((i for i, creature in enumerate(self.sorted_creatures) if creature.name == self.current_creature_name), 0)
+            self.current_turn = next(
+                (i for i, creature in enumerate(self.sorted_creatures) if creature.name == self.current_creature_name),
+                0
+            )
 
         self.current_creature = self.sorted_creatures[self.current_turn]
         self.current_name = self.current_creature.name
@@ -129,30 +139,26 @@ class Application:
         }
 
         for row in range(self.table.rowCount()):
-            color = QColor('#333')
             creature_name = self.table.item(row, 1).text()
             creature = self.manager.creatures.get(creature_name)
+            color = QColor('#333')  # Default color
 
-            if row == self.current_turn and creature.curr_hp != 0:
-                color = QColor('#006400')
-            elif row == self.current_turn and creature.curr_hp == 0:
-                color = QColor('red')
-            else:
-                if creature and creature.curr_hp == 0:
-                    color = QColor('darkRed')
+            if row == self.current_turn:
+                color = QColor('red') if creature and creature.curr_hp == 0 else QColor('#006400')
+            elif creature and creature.curr_hp == 0:
+                color = QColor('darkRed')
+
             self.set_row_color(row, color)
-            
-            for col in self.boolean_columns:
-                item = self.table.item(row, col)
-                if item:
-                    creature_name = self.table.item(row, 1).text()
-                    creature = self.manager.creatures.get(creature_name)
-                    if creature:
+
+            if creature:
+                for col in self.boolean_columns:
+                    item = self.table.item(row, col)
+                    if item:
                         attribute_name = self.boolean_attributes.get(col)
                         value = getattr(creature, attribute_name, False) if attribute_name else False
-                        item.setBackground(QColor('red') if not value else QColor('#006400'))
-                        item.setForeground(QColor('red') if not value else QColor('#006400'))
-
+                        item_color = QColor('red') if not value else QColor('#006400')
+                        item.setBackground(item_color)
+                        item.setForeground(item_color)
 
     def set_row_color(self, row, color):
         for column in range(self.table.columnCount()):
@@ -211,6 +217,12 @@ class Application:
         return [field_to_header[field] for field in self.fields]
 
     def adjust_table_size(self):
+        screen_geometry = QApplication.desktop().availableGeometry(self)
+        screen_height = screen_geometry.height()
+        
+        font_size = max(int(screen_height * 0.015), 10) if screen_height < 1440 else 18
+        self.table.setFont(QFont('Arial', font_size))
+
         total_width = self.table.verticalHeader().width()
         for column in range(self.table.columnCount()):
             self.table.resizeColumnToContents(column)
@@ -236,7 +248,6 @@ class Application:
         list_height = self.creature_list.count() * self.creature_list.sizeHintForRow(0)
         list_height += self.creature_list.frameWidth()*2
         self.creature_list.setFixedHeight(list_height)
-        
 
     def populate_monster_list(self):
         self.monster_list.clear()
@@ -332,7 +343,7 @@ class Application:
 
         if self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
             self.active_statblock_image(self.sorted_creatures[self.current_turn])
-
+    
     def prev_turn(self):
         if self.current_turn == 0:
             if self.round_counter > 1:
@@ -359,6 +370,9 @@ class Application:
 
     def get_data_path(self, filename):
         return os.path.join(self.get_parent_dir(), 'data', filename)
+
+    def get_data_dir(self):
+        return os.path.join(self.get_parent_dir(), 'data')
     
     def get_parent_dir(self):
         return os.path.abspath(os.path.join(self.base_dir, '../../'))
@@ -414,31 +428,31 @@ class Application:
     # Image Label
     def update_statblock_image(self):
         selected_items = self.monster_list.selectedItems()
-        extensions = self.get_extensions()
         if selected_items:
             monster_name = selected_items[0].text()
-            for ext in extensions:
-                image_path = self.get_image_path(f'{monster_name}.{ext}')
-                if os.path.exists(image_path):
-                    pixmap = QPixmap(image_path)
-                    self.statblock.setPixmap(pixmap)
-                    self.statblock.resize(pixmap.size())
-                    return
-
-            self.statblock.clear()
+            self.resize_to_fit_screen(monster_name)
         else:
             self.statblock.clear()
 
     def active_statblock_image(self, creature_name):
         base_name = self.get_base_name(creature_name)
-        extensions = self.get_extensions()
+        self.resize_to_fit_screen(base_name)
+
+    def resize_to_fit_screen(self, base_name):
+        self.statblock.clear()
+        screen_geometry = QApplication.desktop().availableGeometry(self)
+        screen_width = screen_geometry.width()
+        screen_height = screen_geometry.height()
+        extensions = self.get_extensions() 
         for ext in extensions:
             image_path = self.get_image_path(f'{base_name}.{ext}')
             if os.path.exists(image_path):
-                pixmap = QPixmap(image_path)
-                self.statblock.setPixmap(pixmap)
-                self.statblock.resize(pixmap.size())
-                return
+                self.pixmap = QPixmap(image_path)
+                h_shift = screen_width / 2440 if screen_width < 2560 else 1
+                v_shift = screen_height / 1440 if screen_height < 1440 else 1
+                new_size = QSize(int(self.pixmap.width() * h_shift), int(self.pixmap.height() * v_shift))
+                scaled_pixmap = self.pixmap.scaled(new_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                self.statblock.setPixmap(scaled_pixmap)
 
     def hide_statblock(self):
         self.statblock.hide()
@@ -452,7 +466,7 @@ class Application:
 
     def damage_selected_creatures(self):
         self.apply_to_selected_creatures(positive=False)
-
+        
     def apply_to_selected_creatures(self, positive: bool):
         try:
             value = int(self.value_input.text())
@@ -509,7 +523,10 @@ class Application:
         dialog = LoadEncounterWindow(self)
         if dialog.exec_() == QDialog.Accepted:
             self.load_file_to_manager(f'{dialog.selected_file}.json', self.manager)
+            if self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
+                self.active_statblock_image(self.sorted_creatures[self.current_turn])
 
+    # WIP
     def update_players(self):
         dialog = UpdatePlayerWindow(self)
         headers = ['Name', 'Max HP', 'AC']
@@ -520,6 +537,5 @@ class Application:
         dialog.player_table.setHorizontalHeaderLabels(headers)
         
         dialog.resize_table()
-
         if dialog.exec_() == QDialog.Accepted:
             pass

@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import (
     QPushButton, QToolBar, QWidget, QGridLayout, 
     QHBoxLayout, QGridLayout, QMainWindow, QTableWidget, 
     QTableWidgetItem, QListWidget, QListWidgetItem, QLineEdit,
-    QAction, QMenuBar
+    QAction, QMenuBar, QDesktopWidget
 )
 from PyQt5.QtCore import Qt
 from app.app import Application
@@ -15,6 +15,8 @@ class InitiativeTracker(QMainWindow, Application):
     def __init__(self):
         super().__init__()
 
+        self.center()
+        self.update_size_constraints()
         self.setWindowTitle("DnD Combat Tracker")
         self.manager = CreatureManager()
         self.initUI()
@@ -45,7 +47,6 @@ class InitiativeTracker(QMainWindow, Application):
         # Table Widget
         self.table_layout = QVBoxLayout()
         self.table = QTableWidget(self)
-        self.table.setFont(QFont('Arial', 18))
         self.table.itemClicked.connect(self.handle_clicked_item)
         self.table.itemChanged.connect(self.manipulate_manager)
         self.table_layout.addLayout(self.label_layout, 0)
@@ -92,6 +93,7 @@ class InitiativeTracker(QMainWindow, Application):
         # Image Window 
         self.stat_layout = QVBoxLayout()
         self.statblock = QLabel(self)
+        self.statblock.setScaledContents(True)
 
         self.list_buttons = QHBoxLayout()
         self.monster_list = QListWidget(self)
@@ -147,6 +149,10 @@ class InitiativeTracker(QMainWindow, Application):
         self.save_action.triggered.connect(self.save_state)
         self.file_menu.addAction(self.save_action)
 
+        self.save_as_action = QAction('Save As', self)
+        self.save_as_action.triggered.connect(self.save_as)
+        self.file_menu.addAction(self.save_as_action)
+
         self.initialize_players_action = QAction("Initialize", self)
         self.initialize_players_action.triggered.connect(self.init_players)
         self.file_menu.addAction(self.initialize_players_action)
@@ -174,3 +180,33 @@ class InitiativeTracker(QMainWindow, Application):
         self.edit_menu.addAction(self.load_enc_button)
         self.edit_menu.addAction(self.add_button)
         self.edit_menu.addAction(self.rmv_button)
+    
+    def update_size_constraints(self):
+        current_screen = QDesktopWidget().screenNumber(self)
+        screen = QDesktopWidget().screenGeometry(current_screen)
+        self.screen_width = screen.width()
+        self.screen_height = screen.height()
+
+        self.setMaximumSize(self.screen_width, self.screen_height)
+
+    def moveEvent(self, event):
+        """Detect when the window moves between screens."""
+        current_screen = QDesktopWidget().screenNumber(self)
+
+        screen = QDesktopWidget().screenGeometry(current_screen)
+        new_width = screen.width()
+        new_height = screen.height()
+
+        if (new_width, new_height) != (self.screen_width, self.screen_height):
+            self.adjust_table_size()
+            self.screen_width = new_width
+            self.screen_height = new_height
+            self.update_size_constraints()
+            self.active_statblock_image(self.sorted_creatures[self.current_turn])
+        super().moveEvent(event)
+
+    def center(self):
+        frame_geometry = self.frameGeometry()
+        screen_center = QDesktopWidget().availableGeometry().center()
+        frame_geometry.moveCenter(screen_center)
+        self.move(frame_geometry.topLeft())
