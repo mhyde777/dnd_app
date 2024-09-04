@@ -74,6 +74,21 @@
             "_object_interaction": false,
             "_notes": "",
             "_status_time": ""
+        },
+        {
+            "_type": 1,
+            "_name": "Draconian Dreadnought",
+            "_init": 12,
+            "_max_hp": 59,
+            "_curr_hp": 59,
+            "_armor_class": 16,
+            "_movement": 0,
+            "_action": false,
+            "_bonus_action": false,
+            "_reaction": false,
+            "_object_interaction": false,
+            "_notes": "",
+            "_status_time": ""
         }
     ],
     "current_turn": 0,
