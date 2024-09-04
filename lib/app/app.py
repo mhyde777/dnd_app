@@ -431,8 +431,8 @@ class Application:
         if selected_items:
             monster_name = selected_items[0].text()
             self.resize_to_fit_screen(monster_name)
-        else:
-            self.statblock.clear()
+        # else:
+        #     self.statblock.clear()
 
     def active_statblock_image(self, creature_name):
         base_name = self.get_base_name(creature_name)
