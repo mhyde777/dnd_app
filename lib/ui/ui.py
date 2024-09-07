@@ -118,10 +118,10 @@ class InitiativeTracker(QMainWindow, Application):
         self.stat_layout.addLayout(self.list_buttons)
         self.stat_layout.addStretch()
        
-        # Widgets allow for alignment
+# Widgets allow for alignment
         self.dam_widget = QWidget()
         self.dam_widget.setLayout(self.dam_layout)
-        
+
         self.table_widget = QWidget()
         self.table_widget.setLayout(self.table_layout)
 
@@ -133,18 +133,18 @@ class InitiativeTracker(QMainWindow, Application):
         self.mainlayout.addStretch()
         self.mainlayout.addWidget(self.stat_widget, alignment=Qt.AlignRight)
 
-        # Menu Bar
+# Menu Bar
         self.menu_bar = QMenuBar(self)
         self.setMenuBar(self.menu_bar)
 
         self.file_menu = self.menu_bar.addMenu("&File")
         self.edit_menu = self.menu_bar.addMenu("&Edit")
-        
-        # Toolbar
+
+# Toolbar
         self.filetool_bar = QToolBar("File", self)
         self.addToolBar(self.filetool_bar)
 
-        # Actions
+# Actions
         self.save_action = QAction("Save", self)
         self.save_action.triggered.connect(self.save_state)
         self.file_menu.addAction(self.save_action)
@@ -176,6 +176,11 @@ class InitiativeTracker(QMainWindow, Application):
         self.update_player_file = QAction('Update Player Stats', self)
         self.update_player_file.triggered.connect(self.update_players)
         self.file_menu.addAction(self.update_player_file)
+
+        self.merge_encounters = QAction('Merge Encounters', self)
+        self.merge_encounters.triggered.connect(self.merge_encounter)
+        self.edit_menu.addAction(self.merge_encounters)
+        self.filetool_bar.addAction(self.merge_encounters)
 
         self.edit_menu.addAction(self.load_enc_button)
         self.edit_menu.addAction(self.add_button)

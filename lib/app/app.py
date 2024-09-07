@@ -16,7 +16,7 @@ from app.creature import (
 )
 from ui.windows import (
     AddCombatantWindow, RemoveCombatantWindow, BuildEncounterWindow, LoadEncounterWindow,
-    UpdatePlayerWindow
+    UpdatePlayerWindow, MergeEncounterWindow
 )
 from app.save_json import GameState
 from app.manager import CreatureManager
@@ -50,7 +50,8 @@ class Application:
     def save_to_json(self, file, manager):
         file_path = self.get_data_path(file)
         state = GameState()
-        state.players = manager.creatures.values()
+        state.players = [creature for creature in manager.creatures.values() if isinstance(creature, Player)]
+        state.monsters = [creature for creature in manager.creatures.values() if isinstance(creature, Monster)]
         state.current_turn = self.current_turn
         state.round_counter = self.round_counter
         state.time_counter = self.time_counter
@@ -58,21 +59,28 @@ class Application:
         with open(file_path, 'w') as f:
             json.dump(save, f, cls=CustomEncoder, indent=4)
 
-    def load_file_to_manager(self, file_name, manager):
+    def load_file_to_manager(self, file_name, manager, monsters=False):
         file_path = self.get_data_path(file_name)
         if os.path.exists(file_path):
             with open(file_path, 'r') as file:
                 state = json.load(file, object_hook=self.custom_decoder)
 
-            manager.creatures.clear()
-            players = state.get('players', [])
-            monsters = state.get('monsters', [])
-            for creature in players + monsters:
-                manager.add_creature(creature)
+            if monsters:
+                monsters = state.get('monsters', [])
+                for creature in monsters:
+                    manager.add_creature(creature)
 
-            self.current_turn = state['current_turn']
-            self.round_counter = state['round_counter']
-            self.time_counter = state['time_counter']
+            else:
+                manager.creatures.clear()
+                players = state.get('players', [])
+                monsters = state.get('monsters', [])
+                for creature in players + monsters:
+                    manager.add_creature(creature)
+
+                self.current_turn = state['current_turn']
+                self.round_counter = state['round_counter']
+                self.time_counter = state['time_counter']
+
             self.sorted_creatures = list(manager.creatures.values())
             if self.sorted_creatures:
                 self.current_creature_name = self.sorted_creatures[0].name
@@ -431,15 +439,15 @@ class Application:
         if selected_items:
             monster_name = selected_items[0].text()
             self.resize_to_fit_screen(monster_name)
-        # else:
-        #     self.statblock.clear()
+        else:
+            self.statblock.clear()
 
     def active_statblock_image(self, creature_name):
         base_name = self.get_base_name(creature_name)
         self.resize_to_fit_screen(base_name)
 
     def resize_to_fit_screen(self, base_name):
-        self.statblock.clear()
+        # self.statblock.clear()
         screen_geometry = QApplication.desktop().availableGeometry(self)
         screen_width = screen_geometry.width()
         screen_height = screen_geometry.height()
@@ -508,7 +516,8 @@ class Application:
                 )
                 encounter_manager.add_creature(creature)
             state = GameState()
-            state.players = encounter_manager.creatures.values()
+            state.players = [creature for creature in encounter_manager.creatures.values() if isinstance(creature, Player)]
+            state.monsters = [creature for creature in encounter_manager.creatures.values() if isinstance(creature, Monster)]
             state.current_turn = 0
             state.round_counter = 1
             state.time_counter = 0
@@ -526,6 +535,12 @@ class Application:
             if self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
                 self.active_statblock_image(self.sorted_creatures[self.current_turn])
 
+    def merge_encounter(self):
+        dialog = MergeEncounterWindow(self)
+        if dialog.exec_() == QDialog.Accepted:
+            self.load_file_to_manager(f'{dialog.selected_file}.json', self.manager, monsters=True)
+            if self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
+                self.active_statblock_image(self.sorted_creatures[self.current_turn])
     # WIP
     def update_players(self):
         dialog = UpdatePlayerWindow(self)
