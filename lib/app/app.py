@@ -228,7 +228,7 @@ class Application:
         screen_geometry = QApplication.desktop().availableGeometry(self)
         screen_height = screen_geometry.height()
         
-        font_size = max(int(screen_height * 0.015), 10) if screen_height < 1440 else 18
+        font_size = max(int(screen_height * 0.012), 10) if screen_height < 1440 else 18
         self.table.setFont(QFont('Arial', font_size))
 
         total_width = self.table.verticalHeader().width()
