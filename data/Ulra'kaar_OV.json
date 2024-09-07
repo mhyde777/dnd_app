@@ -74,7 +74,8 @@
             "_object_interaction": false,
             "_notes": "",
             "_status_time": ""
-        }],
+        }
+    ],
     "monsters": [
         {
             "_type": 1,
@@ -138,40 +139,10 @@
         },
         {
             "_type": 1,
-            "_name": "Bandit 1",
-            "_init": 3,
-            "_max_hp": 11,
-            "_curr_hp": 11,
-            "_armor_class": 12,
-            "_movement": 0,
-            "_action": false,
-            "_bonus_action": false,
-            "_reaction": false,
-            "_object_interaction": false,
-            "_notes": "",
-            "_status_time": ""
-        },
-        {
-            "_type": 1,
-            "_name": "Bandit 2",
-            "_init": 3,
-            "_max_hp": 11,
-            "_curr_hp": 11,
-            "_armor_class": 12,
-            "_movement": 0,
-            "_action": false,
-            "_bonus_action": false,
-            "_reaction": false,
-            "_object_interaction": false,
-            "_notes": "",
-            "_status_time": ""
-        },
-        {
-            "_type": 1,
-            "_name": "Bandit 3",
-            "_init": 3,
-            "_max_hp": 11,
-            "_curr_hp": 11,
+            "_name": "Healer",
+            "_init": 10,
+            "_max_hp": 18,
+            "_curr_hp": 18,
             "_armor_class": 12,
             "_movement": 0,
             "_action": false,
@@ -240,9 +211,54 @@
             "_object_interaction": false,
             "_notes": "",
             "_status_time": ""
+        },
+        {
+            "_type": 1,
+            "_name": "Bandit 1",
+            "_init": 3,
+            "_max_hp": 11,
+            "_curr_hp": 11,
+            "_armor_class": 12,
+            "_movement": 0,
+            "_action": false,
+            "_bonus_action": false,
+            "_reaction": false,
+            "_object_interaction": false,
+            "_notes": "",
+            "_status_time": ""
+        },
+        {
+            "_type": 1,
+            "_name": "Bandit 2",
+            "_init": 3,
+            "_max_hp": 11,
+            "_curr_hp": 11,
+            "_armor_class": 12,
+            "_movement": 0,
+            "_action": false,
+            "_bonus_action": false,
+            "_reaction": false,
+            "_object_interaction": false,
+            "_notes": "",
+            "_status_time": ""
+        },
+        {
+            "_type": 1,
+            "_name": "Bandit 3",
+            "_init": 3,
+            "_max_hp": 11,
+            "_curr_hp": 11,
+            "_armor_class": 12,
+            "_movement": 0,
+            "_action": false,
+            "_bonus_action": false,
+            "_reaction": false,
+            "_object_interaction": false,
+            "_notes": "",
+            "_status_time": ""
         }
     ],
-    "current_turn": 0,
+    "current_turn": 12,
     "round_counter": 1,
     "time_counter": 0
 }
