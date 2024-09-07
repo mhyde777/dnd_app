@@ -74,13 +74,15 @@
             "_object_interaction": false,
             "_notes": "",
             "_status_time": ""
-        },
+        }
+    ],
+    "monsters": [
         {
             "_type": 1,
-            "_name": "Eala",
-            "_init": 9,
-            "_max_hp": 38,
-            "_curr_hp": 38,
+            "_name": "Basilisk",
+            "_init": 18,
+            "_max_hp": 55,
+            "_curr_hp": 55,
             "_armor_class": 15,
             "_movement": 0,
             "_action": false,
@@ -92,10 +94,10 @@
         },
         {
             "_type": 1,
-            "_name": "Basilisk",
-            "_init": 18,
-            "_max_hp": 55,
-            "_curr_hp": 55,
+            "_name": "Eala",
+            "_init": 9,
+            "_max_hp": 38,
+            "_curr_hp": 38,
             "_armor_class": 15,
             "_movement": 0,
             "_action": false,
