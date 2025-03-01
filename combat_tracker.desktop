@@ -1,0 +1,11 @@
+[Desktop Entry]
+
+Type=Application
+
+Name=Combat Tracker
+
+Path=/opt/combat_tracker
+
+Exec=/opt/combat_tracker/combat_tracker
+
+Icon=combat_tracker

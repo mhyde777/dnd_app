@@ -1,0 +1,6 @@
+-C package
+-s dir
+-t deb
+-n 'combat_tracker'
+-v 0.1.0
+-p combat_tracker.deb
