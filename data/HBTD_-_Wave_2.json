@@ -79,36 +79,6 @@
     "monsters": [
         {
             "_type": 1,
-            "_name": "Zombie 1",
-            "_init": 7,
-            "_max_hp": 15,
-            "_curr_hp": 15,
-            "_armor_class": 8,
-            "_movement": 0,
-            "_action": false,
-            "_bonus_action": false,
-            "_reaction": false,
-            "_object_interaction": false,
-            "_notes": "",
-            "_status_time": ""
-        },
-        {
-            "_type": 1,
-            "_name": "Zombie 2",
-            "_init": 7,
-            "_max_hp": 15,
-            "_curr_hp": 15,
-            "_armor_class": 8,
-            "_movement": 0,
-            "_action": false,
-            "_bonus_action": false,
-            "_reaction": false,
-            "_object_interaction": false,
-            "_notes": "",
-            "_status_time": ""
-        },
-        {
-            "_type": 1,
             "_name": "Skeleton 1",
             "_init": 17,
             "_max_hp": 13,
@@ -169,6 +139,66 @@
         },
         {
             "_type": 1,
+            "_name": "Skin Bat 1",
+            "_init": 13,
+            "_max_hp": 28,
+            "_curr_hp": 28,
+            "_armor_class": 13,
+            "_movement": 0,
+            "_action": false,
+            "_bonus_action": false,
+            "_reaction": false,
+            "_object_interaction": false,
+            "_notes": "",
+            "_status_time": ""
+        },
+        {
+            "_type": 1,
+            "_name": "Skin Bat 2",
+            "_init": 13,
+            "_max_hp": 28,
+            "_curr_hp": 28,
+            "_armor_class": 13,
+            "_movement": 0,
+            "_action": false,
+            "_bonus_action": false,
+            "_reaction": false,
+            "_object_interaction": false,
+            "_notes": "",
+            "_status_time": ""
+        },
+        {
+            "_type": 1,
+            "_name": "Zombie 1",
+            "_init": 7,
+            "_max_hp": 15,
+            "_curr_hp": 15,
+            "_armor_class": 8,
+            "_movement": 0,
+            "_action": false,
+            "_bonus_action": false,
+            "_reaction": false,
+            "_object_interaction": false,
+            "_notes": "",
+            "_status_time": ""
+        },
+        {
+            "_type": 1,
+            "_name": "Zombie 2",
+            "_init": 7,
+            "_max_hp": 15,
+            "_curr_hp": 15,
+            "_armor_class": 8,
+            "_movement": 0,
+            "_action": false,
+            "_bonus_action": false,
+            "_reaction": false,
+            "_object_interaction": false,
+            "_notes": "",
+            "_status_time": ""
+        },
+        {
+            "_type": 1,
             "_name": "Swarm of Crawling Claws 1",
             "_init": 4,
             "_max_hp": 49,
@@ -213,7 +243,7 @@
             "_status_time": ""
         }
     ],
-    "current_turn": 0,
+    "current_turn": 11,
     "round_counter": 1,
     "time_counter": 0
 }
