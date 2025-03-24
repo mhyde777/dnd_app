@@ -279,5 +279,5 @@ class Player(I_Creature):
             _reaction=reaction,
             _object_interaction=object_interaction,
             _notes=notes,
-            _status_time=status_time
+            _status_time=status_time,
         )

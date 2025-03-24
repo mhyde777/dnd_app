@@ -2,7 +2,7 @@ from typing import List, Dict, Any
 import json, os, re
 
 from PyQt5.QtWidgets import(
-   QDialog, QMessageBox, QTableWidgetItem, QDesktopWidget,
+   QDialog, QMessageBox, QTableWidgetItem,
     QApplication, QFileDialog
 ) 
 from PyQt5.QtGui import (
