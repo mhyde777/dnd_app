@@ -99,25 +99,56 @@ class Application:
 
     # UI Manipulation
     def update_table(self):
+        self.table.setUpdatesEnabled(False)
         headers = self.get_headers_from_dataclass()
         self.manager.sort_creatures()
         self.table.setRowCount(len(self.manager.creatures))
         self.table.setColumnCount(len(headers))
         self.table.setHorizontalHeaderLabels(headers)
         self.table.setColumnHidden(0, True)
-        self.table.setWordWrap(True)
+        # self.table.setWordWrap(True)
         for i, name in enumerate(self.manager.creatures.keys()):
             for j, attr in enumerate(self.manager.creatures[name].__dataclass_fields__):
-                value = getattr(self.manager.creatures[name], attr, None)
-                item = QTableWidgetItem(str(value))
+                new_value = getattr(self.manager.creatures[name], attr, None)
+                item = self.table.item(i, j)
+
+                if item is None:
+                    item = QTableWidgetItem(str(new_value))
+                    self.table.setItem(i, j, item)
+                elif item.text() != str(new_value):
+                    item.setText(str(new_value))
+
                 if j in self.boolean_columns:
                     item.setFlags(item.flags() & ~Qt.ItemIsSelectable)
                     item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-                    item.setCheckState(Qt.Checked if value else Qt.Unchecked)
+                    item.setCheckState(Qt.Checked if new_value else Qt.Unchecked)
                 self.table.setItem(i, j, item)
         self.pop_lists()
         self.update_active_init()
         self.adjust_table_size()
+        self.table.setUpdatesEnabled(True)
+
+    def update_creature_row(self, creature_name):
+        if creature_name not in self.manager.creatures:
+            return
+
+        creature = self.manager.creatures[creature_name]
+        row = list(self.manager.creatures.key()).index(creature_name)
+
+        for j, attr in enumerate(creature.__dataclass_fields__):
+            new_value = getattr(creature, attr, None)
+            item = self.table.item(row, j)
+
+            if item is None:
+                item = QTableWidgetItem(str(new_value))
+                self.table.setItem(row, j, item)
+            elif item.text() != str(new_value):
+                item.setText(str(new_value))
+
+            if j in self.boolean_columns:
+                item.setFlags(item.flags() & ~Qt.ItemIsSelectable)
+                item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+                item.setCheckState(Qt.Checked if new_value else Qt.Unchecked)
 
     def update_active_init(self):
         self.sorted_creatures = list(self.manager.creatures.values())
