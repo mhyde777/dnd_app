@@ -8,7 +8,7 @@ pyqt5 = "*"
 pandas = "*"
 pyqtdarktheme = "*"
 # dnd-app-lib = {file = "lib", editable = true}
-dnd-app-lib = {file = "lib", editable = true}
+dnd-app-lib = {file = ".", editable = true}
 
 [dev-packages]
 
