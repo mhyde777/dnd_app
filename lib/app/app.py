@@ -23,6 +23,7 @@ from app.manager import CreatureManager
 from app.gist_utils import load_gist_content, create_or_update_gist
 from ui.token_prompt import TokenPromptWindow
 from app.config import get_github_token
+from ui.load_encounter_window import LoadEncounterWindow  # if not already imported
 
 class Application:
 
@@ -32,10 +33,7 @@ class Application:
         self.time_counter = 0
         self.tracking_by_name = False
         self.base_dir = os.path.dirname(__file__)
-
         self.sorted_creatures = []
-        # self.current_creature_name = None
-
         # ✅ Used for setting booleans in next_turn()
         self.boolean_fields = {
             '_action': 'set_creature_action',
@@ -43,8 +41,6 @@ class Application:
             '_reaction': 'set_creature_reaction',
             '_object_interaction': 'set_creature_object_interaction'
         }
-
-        # ⛔ Check for GitHub token
         if not get_github_token():
             prompt = TokenPromptWindow()
             if prompt.exec_() != QDialog.Accepted:
@@ -60,11 +56,14 @@ class Application:
         index = load_gist_index()
         gist_id = index.get(filename)
 
+        print(f"[DEBUG] Looking for Gist ID for {filename}: {gist_id}")
+
         if gist_id:
             raw_url = f"https://gist.githubusercontent.com/{self.get_github_username()}/{gist_id}/raw/{filename}"
+            print(f"[DEBUG] Found Gist ID. Loading file from Gist: {raw_url}")
             self.load_file_to_manager(raw_url, self.manager)
         else:
-            # print("[DEBUG] No gist ID found for players.json — falling back to local.")
+            print("[DEBUG] No Gist ID found for players.json — falling back to local.")
             self.load_file_to_manager(filename, self.manager)
 
         self.table_model.set_fields_from_sample()
@@ -141,35 +140,30 @@ class Application:
             with open(file_path, 'r') as file:
                 state = json.load(file, object_hook=self.custom_decoder)
 
-        if monsters and not merge:
+        if merge:
+            self.init_tracking_mode(True)  # Track by name during merge
+
+            # Only add monsters during merge (don't overwrite players)
             monsters = state.get('monsters', [])
             for creature in monsters:
                 manager.add_creature(creature)
-
-        if not merge:
-            manager.creatures.clear()
+            manager.sort_creatures()
+        else:
             players = state.get('players', [])
             monsters = state.get('monsters', [])
             for creature in players + monsters:
                 manager.add_creature(creature)
-
-            # Now call the sort_creatures method to ensure they are ordered by initiative
-            manager.sort_creatures()
-
-            # Set current turn, round, and time counters
             self.current_turn = state.get('current_turn', 0)
             self.round_counter = state.get('round_counter', 1)
             self.time_counter = state.get('time_counter', 0)
+            manager.sort_creatures()
 
-        # After sorting, make sure current_turn is within bounds
-        self.current_turn = min(self.current_turn, len(manager.creatures) - 1)
-        self.current_creature_name = list(manager.creatures.values())[self.current_turn].name if manager.creatures else None
+        # Update active creature after sorting
+        # self.update_active_init()
 
-        if manager.creatures and self.current_creature_name:
-            self.update_active_init()
-
+        # Update the table and the creature lists
         self.update_table()
-        self.pop_lists()
+        # self.pop_lists()
 
     def custom_decoder(self, data: Dict[str, Any]) -> Any:
         if '_type' in data:
@@ -192,30 +186,10 @@ class Application:
         self.table_model.refresh()  # This now syncs the creature_names list too
         self.table.setColumnHidden(0, True)
         self.adjust_table_size()
+        self.pop_lists()
+        self.update_active_init()
 
     # UI Manipulation
-    # def update_table(self):
-    #     self.manager.sort_creatures()
-    #     if not self.table_model.fields:
-    #         self.table_model.set_fields_from_sample()
-    #     self.table_model.refresh()
-    #     self.pop_lists()
-    #     self.update_active_init()
-    #
-    #     if '_type' in self.table_model.fields:
-    #         type_index = self.table_model.fields.index('_type')
-    #         self.table.setColumnHidden(type_index, True)
-    #         # print(f"✅ Column '_type' at index {type_index} was hidden.")
-    #
-    #     self.adjust_table_size()
-    #
-    #     # Hide Creature Type column if present
-    #     if '_type' in self.table_model.fields:
-    #         type_index = self.table_model.fields.index('_type')
-    #         self.table.setColumnHidden(type_index, True)
-    #
-    #     self.table.setColumnHidden(type_index, True)
-
     def update_active_init(self):
         self.sorted_creatures = list(self.manager.creatures.values())
         if not self.sorted_creatures:
@@ -223,17 +197,15 @@ class Application:
             return
 
         if self.tracking_by_name:
+            # Check if current_creature_name is set, otherwise use the first creature in the list
             if not self.current_creature_name and self.sorted_creatures:
                 self.current_creature_name = self.sorted_creatures[0].name
 
-            # Only update current_turn if it wasn't already set
-            if self.current_creature_name:
-                matched_index = next(
-                    (i for i, creature in enumerate(self.sorted_creatures) if creature.name == self.current_creature_name),
-                    None
-                )
-                if matched_index is not None:
-                    self.current_turn = matched_index
+            # Find the correct turn by matching the creature's name
+            self.current_turn = next(
+                (i for i, creature in enumerate(self.sorted_creatures) if creature.name == self.current_creature_name),
+                0  # Default to the first creature if no match
+            )
 
         self.current_creature = self.sorted_creatures[self.current_turn]
         self.current_name = self.current_creature.name
@@ -245,12 +217,6 @@ class Application:
         # Let the model know which creature is active
         if hasattr(self.table_model, "set_active_creature"):
             self.table_model.set_active_creature(self.current_name)
-
-    def set_row_color(self, row, color):
-        for column in range(self.table.columnCount()):
-            item = None
-            if item:
-                item.setBackground(color)
     
     def init_tracking_mode(self, by_name):
         self.tracking_by_name = by_name
@@ -348,7 +314,6 @@ class Application:
                     armor_class=creature_data['AC']
                 )
                 self.manager.add_creature(creature)
-            self.pop_lists()
             self.update_table()
         self.init_tracking_mode(False)
 
@@ -360,7 +325,6 @@ class Application:
             for name in selected_creatures:
                 self.manager.rm_creatures(name)
             self.update_table()
-            self.pop_lists()
             if self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
                 self.active_statblock_image(self.sorted_creatures[self.current_turn])
             else:
@@ -443,11 +407,13 @@ class Application:
     def manipulate_manager(self, item):
         row = item.row()
         col = item.column()
+        
         try:
-            creature_name = None.data(0)
+            creature_name = self.table.item(row, 1).data(0)  # Get creature name based on the row
         except:
             return
-        # TODO: How do I do this without mapping?
+
+        # Map columns to methods
         self.column_method_mapping = {
             2: (self.manager.set_creature_init, int),
             3: (self.manager.set_creature_max_hp, int),
@@ -462,6 +428,7 @@ class Application:
             12: (self.manager.set_creature_status_time, int)
         }
 
+        # Handle value change
         if creature_name in self.manager.creatures:
             if col in self.column_method_mapping:
                 method, data_type = self.column_method_mapping[col]
@@ -470,13 +437,16 @@ class Application:
                         value = ""
                     else:
                         value = self.get_value(item, data_type)
-                    method(creature_name, value)
+                    method(creature_name, value)  # Update the creature's data
                 except ValueError:
                     return
-        self.adjust_table_size()
-        self.table.blockSignals(True)
-        self.update_table()
-        self.table.blockSignals(False)
+        
+        # Re-sort the creatures after updating any value
+        self.manager.sort_creatures()
+
+        # Refresh the model and table view
+        self.table_model.refresh()  # Update the model
+        self.update_table()  # Refresh the table view
 
     def get_value(self, item, data_type):
         text = item.text()
@@ -547,7 +517,6 @@ class Application:
                     creature.curr_hp -= value
                     creature.curr_hp = max(0, creature.curr_hp)
         self.value_input.clear()
-        self.pop_lists()
         self.update_table()
 
     # Encounter Builder
@@ -593,38 +562,7 @@ class Application:
                 QMessageBox.information(self, "Saved to Gist", f"Gist created:\n{gist_url}\n\nRaw URL:\n{raw_url}")
             except Exception as e:
                 QMessageBox.warning(self, "Error", f"Failed to save gist:\n{e}")
-    
-
-    # def save_encounter(self):
-    #     dialog = BuildEncounterWindow(self)
-    #     if dialog.exec_() == QDialog.Accepted:
-    #         data = dialog.get_data()
-    #         encounter_manager = CreatureManager()
-    #         self.load_file_to_manager('players.json', encounter_manager)
-    #         for creature_data in data:
-    #             creature = Monster(
-    #                 name=creature_data['Name'],
-    #                 init=creature_data['Init'],
-    #                 max_hp=creature_data['HP'],
-    #                 curr_hp=creature_data['HP'],
-    #                 armor_class=creature_data['AC']
-    #             )
-    #             encounter_manager.add_creature(creature)
-    #         state = GameState()
-    #         state.players = [creature for creature in encounter_manager.creatures.values() if isinstance(creature, Player)]
-    #         state.monsters = [creature for creature in encounter_manager.creatures.values() if isinstance(creature, Monster)]
-    #         state.current_turn = 0
-    #         state.round_counter = 1
-    #         state.time_counter = 0
-    #         save = state.to_dict()
-    #         filename = dialog.filename_input.text().strip()
-    #         filename = filename.replace(' ', '_')
-    #         file_path = self.get_data_path(f"{filename}.json")
-    #         with open(file_path, 'w') as f:
-    #             json.dump(save, f, cls=CustomEncoder, indent=4)
-
     def load_encounter(self):
-        from ui.load_encounter_window import LoadEncounterWindow  # if not already imported
         dialog = LoadEncounterWindow(self)
         if dialog.exec_() == QDialog.Accepted and dialog.selected_file:
             self.load_file_to_manager(dialog.selected_file, self.manager)
@@ -632,40 +570,15 @@ class Application:
             if self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
                 self.active_statblock_image(self.sorted_creatures[self.current_turn])
 
-    # def load_encounter(self):
-    #     dialog = LoadEncounterWindow(self)
-    #     if dialog.exec_() == QDialog.Accepted:
-    #         self.load_file_to_manager(f'{dialog.selected_file}.json', self.manager)
-    #         if self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
-    #             self.active_statblock_image(self.sorted_creatures[self.current_turn])
-
     def merge_encounter(self):
         dialog = LoadEncounterWindow(self)
-        if dialog.exec_() == QDialog.Accepted:
-            selected_file = dialog.get_selected_file()  # Get the selected file with .json
-            print(f"[DEBUG] Merging file: {selected_file}")  # Debugging statement
+        if dialog.exec_() == QDialog.Accepted and dialog.selected_file:
+            # Pass merge=True to avoid overwriting players and the encounter state
+            self.load_file_to_manager(dialog.selected_file, self.manager, merge=True)
 
-            # Load the Gist index and check if the file is present
-            from app.gist_utils import load_gist_index
-            index = load_gist_index()
-            
-            print(f"[DEBUG] Gist index loaded: {index}")  # Print the Gist index to check its contents
-
-            # Look for the selected file's Gist ID in the index
-            gist_id = index.get(selected_file)
-
-            if gist_id:
-                # Load the encounter from Gist using the raw URL
-                raw_url = f"https://gist.githubusercontent.com/{self.get_github_username()}/{gist_id}/raw/{selected_file}"
-                print(f"[DEBUG] Loading encounter from Gist: {raw_url}")
-                self.load_file_to_manager(raw_url, self.manager, monsters=True, merge=True)
-            else:
-                # Fallback to loading from local files if no Gist is found
-                print(f"[DEBUG] No Gist ID found for {selected_file} — falling back to local.")
-                self.load_file_to_manager(selected_file, self.manager, monsters=True, merge=True)
-
-        # Ensure the table is updated after the merge
-        self.update_table()
+            # Update the statblock for the current creature (if it's a monster)
+            if self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
+                self.active_statblock_image(self.sorted_creatures[self.current_turn])
 
     # WIP
     def update_players(self):
