@@ -1,12 +1,12 @@
-from typing import List, Dict, Any
+from typing import Dict, Any
 import json, os, re
 
 from PyQt5.QtWidgets import(
-   QDialog, QMessageBox, QTableWidgetItem,
-    QApplication, QFileDialog
+   QDialog, QMessageBox,
+    QApplication, QFileDialog, QSizePolicy
 ) 
 from PyQt5.QtGui import (
-        QColor, QPixmap, QFont
+        QPixmap, QFont
 )
 from PyQt5.QtCore import (
     Qt, QSize
@@ -20,6 +20,7 @@ from ui.windows import (
 )
 from app.save_json import GameState
 from app.manager import CreatureManager
+from app.gist_utils import load_gist_content, create_or_update_gist
 
 class Application:
 
@@ -28,16 +29,19 @@ class Application:
         self.round_counter = 1
         self.time_counter = 0
         self.tracking_by_name = False
-        self.boolean_columns = {7, 8, 9, 10}
         self.base_dir = os.path.dirname(__file__)
 
     # JSON Manipulation
     def init_players(self):
         self.load_file_to_manager("players.json", self.manager)
+        # print("Creatures loaded:", list(self.manager.creatures.keys()))
+        # print("Sample creature:", next(iter(self.manager.creatures.values())).__dict__)
+        # self.table_model.set_fields_from_sample()
         self.statblock.clear()
 
     def load_state(self):
-            self.load_file_to_manager("last_state.json", self.manager)
+        self.load_file_to_manager("last_state.json", self.manager)
+        self.table_model.set_fields_from_sample()   
     
     def save_state(self):
         self.save_to_json('last_state.json', self.manager)
@@ -60,38 +64,42 @@ class Application:
             json.dump(save, f, cls=CustomEncoder, indent=4)
 
     def load_file_to_manager(self, file_name, manager, monsters=False):
-        file_path = self.get_data_path(file_name)
-        if os.path.exists(file_path):
+        if file_name.startswith("http"):
+            # Load from Gist
+            state = load_gist_content(file_name)
+        else:
+            # Load from local file
+            file_path = self.get_data_path(file_name)
+            if not os.path.exists(file_path):
+                return
             with open(file_path, 'r') as file:
                 state = json.load(file, object_hook=self.custom_decoder)
 
-            if monsters:
-                monsters = state.get('monsters', [])
-                for creature in monsters:
-                    manager.add_creature(creature)
-
-            else:
-                manager.creatures.clear()
-                players = state.get('players', [])
-                monsters = state.get('monsters', [])
-                for creature in players + monsters:
-                    manager.add_creature(creature)
-
-                self.current_turn = state['current_turn']
-                self.round_counter = state['round_counter']
-                self.time_counter = state['time_counter']
-
-            self.sorted_creatures = list(manager.creatures.values())
-            if self.sorted_creatures:
-                self.current_creature_name = self.sorted_creatures[0].name
-            else:
-                self.current_creature_name = None
-            if self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
-                self.active_statblock_image(self.sorted_creatures[self.current_turn])
-            self.update_table()
+        if monsters:
+            monsters = state.get('monsters', [])
+            for creature in monsters:
+                manager.add_creature(creature)
         else:
-            return
-    
+            manager.creatures.clear()
+            players = state.get('players', [])
+            monsters = state.get('monsters', [])
+            for creature in players + monsters:
+                manager.add_creature(creature)
+
+            self.current_turn = state['current_turn']
+            self.round_counter = state['round_counter']
+            self.time_counter = state['time_counter']
+
+        self.sorted_creatures = list(manager.creatures.values())
+        self.current_creature_name = self.sorted_creatures[0].name if self.sorted_creatures else None
+
+        if self.sorted_creatures and self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
+            self.active_statblock_image(self.sorted_creatures[self.current_turn])
+
+        self.table_model.set_fields_from_sample()
+        self.table_model.refresh()  # <-- Add this!
+        self.update_table()
+
     def custom_decoder(self, data: Dict[str, Any]) -> Any:
         if '_type' in data:
             return I_Creature.from_dict(data)
@@ -99,56 +107,24 @@ class Application:
 
     # UI Manipulation
     def update_table(self):
-        self.table.setUpdatesEnabled(False)
-        headers = self.get_headers_from_dataclass()
         self.manager.sort_creatures()
-        self.table.setRowCount(len(self.manager.creatures))
-        self.table.setColumnCount(len(headers))
-        self.table.setHorizontalHeaderLabels(headers)
-        self.table.setColumnHidden(0, True)
-        # self.table.setWordWrap(True)
-        for i, name in enumerate(self.manager.creatures.keys()):
-            for j, attr in enumerate(self.manager.creatures[name].__dataclass_fields__):
-                new_value = getattr(self.manager.creatures[name], attr, None)
-                item = self.table.item(i, j)
-
-                if item is None:
-                    item = QTableWidgetItem(str(new_value))
-                    self.table.setItem(i, j, item)
-                elif item.text() != str(new_value):
-                    item.setText(str(new_value))
-
-                if j in self.boolean_columns:
-                    item.setFlags(item.flags() & ~Qt.ItemIsSelectable)
-                    item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-                    item.setCheckState(Qt.Checked if new_value else Qt.Unchecked)
-                self.table.setItem(i, j, item)
+        self.table_model.refresh()
         self.pop_lists()
         self.update_active_init()
+
+        if '_type' in self.table_model.fields:
+            type_index = self.table_model.fields.index('_type')
+            self.table.setColumnHidden(type_index, True)
+            print(f"✅ Column '_type' at index {type_index} was hidden.")
+
         self.adjust_table_size()
-        self.table.setUpdatesEnabled(True)
 
-    def update_creature_row(self, creature_name):
-        if creature_name not in self.manager.creatures:
-            return
+        # Hide Creature Type column if present
+        if '_type' in self.table_model.fields:
+            type_index = self.table_model.fields.index('_type')
+            self.table.setColumnHidden(type_index, True)
 
-        creature = self.manager.creatures[creature_name]
-        row = list(self.manager.creatures.key()).index(creature_name)
-
-        for j, attr in enumerate(creature.__dataclass_fields__):
-            new_value = getattr(creature, attr, None)
-            item = self.table.item(row, j)
-
-            if item is None:
-                item = QTableWidgetItem(str(new_value))
-                self.table.setItem(row, j, item)
-            elif item.text() != str(new_value):
-                item.setText(str(new_value))
-
-            if j in self.boolean_columns:
-                item.setFlags(item.flags() & ~Qt.ItemIsSelectable)
-                item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-                item.setCheckState(Qt.Checked if new_value else Qt.Unchecked)
+        self.table.setColumnHidden(type_index, True)
 
     def update_active_init(self):
         self.sorted_creatures = list(self.manager.creatures.values())
@@ -166,114 +142,47 @@ class Application:
 
         self.current_creature = self.sorted_creatures[self.current_turn]
         self.current_name = self.current_creature.name
+
         self.active_init_label.setText(f"Active: {self.current_name}")
-        self.round_counter_label.setText(f'Round: {self.round_counter}')
-        self.time_counter_label.setText(f'Time: {self.time_counter} seconds')
+        self.round_counter_label.setText(f"Round: {self.round_counter}")
+        self.time_counter_label.setText(f"Time: {self.time_counter} seconds")
 
-        self.boolean_attributes = {
-            7: 'action',
-            8: 'bonus_action',
-            9: 'reaction',
-            10: 'object_interaction'
-        }
-
-        for row in range(self.table.rowCount()):
-            creature_name = self.table.item(row, 1).text()
-            creature = self.manager.creatures.get(creature_name)
-            color = QColor('#333')  # Default color
-
-            if row == self.current_turn:
-                color = QColor('red') if creature and creature.curr_hp == 0 else QColor('#006400')
-            elif creature and creature.curr_hp == 0:
-                color = QColor('darkRed')
-
-            self.set_row_color(row, color)
-
-            if creature:
-                for col in self.boolean_columns:
-                    item = self.table.item(row, col)
-                    if item:
-                        attribute_name = self.boolean_attributes.get(col)
-                        value = getattr(creature, attribute_name, False) if attribute_name else False
-                        item_color = QColor('red') if not value else QColor('#006400')
-                        item.setBackground(item_color)
-                        item.setForeground(item_color)
+        # Let the model know which creature is active
+        if hasattr(self.table_model, "set_active_creature"):
+            self.table_model.set_active_creature(self.current_name)
 
     def set_row_color(self, row, color):
         for column in range(self.table.columnCount()):
-            item = self.table.item(row, column)
+            item = None
             if item:
                 item.setBackground(color)
     
     def init_tracking_mode(self, by_name):
         self.tracking_by_name = by_name
-    
-    def toggle_bool_value(self, row, col):
-        if col not in self.boolean_columns:
-                    return
-
-        item = self.table.item(row, col)
-        if item:
-            current_text = item.text()
-            new_text = "True" if current_text == "False" else "False"
-            item.setText(new_text)
-            creature_name = self.table.item(row, 1).text()
-            if creature_name in self.manager.creatures:
-                # TODO: How the fuck do I do this without mapping?
-                method_mapping = {
-                    7: self.manager.set_creature_action,
-                    8: self.manager.set_creature_bonus_action,
-                    9: self.manager.set_creature_reaction,
-                    10: self.manager.set_creature_object_interaction
-                }
-                if col in method_mapping:
-                    method = method_mapping[col]
-                    method(creature_name, new_text == 'True')
-        self.update_active_init()
-
-    def handle_clicked_item(self, item: QTableWidgetItem):
-        row = item.row()
-        col = item.column()
-        self.toggle_bool_value(row, col)
-
-    def get_headers_from_dataclass(self) -> List[str]:
-        field_to_header = {
-            '_type': 'CreatureType',
-            '_name': 'Name',
-            '_init': 'Init',
-            '_max_hp': 'Max HP',
-            '_curr_hp': 'Curr HP',
-            '_armor_class': 'AC',
-            '_movement': 'M',
-            '_action': 'A',
-            '_bonus_action': 'BA',
-            '_reaction': 'R',
-            '_object_interaction': 'OI',
-            '_notes': 'Notes',
-            '_status_time': 'Status Time'
-        }
-        self.fields = [field.name for field in Player.__dataclass_fields__.values() if field.name in field_to_header]
-        return [field_to_header[field] for field in self.fields]
 
     def adjust_table_size(self):
         screen_geometry = QApplication.desktop().availableGeometry(self)
         screen_height = screen_geometry.height()
-        
+
         font_size = max(int(screen_height * 0.012), 10) if screen_height < 1440 else 18
         self.table.setFont(QFont('Arial', font_size))
 
+        self.table.resizeColumnsToContents()
+        self.table.resizeRowsToContents()
+
         total_width = self.table.verticalHeader().width()
-        for column in range(self.table.columnCount()):
-            self.table.resizeColumnToContents(column)
-            total_width += self.table.columnWidth(column)
+        for col in range(self.table.model().columnCount()):
+            if not self.table.isColumnHidden(col):
+                total_width += self.table.columnWidth(col)
 
         total_height = self.table.horizontalHeader().height()
-        for row in range(self.table.rowCount()):
-            self.table.resizeRowToContents(row)
+        for row in range(self.table.model().rowCount()):
             total_height += self.table.rowHeight(row)
 
-        self.table.setFixedWidth(total_width + self.table.frameWidth() * 2)
-        self.table.setFixedHeight(total_height + self.table.frameWidth() * 2)
+        # Remove scrollbars, set exact size
+        self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.table.setFixedSize(total_width + 2, total_height + 2)
 
     def pop_lists(self):
         self.populate_monster_list()
@@ -355,29 +264,23 @@ class Application:
     # Button Logic
     def next_turn(self):
         self.current_turn += 1
-        if self.current_turn >= len(self.manager.creatures):
+        if self.current_turn >= len(self.sorted_creatures):
             self.current_turn = 0
             self.round_counter += 1
             self.time_counter += 6
             self.round_counter_label.setText(f"Round: {self.round_counter}")
             self.time_counter_label.setText(f"Time: {self.time_counter} seconds")
+
             for creature in self.manager.creatures.values():
                 if creature.status_time:
                     creature.status_time -= 6
                 creature.action = False
                 creature.bonus_action = False
                 creature.object_interaction = False
-            self.update_table()
 
         self.current_creature_name = self.sorted_creatures[self.current_turn].name
         self.manager.creatures[self.current_creature_name].reaction = False
-        for col in self.boolean_columns:
-            attribute_name = self.boolean_attributes.get(col)
-            if attribute_name:
-                value = getattr(self.manager.creatures[self.current_creature_name], attribute_name, False)
-                item = self.table.item(self.current_turn, col)
-                if item:
-                    item.setText('True' if value else 'False')
+
         self.update_active_init()
 
         if self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
@@ -386,17 +289,18 @@ class Application:
     def prev_turn(self):
         if self.current_turn == 0:
             if self.round_counter > 1:
-                self.current_turn = len(self.manager.creatures) -1
+                self.current_turn = len(self.manager.creatures) - 1
                 self.round_counter -= 1
                 self.time_counter -= 6
                 self.round_counter_label.setText(f"Round: {self.round_counter}")
                 self.time_counter_label.setText(f"Time: {self.time_counter} seconds")
+
                 for creature in self.manager.creatures.values():
                     if creature.status_time:
                         creature.status_time += 6
         else:
             self.current_turn -= 1
-        
+
         self.current_creature_name = self.sorted_creatures[self.current_turn].name
         self.update_active_init()
 
@@ -424,7 +328,7 @@ class Application:
         row = item.row()
         col = item.column()
         try:
-            creature_name = self.table.item(row, 1).data(0)
+            creature_name = None.data(0)
         except:
             return
         # TODO: How do I do this without mapping?
@@ -537,6 +441,7 @@ class Application:
             data = dialog.get_data()
             encounter_manager = CreatureManager()
             self.load_file_to_manager('players.json', encounter_manager)
+
             for creature_data in data:
                 creature = Monster(
                     name=creature_data['Name'],
@@ -546,25 +451,69 @@ class Application:
                     armor_class=creature_data['AC']
                 )
                 encounter_manager.add_creature(creature)
+
             state = GameState()
-            state.players = [creature for creature in encounter_manager.creatures.values() if isinstance(creature, Player)]
-            state.monsters = [creature for creature in encounter_manager.creatures.values() if isinstance(creature, Monster)]
+            state.players = [c for c in encounter_manager.creatures.values() if isinstance(c, Player)]
+            state.monsters = [c for c in encounter_manager.creatures.values() if isinstance(c, Monster)]
             state.current_turn = 0
             state.round_counter = 1
             state.time_counter = 0
             save = state.to_dict()
-            filename = dialog.filename_input.text().strip()
-            filename = filename.replace(' ', '_')
-            file_path = self.get_data_path(f"{filename}.json")
-            with open(file_path, 'w') as f:
-                json.dump(save, f, cls=CustomEncoder, indent=4)
+
+            filename = dialog.filename_input.text().strip().replace(' ', '_') + '.json'
+
+            try:
+                gist_response = create_or_update_gist(filename, save)
+                gist_url = gist_response['html_url']
+                raw_url = list(gist_response['files'].values())[0]['raw_url']
+                QMessageBox.information(self, "Saved to Gist", f"Gist created:\n{gist_url}\n\nRaw URL:\n{raw_url}")
+            except Exception as e:
+                QMessageBox.warning(self, "Error", f"Failed to save gist:\n{e}")
+    
+
+    # def save_encounter(self):
+    #     dialog = BuildEncounterWindow(self)
+    #     if dialog.exec_() == QDialog.Accepted:
+    #         data = dialog.get_data()
+    #         encounter_manager = CreatureManager()
+    #         self.load_file_to_manager('players.json', encounter_manager)
+    #         for creature_data in data:
+    #             creature = Monster(
+    #                 name=creature_data['Name'],
+    #                 init=creature_data['Init'],
+    #                 max_hp=creature_data['HP'],
+    #                 curr_hp=creature_data['HP'],
+    #                 armor_class=creature_data['AC']
+    #             )
+    #             encounter_manager.add_creature(creature)
+    #         state = GameState()
+    #         state.players = [creature for creature in encounter_manager.creatures.values() if isinstance(creature, Player)]
+    #         state.monsters = [creature for creature in encounter_manager.creatures.values() if isinstance(creature, Monster)]
+    #         state.current_turn = 0
+    #         state.round_counter = 1
+    #         state.time_counter = 0
+    #         save = state.to_dict()
+    #         filename = dialog.filename_input.text().strip()
+    #         filename = filename.replace(' ', '_')
+    #         file_path = self.get_data_path(f"{filename}.json")
+    #         with open(file_path, 'w') as f:
+    #             json.dump(save, f, cls=CustomEncoder, indent=4)
 
     def load_encounter(self):
         dialog = LoadEncounterWindow(self)
         if dialog.exec_() == QDialog.Accepted:
+            # Use Google Drive
             self.load_file_to_manager(f'{dialog.selected_file}.json', self.manager)
+
             if self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
                 self.active_statblock_image(self.sorted_creatures[self.current_turn])
+
+    # def load_encounter(self):
+    #     dialog = LoadEncounterWindow(self)
+    #     if dialog.exec_() == QDialog.Accepted:
+    #         self.load_file_to_manager(f'{dialog.selected_file}.json', self.manager)
+    #         if self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
+    #             self.active_statblock_image(self.sorted_creatures[self.current_turn])
 
     def merge_encounter(self):
         dialog = MergeEncounterWindow(self)
