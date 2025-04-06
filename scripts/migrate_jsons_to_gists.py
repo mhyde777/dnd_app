@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-LOCAL_JSON_DIR = os.path.join(os.path.dirname(__file__), "data")
+LOCAL_JSON_DIR = os.path.join(os.path.dirname(__file__), "../data")
 ENCOUNTER_FILES = [f for f in os.listdir(LOCAL_JSON_DIR) if f.endswith(".json")]
 
 for filename in ENCOUNTER_FILES:
