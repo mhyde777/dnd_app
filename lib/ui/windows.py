@@ -8,6 +8,7 @@ from PyQt5.QtCore import Qt
 from app.manager import CreatureManager
 from app.creature import I_Creature
 import os, json
+from app.gist_utils import list_gists
 
 class AddCombatantWindow(QDialog):
     def __init__(self, parent=None):
@@ -82,22 +83,30 @@ class BuildEncounterWindow(QDialog):
         self.setWindowTitle("Build Encounter")
         self.builder_layout = QVBoxLayout()
         
-        # Custom Table Widget
+        # Table Widget
         self.encounter_table = QTableWidget(21, 4)
         self.encounter_table.setHorizontalHeaderLabels(["Name", "Initiative", "HP", "AC"])
 
+        # Filename & Description Fields
         self.filename_input = QLineEdit(self)
+        self.filename_input.setPlaceholderText("Enter filename (e.g., goblin_ambush.json)")
+        self.description_input = QLineEdit(self)
+        self.description_input.setPlaceholderText("Optional: Gist description")
+
         self.save_button = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel, self)
         self.save_button.accepted.connect(self.accept)
         self.save_button.rejected.connect(self.reject)
 
-        self.builder_layout.addWidget(self.filename_input, 1)
-        self.builder_layout.addWidget(self.encounter_table, 2)
-        self.builder_layout.addWidget(self.save_button, 3)
+        # Add widgets to layout
+        self.builder_layout.addWidget(QLabel("Filename:"))
+        self.builder_layout.addWidget(self.filename_input)
+        self.builder_layout.addWidget(QLabel("Gist Description:"))
+        self.builder_layout.addWidget(self.description_input)
+        self.builder_layout.addWidget(self.encounter_table)
+        self.builder_layout.addWidget(self.save_button)
 
         self.setLayout(self.builder_layout)
         self.resize_table()
-
 
     def get_data(self):
         data: List[Dict[str, Any]] = []
@@ -115,13 +124,20 @@ class BuildEncounterWindow(QDialog):
                 })
         return data
 
+    def get_metadata(self):
+        return {
+            "filename": self.filename_input.text().strip(),
+            "description": self.description_input.text().strip()
+        }
+
     def resize_table(self):
         self.total_width = self.encounter_table.verticalHeader().width()
         for column in range(self.encounter_table.columnCount()):
             self.encounter_table.resizeColumnToContents(column)
             self.total_width += self.encounter_table.columnWidth(column)
-
-        self.encounter_table.setFixedWidth(self.total_width + self.encounter_table.verticalScrollBar().width() + self.encounter_table.frameWidth()*2)
+        self.encounter_table.setFixedWidth(
+            self.total_width + self.encounter_table.verticalScrollBar().width() + self.encounter_table.frameWidth() * 2
+        )
 
 
 class LoadEncounterWindow(QDialog):
@@ -145,18 +161,18 @@ class LoadEncounterWindow(QDialog):
         self.setLayout(self.load_layout)
 
     def populate_file_list(self):
-        exceptions = {'players', 'last_state'}
         try:
-            files = os.listdir(self.get_data_dict())
-        except FileNotFoundError:
-            print(f'Directory {self.get_data_path()} not found.')
-            return
+            # List files from Gist
+            gists = list_gists()  # This should return a list of gists
+            for gist in gists:
+                # Extract the file name from the 'files' dictionary
+                for file_name in gist['files']:
+                    self.file_list.addItem(file_name)  # Add the file name (string) to the list
 
-        for file in files:
-            name, ext = os.path.splitext(file)
-            if name not in exceptions and os.path.isfile(self.get_data_path(file)):
-                name = name.replace('_', ' ')
-                self.file_list.addItem(name)
+        except Exception as e:
+            print(f"Error while populating file list: {e}")
+            # Optionally handle the case where there are no Gists, maybe fallback to local files
+            print(f"Directory {self.get_data_path()} not found.")
 
     def on_item_clicked(self, item):
         self.selected_file = item.text().replace(' ','_')
@@ -192,18 +208,18 @@ class MergeEncounterWindow(QDialog):
         self.setLayout(self.merge_layout)
 
     def populate_file_list(self):
-        exceptions = {'players', 'last_state'}
         try:
-            files = os.listdir(self.get_data_dict())
-        except FileNotFoundError:
-            print(f'Directory {self.get_data_path()} not found.')
-            return
+            # List files from Gist
+            gists = list_gists()  # This should return a list of gists
+            for gist in gists:
+                # Assuming 'gist' contains the file name and Gist ID
+                file_name = gist['files'].keys()  # or extract the filename from Gist data
+                self.file_list.addItem(file_name)  # Populate the file list with the file names
 
-        for file in files:
-            name, ext = os.path.splitext(file)
-            if name not in exceptions and os.path.isfile(self.get_data_path(file)):
-                name = name.replace('_', ' ')
-                self.file_list.addItem(name)
+        except Exception as e:
+            print(f"Error while populating file list: {e}")
+            # Optionally handle the case where there are no Gists, maybe fallback to local files
+            print(f"Directory {self.get_data_path()} not found.")
 
     def on_item_clicked(self, item):
         self.selected_file = item.text().replace(' ','_')

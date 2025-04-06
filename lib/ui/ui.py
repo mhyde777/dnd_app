@@ -18,51 +18,61 @@ class InitiativeTracker(QMainWindow, Application):
         self.setWindowTitle("DnD Combat Tracker")
         self.manager = CreatureManager()
         self.initUI()
-        self.load_state()
+
+        try:
+            self.load_state()
+            self.table_model.set_fields_from_sample()
+            self.table_model.refresh()
+            self.update_active_init()  # ✅ <- This is what updates the labels!
+            self.pop_lists()
+        except Exception as e:
+            print(f"[Startup] Failed to load last state: {e}")
 
     def initUI(self):
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.mainlayout = QHBoxLayout(self.central_widget)
 
-        self.label_layout = QHBoxLayout()
-        self.table_layout = QVBoxLayout()
+        # === LABEL AREA (Top) ===
+        self.label_widget = QWidget()
+        self.label_layout = QHBoxLayout(self.label_widget)
+        self.label_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.active_init_label = QLabel(self)
+        self.active_init_label = QLabel("Active: None", self)
         self.active_init_label.setStyleSheet("font-size: 18px;")
+        self.active_init_label.setMinimumHeight(24)
         self.label_layout.addWidget(self.active_init_label)
 
-        self.round_counter_label = QLabel(self)
+        self.round_counter_label = QLabel("Round: 1", self)
         self.round_counter_label.setStyleSheet("font-size: 18px;")
+        self.round_counter_label.setMinimumHeight(24)
         self.label_layout.addWidget(self.round_counter_label)
 
-        self.time_counter_label = QLabel(self)
+        self.time_counter_label = QLabel("Time: 0 seconds", self)
         self.time_counter_label.setStyleSheet("font-size: 18px;")
+        self.time_counter_label.setMinimumHeight(24)
         self.label_layout.addWidget(self.time_counter_label)
 
-# Create the widget and layout for the table
-        self.table_widget = QWidget()
-        self.table_widget_layout = QVBoxLayout(self.table_widget)
-        self.table_widget_layout.setContentsMargins(0, 0, 0, 0)
+        self.label_layout.addStretch()
 
-# Create the table and model
-        self.table = QTableView(self)
+        # === TABLE AREA (under labels) ===
         self.table_model = CreatureTableModel(self.manager)
+        self.table = QTableView(self)
         self.table.setModel(self.table_model)
+        self.table.clicked.connect(self.toggle_boolean_cell)
 
-# Add table to layout
-        self.table_widget_layout.addWidget(self.table)
+        self.table_widget = QWidget()
+        self.table_layout = QVBoxLayout(self.table_widget)
+        self.table_layout.setContentsMargins(0, 0, 0, 0)
+        self.table_layout.addWidget(self.label_widget)
+        self.table_layout.addWidget(self.table)
 
-# Now add the label layout and table widget
-        self.table_layout = QVBoxLayout()
-        self.table_layout.addLayout(self.label_layout)
-        self.table_layout.addWidget(self.table_widget)
-        self.table_layout.addStretch()
-
+        # === SIDEBAR with buttons ===
         self.nextprev_layout = QVBoxLayout()
         self.prev_button = QPushButton("Prev", self)
         self.prev_button.clicked.connect(self.prev_turn)
         self.nextprev_layout.addWidget(self.prev_button)
+
         self.next_button = QPushButton("Next", self)
         self.next_button.clicked.connect(self.next_turn)
         self.nextprev_layout.addWidget(self.next_button)
@@ -71,8 +81,10 @@ class InitiativeTracker(QMainWindow, Application):
         self.creature_list = QListWidget(self)
         self.creature_list.setSelectionMode(QListWidget.MultiSelection)
         self.value_input = QLineEdit(self)
+
         self.heal_button = QPushButton("Heal", self)
         self.heal_button.clicked.connect(self.heal_selected_creatures)
+
         self.dam_button = QPushButton("Damage", self)
         self.dam_button.clicked.connect(self.damage_selected_creatures)
 
@@ -83,29 +95,31 @@ class InitiativeTracker(QMainWindow, Application):
 
         self.creature_list.setFixedWidth(200)
         self.value_input.setFixedWidth(200)
+
         self.dam_layout.addLayout(self.nextprev_layout)
         self.dam_layout.addWidget(self.creature_list)
         self.dam_layout.addLayout(self.heal_dam_layout)
         self.dam_layout.addStretch()
 
+        # === RIGHT PANEL: STATBLOCK VIEW ===
         self.stat_layout = QVBoxLayout()
         self.statblock = QLabel(self)
         self.statblock.setScaledContents(True)
 
-        self.list_buttons = QHBoxLayout()
         self.monster_list = QListWidget(self)
         self.monster_list.setSelectionMode(QListWidget.SingleSelection)
         self.monster_list.itemSelectionChanged.connect(self.update_statblock_image)
         self.monster_list.setFixedSize(200, 100)
 
-        self.show_hide_butts = QVBoxLayout()
         self.hide_img = QPushButton("Hide Image", self)
         self.hide_img.clicked.connect(self.hide_statblock)
         self.show_img = QPushButton("Show Image", self)
         self.show_img.clicked.connect(self.show_statblock)
+
+        self.list_buttons = QHBoxLayout()
+        self.show_hide_butts = QVBoxLayout()
         self.show_hide_butts.addWidget(self.show_img)
         self.show_hide_butts.addWidget(self.hide_img)
-
         self.list_buttons.addWidget(self.monster_list)
         self.list_buttons.addLayout(self.show_hide_butts)
         self.list_buttons.addStretch()
@@ -114,18 +128,21 @@ class InitiativeTracker(QMainWindow, Application):
         self.stat_layout.addLayout(self.list_buttons)
         self.stat_layout.addStretch()
 
+        # === Wrap and attach all to main layout ===
         self.dam_widget = QWidget()
         self.dam_widget.setLayout(self.dam_layout)
-        self.table_widget = QWidget()
-        self.table_widget.setLayout(self.table_layout)
+
         self.stat_widget = QWidget()
         self.stat_widget.setLayout(self.stat_layout)
 
         self.mainlayout.addWidget(self.dam_widget, alignment=Qt.AlignLeft)
-        self.mainlayout.addWidget(self.table_widget, alignment=Qt.AlignLeft)
+        self.mainlayout.addWidget(self.table_widget, alignment=Qt.AlignTop)
         self.mainlayout.addStretch()
         self.mainlayout.addWidget(self.stat_widget, alignment=Qt.AlignRight)
 
+        self.setup_menu_and_toolbar()
+
+    def setup_menu_and_toolbar(self):
         self.menu_bar = QMenuBar(self)
         self.setMenuBar(self.menu_bar)
 
@@ -213,10 +230,8 @@ class InitiativeTracker(QMainWindow, Application):
     def handle_data_changed(self, topLeft, bottomRight, roles):
         seen = set()
         for row in range(topLeft.row(), bottomRight.row() + 1):
-            # Protect against out-of-bounds or stale rows
             if row >= len(self.table_model.creature_names):
                 continue
-
             creature_name = self.table_model.creature_names[row]
             if creature_name not in seen:
                 print(f"Data changed for: {creature_name}")
@@ -239,9 +254,4 @@ class InitiativeTracker(QMainWindow, Application):
             setattr(creature, attr, new_value)
             print(f"Toggled {name}.{attr} → {new_value}")
             self.table_model.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.BackgroundRole])
-            self.update_active_init()  # optional for recoloring
-
-    # def handle_data_changed(self, topLeft, bottomRight, roles):
-    #     for row in range(topLeft.row(), bottomRight.row() + 1):
-    #         creature_name = self.table_model.creature_names[row]
-    #         print(f"Data changed for: {creature_name}")
+            self.update_active_init()

@@ -6,6 +6,7 @@ class CreatureTableModel(QAbstractTableModel):
     def __init__(self, manager, fields=None, parent=None):
         super().__init__(parent)
         self.manager = manager
+        self.active_creature_name = None
 
         if fields is None and self.manager.creatures:
             sample_creature = next(iter(self.manager.creatures.values()))
@@ -34,7 +35,7 @@ class CreatureTableModel(QAbstractTableModel):
 
         if role == Qt.DisplayRole:
             if isinstance(value, bool):
-                return ""  # No checkmark/✗
+                return ""  # no ✓ or ✗
             return str(value)
 
         if role == Qt.TextAlignmentRole:
@@ -44,13 +45,11 @@ class CreatureTableModel(QAbstractTableModel):
             if attr == '_curr_hp' and value == 0:
                 return QColor('darkRed')
 
-            # Color-code boolean attributes
             if isinstance(value, bool):
                 return QColor('#006400') if value else QColor('darkRed')
 
-            # Highlight active creature
             if name == self.active_creature_name:
-                return QColor('#006400')  # active row
+                return QColor('#006400')
 
         return QVariant()
 
@@ -87,7 +86,6 @@ class CreatureTableModel(QAbstractTableModel):
         value = getattr(self.manager.creatures[self.creature_names[index.row()]], attr)
 
         if isinstance(value, bool):
-            # ⛔ Not selectable or editable — just clickable
             return Qt.ItemIsEnabled
         else:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
@@ -103,15 +101,21 @@ class CreatureTableModel(QAbstractTableModel):
 
     def field_to_header(self, field):
         mapping = {
+            '_type': '',
+            '_name': 'Name',
             '_init': 'Init',
             '_curr_hp': 'Curr HP',
-            '_max_hp': 'Max HP'
+            '_max_hp': 'Max HP',
+            '_armor_class': 'AC',
+            '_movement': 'M',
+            '_action': 'A',
+            '_bonus_action': 'BA',
+            '_reaction': 'R',
+            '_object_interaction': 'OI',
+            '_notes': 'Notes',
+            '_status_time': 'Status'
         }
-        if field in mapping:
-            return mapping[field]
-        return field.lstrip('_').replace('_', ' ').title()
-
-
+        return mapping.get(field, field.lstrip('_').replace('_', ' ').title())
 
     def set_fields_from_sample(self):
         if self.manager.creatures:
@@ -132,4 +136,8 @@ class CreatureTableModel(QAbstractTableModel):
             self.index(0, 0),
             self.index(self.rowCount() - 1, self.columnCount() - 1),
             [Qt.BackgroundRole]
-) 
+        )
+
+    def set_creatures(self, creatures):
+        self.creatures = creatures
+        self.layoutChanged.emit()  # Trigger the model to refresh
