@@ -21,6 +21,8 @@ from ui.windows import (
 from app.save_json import GameState
 from app.manager import CreatureManager
 from app.gist_utils import load_gist_content, create_or_update_gist
+from ui.token_prompt import TokenPromptWindow
+from app.config import get_github_token
 
 class Application:
 
@@ -31,20 +33,83 @@ class Application:
         self.tracking_by_name = False
         self.base_dir = os.path.dirname(__file__)
 
+        self.sorted_creatures = []
+        # self.current_creature_name = None
+
+        # ✅ Used for setting booleans in next_turn()
+        self.boolean_fields = {
+            '_action': 'set_creature_action',
+            '_bonus_action': 'set_creature_bonus_action',
+            '_reaction': 'set_creature_reaction',
+            '_object_interaction': 'set_creature_object_interaction'
+        }
+
+        # ⛔ Check for GitHub token
+        if not get_github_token():
+            prompt = TokenPromptWindow()
+            if prompt.exec_() != QDialog.Accepted:
+                raise RuntimeError("GitHub token required to run the app.")
+
+        # self.pop_lists()
+
     # JSON Manipulation
     def init_players(self):
-        self.load_file_to_manager("players.json", self.manager)
-        # print("Creatures loaded:", list(self.manager.creatures.keys()))
-        # print("Sample creature:", next(iter(self.manager.creatures.values())).__dict__)
-        # self.table_model.set_fields_from_sample()
+        from app.gist_utils import load_gist_index
+
+        filename = "players.json"
+        index = load_gist_index()
+        gist_id = index.get(filename)
+
+        if gist_id:
+            raw_url = f"https://gist.githubusercontent.com/{self.get_github_username()}/{gist_id}/raw/{filename}"
+            self.load_file_to_manager(raw_url, self.manager)
+        else:
+            # print("[DEBUG] No gist ID found for players.json — falling back to local.")
+            self.load_file_to_manager(filename, self.manager)
+
+        self.table_model.set_fields_from_sample()
+        self.table_model.refresh()
+        self.update_table()
         self.statblock.clear()
 
     def load_state(self):
-        self.load_file_to_manager("last_state.json", self.manager)
-        self.table_model.set_fields_from_sample()   
+        from app.gist_utils import load_gist_index
+
+        filename = "last_state.json"
+        index = load_gist_index()
+        gist_id = index.get(filename)
+
+        if gist_id:
+            raw_url = f"https://gist.githubusercontent.com/{self.get_github_username()}/{gist_id}/raw/{filename}"
+            # print(f"[DEBUG] Loading last_state from Gist URL: {raw_url}")
+            self.load_file_to_manager(raw_url, self.manager)
+        else:
+            # print("[DEBUG] No gist ID found for last_state.json — falling back to local.")
+            self.load_file_to_manager(filename, self.manager)
+
+        if self.manager.creatures:
+            self.table_model.set_fields_from_sample()
+
     
     def save_state(self):
-        self.save_to_json('last_state.json', self.manager)
+        from app.gist_utils import create_or_update_gist
+
+        state = GameState()
+        state.players = [c for c in self.manager.creatures.values() if isinstance(c, Player)]
+        state.monsters = [c for c in self.manager.creatures.values() if isinstance(c, Monster)]
+        state.current_turn = self.current_turn
+        state.round_counter = self.round_counter
+        state.time_counter = self.time_counter
+        save = state.to_dict()
+
+        filename = "last_state.json"
+        description = "Auto-saved state from initiative tracker"
+
+        try:
+            gist_response = create_or_update_gist(filename, save, description=description)
+            # print(f"[DEBUG] Saved last_state.json to Gist: {gist_response['html_url']}")
+        except Exception as e:
+            print(f"[ERROR] Failed to save state to Gist: {e}")
 
     def save_as(self):
         options = QFileDialog.Options()
@@ -63,68 +128,93 @@ class Application:
         with open(file_path, 'w') as f:
             json.dump(save, f, cls=CustomEncoder, indent=4)
 
-    def load_file_to_manager(self, file_name, manager, monsters=False):
+    def load_file_to_manager(self, file_name, manager, monsters=False, merge=False):
         if file_name.startswith("http"):
-            # Load from Gist
-            state = load_gist_content(file_name)
+            # Load from Gist and parse with custom decoder
+            raw = load_gist_content(file_name)
+            state = json.loads(json.dumps(raw), object_hook=self.custom_decoder)
         else:
-            # Load from local file
+            # Load from local JSON file
             file_path = self.get_data_path(file_name)
             if not os.path.exists(file_path):
                 return
             with open(file_path, 'r') as file:
                 state = json.load(file, object_hook=self.custom_decoder)
 
-        if monsters:
+        if monsters and not merge:
             monsters = state.get('monsters', [])
             for creature in monsters:
                 manager.add_creature(creature)
-        else:
+
+        if not merge:
             manager.creatures.clear()
             players = state.get('players', [])
             monsters = state.get('monsters', [])
             for creature in players + monsters:
                 manager.add_creature(creature)
 
-            self.current_turn = state['current_turn']
-            self.round_counter = state['round_counter']
-            self.time_counter = state['time_counter']
+            # Now call the sort_creatures method to ensure they are ordered by initiative
+            manager.sort_creatures()
 
-        self.sorted_creatures = list(manager.creatures.values())
-        self.current_creature_name = self.sorted_creatures[0].name if self.sorted_creatures else None
+            # Set current turn, round, and time counters
+            self.current_turn = state.get('current_turn', 0)
+            self.round_counter = state.get('round_counter', 1)
+            self.time_counter = state.get('time_counter', 0)
 
-        if self.sorted_creatures and self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
-            self.active_statblock_image(self.sorted_creatures[self.current_turn])
+        # After sorting, make sure current_turn is within bounds
+        self.current_turn = min(self.current_turn, len(manager.creatures) - 1)
+        self.current_creature_name = list(manager.creatures.values())[self.current_turn].name if manager.creatures else None
 
-        self.table_model.set_fields_from_sample()
-        self.table_model.refresh()  # <-- Add this!
+        if manager.creatures and self.current_creature_name:
+            self.update_active_init()
+
         self.update_table()
+        self.pop_lists()
 
     def custom_decoder(self, data: Dict[str, Any]) -> Any:
         if '_type' in data:
             return I_Creature.from_dict(data)
         return data
 
-    # UI Manipulation
+    def get_github_username(self):
+        from app.config import get_github_token
+        import requests
+
+        token = get_github_token()
+        headers = {"Authorization": f"token {token}"}
+        response = requests.get("https://api.github.com/user", headers=headers)
+        response.raise_for_status()
+        return response.json()["login"]
+
     def update_table(self):
-        self.manager.sort_creatures()
-        self.table_model.refresh()
-        self.pop_lists()
-        self.update_active_init()
-
-        if '_type' in self.table_model.fields:
-            type_index = self.table_model.fields.index('_type')
-            self.table.setColumnHidden(type_index, True)
-            print(f"✅ Column '_type' at index {type_index} was hidden.")
-
+        if not self.table_model.fields:
+            self.table_model.set_fields_from_sample()
+        self.table_model.refresh()  # This now syncs the creature_names list too
+        self.table.setColumnHidden(0, True)
         self.adjust_table_size()
 
-        # Hide Creature Type column if present
-        if '_type' in self.table_model.fields:
-            type_index = self.table_model.fields.index('_type')
-            self.table.setColumnHidden(type_index, True)
-
-        self.table.setColumnHidden(type_index, True)
+    # UI Manipulation
+    # def update_table(self):
+    #     self.manager.sort_creatures()
+    #     if not self.table_model.fields:
+    #         self.table_model.set_fields_from_sample()
+    #     self.table_model.refresh()
+    #     self.pop_lists()
+    #     self.update_active_init()
+    #
+    #     if '_type' in self.table_model.fields:
+    #         type_index = self.table_model.fields.index('_type')
+    #         self.table.setColumnHidden(type_index, True)
+    #         # print(f"✅ Column '_type' at index {type_index} was hidden.")
+    #
+    #     self.adjust_table_size()
+    #
+    #     # Hide Creature Type column if present
+    #     if '_type' in self.table_model.fields:
+    #         type_index = self.table_model.fields.index('_type')
+    #         self.table.setColumnHidden(type_index, True)
+    #
+    #     self.table.setColumnHidden(type_index, True)
 
     def update_active_init(self):
         self.sorted_creatures = list(self.manager.creatures.values())
@@ -133,12 +223,17 @@ class Application:
             return
 
         if self.tracking_by_name:
-            if not self.current_creature_name:
+            if not self.current_creature_name and self.sorted_creatures:
                 self.current_creature_name = self.sorted_creatures[0].name
-            self.current_turn = next(
-                (i for i, creature in enumerate(self.sorted_creatures) if creature.name == self.current_creature_name),
-                0
-            )
+
+            # Only update current_turn if it wasn't already set
+            if self.current_creature_name:
+                matched_index = next(
+                    (i for i, creature in enumerate(self.sorted_creatures) if creature.name == self.current_creature_name),
+                    None
+                )
+                if matched_index is not None:
+                    self.current_turn = matched_index
 
         self.current_creature = self.sorted_creatures[self.current_turn]
         self.current_name = self.current_creature.name
@@ -171,46 +266,57 @@ class Application:
         self.table.resizeRowsToContents()
 
         total_width = self.table.verticalHeader().width()
-        for col in range(self.table.model().columnCount()):
-            if not self.table.isColumnHidden(col):
-                total_width += self.table.columnWidth(col)
+        model = self.table.model()
+        if model:
+            for column in range(model.columnCount()):
+                self.table.resizeColumnToContents(column)
+                if not self.table.isColumnHidden(column):
+                    total_width += self.table.columnWidth(column)
 
         total_height = self.table.horizontalHeader().height()
-        for row in range(self.table.model().rowCount()):
+        for row in range(model.rowCount() if model else 0):
             total_height += self.table.rowHeight(row)
 
-        # Remove scrollbars, set exact size
         self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.table.setFixedSize(total_width + 2, total_height + 2)
+        self.table.setFixedSize(total_width + 19, total_height + 2)  # ✅ extra padding for gutter
 
+# ============== Populate Lists ====================
     def pop_lists(self):
-        self.populate_monster_list()
+        # Populate the list of creatures (names) for both the creature list and monster list
         self.populate_creature_list()
+        self.populate_monster_list()
 
     def populate_creature_list(self):
         self.creature_list.clear()
-        for creature in self.manager.creatures.values():
-            self.creature_list.addItem(creature.name)
+        # Use the table model to get the list of creature names (assuming your model contains these names)
+        for row in range(self.table_model.rowCount()):
+            creature_name = self.table_model.creature_names[row]  # Adjust based on your model's data
+            self.creature_list.addItem(creature_name)
 
         list_height = self.creature_list.count() * self.creature_list.sizeHintForRow(0)
-        list_height += self.creature_list.frameWidth()*2
+        list_height += self.creature_list.frameWidth() * 2
         self.creature_list.setFixedHeight(list_height)
 
     def populate_monster_list(self):
         self.monster_list.clear()
         unique_monster_names = set()
 
-        for creature in self.manager.creatures.values():
-            if creature._type == CreatureType.MONSTER:
-                base_name = self.get_base_name(creature)
+        for row in range(self.table_model.rowCount()):
+            creature_name = self.table_model.creature_names[row]  # Adjust based on your model's data
+            creature = self.manager.creatures.get(creature_name)
+            
+            if creature and creature._type == CreatureType.MONSTER:
+                # Strip the number suffix from monster names (e.g., 'Slaad Tadpole 1' becomes 'Slaad Tadpole')
+                base_name = re.sub(r'\s*\d+$', '', creature_name)
                 unique_monster_names.add(base_name)
 
+        # Add unique monster names to the list
         for name in unique_monster_names:
             self.monster_list.addItem(name)
 
         list_height = self.monster_list.count() * self.monster_list.sizeHintForRow(0)
-        list_height += self.monster_list.frameWidth()*2
+        list_height += self.monster_list.frameWidth() * 2
         self.monster_list.setFixedHeight(list_height)
 
         if self.monster_list.count() == 0:
@@ -227,7 +333,7 @@ class Application:
         base_name = non_num_name.strip()
         return base_name
 
-    # Edit Menu Actions
+# ================== Edit Menu Actions =====================
     def add_combatant(self):
         self.init_tracking_mode(True)
         dialog = AddCombatantWindow(self)
@@ -261,9 +367,15 @@ class Application:
                 self.statblock.clear()
         self.init_tracking_mode(False)
 
-    # Button Logic
+# ====================== Button Logic ======================
     def next_turn(self):
+        if not self.sorted_creatures:
+            print("[WARNING] No creatures in encounter. Cannot advance turn.")
+            return
+
         self.current_turn += 1
+
+        # Round advance
         if self.current_turn >= len(self.sorted_creatures):
             self.current_turn = 0
             self.round_counter += 1
@@ -271,16 +383,20 @@ class Application:
             self.round_counter_label.setText(f"Round: {self.round_counter}")
             self.time_counter_label.setText(f"Time: {self.time_counter} seconds")
 
+            # Decrement status time and reset booleans
             for creature in self.manager.creatures.values():
                 if creature.status_time:
                     creature.status_time -= 6
-                creature.action = False
-                creature.bonus_action = False
-                creature.object_interaction = False
+                for field in self.boolean_fields.keys():
+                    setattr(creature, field.lstrip('_'), False)
 
+            self.update_table()
+
+        # Update active creature
         self.current_creature_name = self.sorted_creatures[self.current_turn].name
         self.manager.creatures[self.current_creature_name].reaction = False
 
+        # Update display
         self.update_active_init()
 
         if self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
@@ -439,19 +555,28 @@ class Application:
         dialog = BuildEncounterWindow(self)
         if dialog.exec_() == QDialog.Accepted:
             data = dialog.get_data()
+            metadata = dialog.get_metadata()
+
+            filename = metadata["filename"].replace(" ", "_")
+            if not filename.endswith(".json"):
+                filename += ".json"
+            description = metadata["description"]
+
+            # Build encounter manager with player + added monster data
             encounter_manager = CreatureManager()
-            self.load_file_to_manager('players.json', encounter_manager)
+            self.load_file_to_manager("players.json", encounter_manager)
 
             for creature_data in data:
                 creature = Monster(
-                    name=creature_data['Name'],
-                    init=creature_data['Init'],
-                    max_hp=creature_data['HP'],
-                    curr_hp=creature_data['HP'],
-                    armor_class=creature_data['AC']
+                    name=creature_data["Name"],
+                    init=creature_data["Init"],
+                    max_hp=creature_data["HP"],
+                    curr_hp=creature_data["HP"],
+                    armor_class=creature_data["AC"]
                 )
                 encounter_manager.add_creature(creature)
 
+            # Save state
             state = GameState()
             state.players = [c for c in encounter_manager.creatures.values() if isinstance(c, Player)]
             state.monsters = [c for c in encounter_manager.creatures.values() if isinstance(c, Monster)]
@@ -460,12 +585,11 @@ class Application:
             state.time_counter = 0
             save = state.to_dict()
 
-            filename = dialog.filename_input.text().strip().replace(' ', '_') + '.json'
-
+            # Save to Gist
             try:
-                gist_response = create_or_update_gist(filename, save)
-                gist_url = gist_response['html_url']
-                raw_url = list(gist_response['files'].values())[0]['raw_url']
+                gist_response = create_or_update_gist(filename, save, description=description)
+                gist_url = gist_response["html_url"]
+                raw_url = list(gist_response["files"].values())[0]["raw_url"]
                 QMessageBox.information(self, "Saved to Gist", f"Gist created:\n{gist_url}\n\nRaw URL:\n{raw_url}")
             except Exception as e:
                 QMessageBox.warning(self, "Error", f"Failed to save gist:\n{e}")
@@ -500,10 +624,10 @@ class Application:
     #             json.dump(save, f, cls=CustomEncoder, indent=4)
 
     def load_encounter(self):
+        from ui.load_encounter_window import LoadEncounterWindow  # if not already imported
         dialog = LoadEncounterWindow(self)
-        if dialog.exec_() == QDialog.Accepted:
-            # Use Google Drive
-            self.load_file_to_manager(f'{dialog.selected_file}.json', self.manager)
+        if dialog.exec_() == QDialog.Accepted and dialog.selected_file:
+            self.load_file_to_manager(dialog.selected_file, self.manager)
 
             if self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
                 self.active_statblock_image(self.sorted_creatures[self.current_turn])
@@ -516,11 +640,33 @@ class Application:
     #             self.active_statblock_image(self.sorted_creatures[self.current_turn])
 
     def merge_encounter(self):
-        dialog = MergeEncounterWindow(self)
+        dialog = LoadEncounterWindow(self)
         if dialog.exec_() == QDialog.Accepted:
-            self.load_file_to_manager(f'{dialog.selected_file}.json', self.manager, monsters=True)
-            if self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
-                self.active_statblock_image(self.sorted_creatures[self.current_turn])
+            selected_file = dialog.get_selected_file()  # Get the selected file with .json
+            print(f"[DEBUG] Merging file: {selected_file}")  # Debugging statement
+
+            # Load the Gist index and check if the file is present
+            from app.gist_utils import load_gist_index
+            index = load_gist_index()
+            
+            print(f"[DEBUG] Gist index loaded: {index}")  # Print the Gist index to check its contents
+
+            # Look for the selected file's Gist ID in the index
+            gist_id = index.get(selected_file)
+
+            if gist_id:
+                # Load the encounter from Gist using the raw URL
+                raw_url = f"https://gist.githubusercontent.com/{self.get_github_username()}/{gist_id}/raw/{selected_file}"
+                print(f"[DEBUG] Loading encounter from Gist: {raw_url}")
+                self.load_file_to_manager(raw_url, self.manager, monsters=True, merge=True)
+            else:
+                # Fallback to loading from local files if no Gist is found
+                print(f"[DEBUG] No Gist ID found for {selected_file} — falling back to local.")
+                self.load_file_to_manager(selected_file, self.manager, monsters=True, merge=True)
+
+        # Ensure the table is updated after the merge
+        self.update_table()
+
     # WIP
     def update_players(self):
         dialog = UpdatePlayerWindow(self)

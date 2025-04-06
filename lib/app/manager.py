@@ -24,7 +24,8 @@ class CreatureManager:
                 del self.creatures[creature_names]
 
     def sort_creatures(self) -> None:
-        self.creatures = dict(sorted(self.creatures.items(), key=lambda item: item[1], reverse=True))
+        # Sort creatures by the initiative value (_init)
+        self.creatures = dict(sorted(self.creatures.items(), key=lambda item: item[1]._init, reverse=True))
 
     def set_creature_init(self, creature: str, init: int) -> None:
         self.creatures[creature].initiative = init
