@@ -100,3 +100,16 @@ def list_gists() -> list:
     response = requests.get(f"{GITHUB_API_URL}/gists", headers=headers)
     response.raise_for_status()
     return response.json()
+
+def delete_gist(gist_id: str) -> None:
+    token = get_github_token()
+    if not token:
+        raise EnvironmentError("GitHub token not found. Please configure your token.")
+
+    headers = {
+        "Authorization": f"token {token}"
+    }
+
+    response = requests.delete(f"{GITHUB_API_URL}/gists/{gist_id}", headers=headers)
+    response.raise_for_status()  # Will raise if deletion failed
+

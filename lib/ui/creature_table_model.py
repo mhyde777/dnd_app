@@ -7,6 +7,8 @@ class CreatureTableModel(QAbstractTableModel):
         super().__init__(parent)
         self.manager = manager
         self.active_creature_name = None
+        self.selected_index = None  # Store selected index to deselect it later
+        self.view = parent  # Store reference to the QTableView instance
 
         if fields is None and self.manager.creatures:
             sample_creature = next(iter(self.manager.creatures.values()))
@@ -35,21 +37,34 @@ class CreatureTableModel(QAbstractTableModel):
 
         if role == Qt.DisplayRole:
             if isinstance(value, bool):
-                return ""  # no ✓ or ✗
+                return ""
+            if value == 0:
+                return ""
             return str(value)
 
         if role == Qt.TextAlignmentRole:
             return Qt.AlignCenter
 
         if role == Qt.BackgroundRole:
-            if attr == '_curr_hp' and value == 0:
-                return QColor('darkRed')
+            is_boolean = isinstance(value, bool)
 
-            if isinstance(value, bool):
-                return QColor('#006400') if value else QColor('darkRed')
+            # ✅ Boolean column formatting (based on boolean state only)
+            if is_boolean:
+                return QColor("#006400") if value else QColor("darkred")
 
-            if name == self.active_creature_name:
-                return QColor('#006400')
+            # ✅ Non-boolean cell formatting based on HP and active creature
+            curr_hp = getattr(creature, "_curr_hp", -1)
+            max_hp = getattr(creature, "_max_hp", -1)
+
+            if isinstance(curr_hp, int) and isinstance(max_hp, int) and max_hp > 0:
+                hp_ratio = curr_hp / max_hp
+
+                if curr_hp == 0:
+                    return QColor("red") if name == self.active_creature_name else QColor("darkRed")
+                elif hp_ratio <= 0.5:
+                    return QColor("#7a663a") if name == self.active_creature_name else QColor("#5e4e2a")
+                elif name == self.active_creature_name:
+                    return QColor('#006400')  # dark green
 
         return QVariant()
 
@@ -74,9 +89,19 @@ class CreatureTableModel(QAbstractTableModel):
                 return False
 
             self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.EditRole])
+
+            # Deselect the active cell after editing
+            self.deselect_active_cell()
+
             return True
         except (ValueError, TypeError):
             return False
+
+    def deselect_active_cell(self):
+        """Deselect the currently selected cell in the view."""
+        if self.view:
+            self.view.clearSelection()  # Clear selection from QTableView
+        self.selected_index = None  # Clear the selected index
 
     def flags(self, index):
         if not index.isValid():
@@ -128,7 +153,14 @@ class CreatureTableModel(QAbstractTableModel):
         if not self.fields and self.manager.creatures:
             sample = next(iter(self.manager.creatures.values()))
             self.fields = [f.name for f in dataclass_fields(sample)]
+
         self.layoutChanged.emit()
+
+        # Force dataChanged for all cells (needed for background updates)
+        if self.rowCount() > 0 and self.columnCount() > 0:
+            top_left = self.index(0, 0)
+            bottom_right = self.index(self.rowCount() - 1, self.columnCount() - 1)
+            self.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole, Qt.BackgroundRole])
 
     def set_active_creature(self, name: str):
         self.active_creature_name = name

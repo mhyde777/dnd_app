@@ -2,7 +2,8 @@ from PyQt5.QtWidgets import (
     QVBoxLayout, QLabel, QLineEdit,
     QPushButton, QToolBar, QWidget,
     QHBoxLayout, QMainWindow, QListWidget,
-    QAction, QMenuBar, QDesktopWidget, QTableView
+    QAction, QMenuBar, QDesktopWidget, QTableView,
+    QSizePolicy
 )
 from PyQt5.QtCore import Qt
 from app.app import Application
@@ -53,13 +54,16 @@ class InitiativeTracker(QMainWindow, Application):
         self.time_counter_label.setMinimumHeight(24)
         self.label_layout.addWidget(self.time_counter_label)
 
-        self.label_layout.addStretch()
+        # self.label_layout.addStretch()
 
         # === TABLE AREA (under labels) ===
         self.table_model = CreatureTableModel(self.manager)
         self.table = QTableView(self)
         self.table.setModel(self.table_model)
         self.table.clicked.connect(self.toggle_boolean_cell)
+# Ensure that the table's size is fixed and matches its content
+        self.table.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
 
         self.table_widget = QWidget()
         self.table_layout = QVBoxLayout(self.table_widget)
@@ -147,7 +151,11 @@ class InitiativeTracker(QMainWindow, Application):
         self.setMenuBar(self.menu_bar)
 
         self.file_menu = self.menu_bar.addMenu("&File")
+        self.characters_menu = self.file_menu.addMenu("Characters")
+
+
         self.edit_menu = self.menu_bar.addMenu("&Edit")
+        self.encounter_menu = self.edit_menu.addMenu("Encounters")
 
         self.filetool_bar = QToolBar("File", self)
         self.addToolBar(self.filetool_bar)
@@ -162,10 +170,11 @@ class InitiativeTracker(QMainWindow, Application):
 
         self.initialize_players_action = QAction("Initialize", self)
         self.initialize_players_action.triggered.connect(self.init_players)
-        self.file_menu.addAction(self.initialize_players_action)
+        self.edit_menu.addAction(self.initialize_players_action)
 
         self.load_enc_button = QAction("Load Encounter", self)
         self.load_enc_button.triggered.connect(self.load_encounter)
+        self.encounter_menu.addAction(self.load_enc_button)
         self.filetool_bar.addAction(self.load_enc_button)
 
         self.add_button = QAction("Add Combatant", self)
@@ -178,27 +187,43 @@ class InitiativeTracker(QMainWindow, Application):
 
         self.build_encounter = QAction("Build Encounter", self)
         self.build_encounter.triggered.connect(self.save_encounter)
-        self.file_menu.addAction(self.build_encounter)
-
-        self.update_player_file = QAction('Update Player Stats', self)
-        self.update_player_file.triggered.connect(self.update_players)
-        self.file_menu.addAction(self.update_player_file)
+        self.encounter_menu.addAction(self.build_encounter)
 
         self.merge_encounters = QAction('Merge Encounters', self)
         self.merge_encounters.triggered.connect(self.merge_encounter)
-        self.edit_menu.addAction(self.merge_encounters)
+        self.encounter_menu.addAction(self.merge_encounters)
         self.filetool_bar.addAction(self.merge_encounters)
 
-        self.edit_menu.addAction(self.load_enc_button)
+        # self.edit_menu.addAction(self.load_enc_button)
         self.edit_menu.addAction(self.add_button)
         self.edit_menu.addAction(self.rmv_button)
 
+        self.active_gists = QAction("Activate/Deactivate Encounters", self)
+        self.active_gists.triggered.connect(self.manage_gist_statuses)
+        self.encounter_menu.addAction(self.active_gists)
+
+        self.delete_gists_button = QAction("Delete Encounter", self)
+        self.delete_gists_button.triggered.connect(self.delete_gists)
+        self.encounter_menu.addAction(self.delete_gists_button)
+
+        self.update_characters_action = QAction("Create/Update Characters", self)
+        self.update_characters_action.triggered.connect(self.create_or_update_characters)
+        self.characters_menu.addAction(self.update_characters_action)
+
+
     def update_size_constraints(self):
+        # Get the current screen where the app is being displayed
         current_screen = QDesktopWidget().screenNumber(self)
         screen = QDesktopWidget().screenGeometry(current_screen)
+        
         self.screen_width = screen.width()
         self.screen_height = screen.height()
+        
+        # Set the maximum size to the screen size to avoid going beyond bounds
         self.setMaximumSize(self.screen_width, self.screen_height)
+        
+        # Optionally set the window size to be full screen on the current screen
+        self.setWindowState(self.windowState() | Qt.WindowMaximized)
 
     def moveEvent(self, event):
         current_screen = QDesktopWidget().screenNumber(self)
@@ -206,12 +231,15 @@ class InitiativeTracker(QMainWindow, Application):
         new_width = screen.width()
         new_height = screen.height()
 
+        # Only update if the screen size has changed
         if (new_width, new_height) != (self.screen_width, self.screen_height):
-            self.adjust_table_size()
             self.screen_width = new_width
             self.screen_height = new_height
-            self.update_size_constraints()
-            self.active_statblock_image(self.sorted_creatures[self.current_turn])
+            self.update_size_constraints()  # Update constraints to keep the window within the screen bounds
+
+            # Optionally, center the window on the new screen
+            self.center()
+
         super().moveEvent(event)
 
     def center(self):
@@ -225,7 +253,7 @@ class InitiativeTracker(QMainWindow, Application):
         col = index.column()
         field = self.table_model.fields[col]
         creature_name = self.table_model.creature_names[row]
-        print(f"Clicked {creature_name} - {field}")
+        # print(f"Clicked {creature_name} - {field}")
 
     def handle_data_changed(self, topLeft, bottomRight, roles):
         seen = set()
@@ -234,7 +262,7 @@ class InitiativeTracker(QMainWindow, Application):
                 continue
             creature_name = self.table_model.creature_names[row]
             if creature_name not in seen:
-                print(f"Data changed for: {creature_name}")
+                # print(f"Data changed for: {creature_name}")
                 seen.add(creature_name)
 
     def toggle_boolean_cell(self, index):
@@ -252,6 +280,6 @@ class InitiativeTracker(QMainWindow, Application):
         if isinstance(value, bool):
             new_value = not value
             setattr(creature, attr, new_value)
-            print(f"Toggled {name}.{attr} → {new_value}")
+            # print(f"Toggled {name}.{attr} → {new_value}")
             self.table_model.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.BackgroundRole])
             self.update_active_init()
