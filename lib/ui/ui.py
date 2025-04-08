@@ -165,7 +165,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.file_menu.addAction(self.save_action)
 
         self.save_as_action = QAction('Save As', self)
-        self.save_as_action.triggered.connect(self.save_as)
+        self.save_as_action.triggered.connect(self.save_as_encounter)
         self.file_menu.addAction(self.save_as_action)
 
         self.initialize_players_action = QAction("Initialize", self)
@@ -273,13 +273,18 @@ class InitiativeTracker(QMainWindow, Application):
         col = index.column()
 
         attr = self.table_model.fields[col]
+
+        # ❌ Do nothing if it's the virtual spellbook column
+        if attr == "_spellbook":
+            return
+
         name = self.table_model.creature_names[row]
         creature = self.manager.creatures[name]
+
         value = getattr(creature, attr)
 
         if isinstance(value, bool):
             new_value = not value
             setattr(creature, attr, new_value)
-            # print(f"Toggled {name}.{attr} → {new_value}")
             self.table_model.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.BackgroundRole])
             self.update_active_init()

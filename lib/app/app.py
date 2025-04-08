@@ -3,7 +3,7 @@ import json, os, re
 
 from PyQt5.QtWidgets import(
    QDialog, QMessageBox,
-    QApplication, QFileDialog, QSizePolicy
+    QApplication, QFileDialog
 ) 
 from PyQt5.QtGui import (
         QPixmap, QFont
@@ -14,19 +14,18 @@ from PyQt5.QtCore import (
 from app.creature import (
     I_Creature, Player, Monster, CustomEncoder, CreatureType
 )
-from ui.windows import (
-    AddCombatantWindow, RemoveCombatantWindow, BuildEncounterWindow, LoadEncounterWindow,
-    UpdatePlayerWindow, MergeEncounterWindow
-)
 from app.save_json import GameState
 from app.manager import CreatureManager
 from app.gist_utils import load_gist_content, create_or_update_gist, load_gist_index
-from ui.token_prompt import TokenPromptWindow
 from app.config import get_github_token
-from ui.load_encounter_window import LoadEncounterWindow  # if not already imported
+from ui.windows import (
+    AddCombatantWindow, RemoveCombatantWindow, BuildEncounterWindow, UpdatePlayerWindow
+)
+from ui.load_encounter_window import LoadEncounterWindow
 from ui.gist_status import GistStatusWindow
 from ui.delete_gist import DeleteGistWindow
 from ui.update_characters import UpdateCharactersWindow
+from ui.token_prompt import TokenPromptWindow
 
 
 class Application:
@@ -38,7 +37,6 @@ class Application:
         self.tracking_by_name = False
         self.base_dir = os.path.dirname(__file__)
         self.sorted_creatures = []
-        # ✅ Used for setting booleans in next_turn()
         self.boolean_fields = {
             '_action': 'set_creature_action',
             '_bonus_action': 'set_creature_bonus_action',
@@ -49,8 +47,6 @@ class Application:
             prompt = TokenPromptWindow()
             if prompt.exec_() != QDialog.Accepted:
                 raise RuntimeError("GitHub token required to run the app.")
-
-        # self.pop_lists()
 
     # JSON Manipulation
     def init_players(self):
@@ -101,8 +97,48 @@ class Application:
 
         if self.manager.creatures:
             self.table_model.set_fields_from_sample()
+ 
+    def save_encounter_to_gist(self, filename: str, description: str = ""):
+        from app.gist_utils import create_or_update_gist
 
-    
+        # Prepare state from current encounter
+        state = GameState()
+        state.players = [c for c in self.manager.creatures.values() if isinstance(c, Player)]
+        state.monsters = [c for c in self.manager.creatures.values() if isinstance(c, Monster)]
+        state.current_turn = self.current_turn
+        state.round_counter = self.round_counter
+        state.time_counter = self.time_counter
+        data = state.to_dict()
+
+        # Ensure proper extension
+        if not filename.endswith(".json"):
+            filename += ".json"
+
+        # Save to Gist
+        try:
+            response = create_or_update_gist(filename, data, description)
+            return response  # you can optionally return the Gist URL or metadata
+        except Exception as e:
+            raise RuntimeError(f"Failed to save to Gist: {e}")
+
+    def save_as_encounter(self):
+        from PyQt5.QtWidgets import QInputDialog, QLineEdit, QMessageBox
+
+        filename, ok = QInputDialog.getText(self, "Save Encounter As", "Enter filename:", QLineEdit.Normal)
+        if not ok or not filename.strip():
+            return
+
+        filename = filename.strip().replace(" ", "_")
+
+        description, _ = QInputDialog.getText(self, "Description", "Optional description:", QLineEdit.Normal)
+
+        try:
+            result = self.save_encounter_to_gist(filename, description)
+            gist_url = result["html_url"]
+            QMessageBox.information(self, "Saved", f"Gist created:\n{gist_url}")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e))
+
     def save_state(self):
         from app.gist_utils import create_or_update_gist
 
@@ -122,23 +158,23 @@ class Application:
             # print(f"[DEBUG] Saved last_state.json to Gist: {gist_response['html_url']}")
         except Exception as e:
             print(f"[ERROR] Failed to save state to Gist: {e}")
-
-    def save_as(self):
-        options = QFileDialog.Options()
-        file_path, _ = QFileDialog.getSaveFileName(self, "Save File", self.get_data_dir(), "All Files (*);;JSON Files (*.json)", options=options)
-        self.save_to_json(file_path, self.manager)
-
-    def save_to_json(self, file, manager):
-        file_path = self.get_data_path(file)
-        state = GameState()
-        state.players = [creature for creature in manager.creatures.values() if isinstance(creature, Player)]
-        state.monsters = [creature for creature in manager.creatures.values() if isinstance(creature, Monster)]
-        state.current_turn = self.current_turn
-        state.round_counter = self.round_counter
-        state.time_counter = self.time_counter
-        save = state.to_dict()
-        with open(file_path, 'w') as f:
-            json.dump(save, f, cls=CustomEncoder, indent=4)
+    #
+    # def save_as(self):
+    #     options = QFileDialog.Options()
+    #     file_path, _ = QFileDialog.getSaveFileName(self, "Save File", self.get_data_dir(), "All Files (*);;JSON Files (*.json)", options=options)
+    #     self.save_to_json(file_path, self.manager)
+    #
+    # def save_to_json(self, file, manager):
+    #     file_path = self.get_data_path(file)
+    #     state = GameState()
+    #     state.players = [creature for creature in manager.creatures.values() if isinstance(creature, Player)]
+    #     state.monsters = [creature for creature in manager.creatures.values() if isinstance(creature, Monster)]
+    #     state.current_turn = self.current_turn
+    #     state.round_counter = self.round_counter
+    #     state.time_counter = self.time_counter
+    #     save = state.to_dict()
+    #     with open(file_path, 'w') as f:
+    #         json.dump(save, f, cls=CustomEncoder, indent=4)
 
     def load_file_to_manager(self, file_name, manager, monsters=False, merge=False):
         if file_name.startswith("http"):
@@ -203,16 +239,29 @@ class Application:
             self.table_model.set_fields_from_sample()
         self.table_model.refresh()  # This now syncs the creature_names list too
         self.table.setColumnHidden(0, True)
-# Hide the Max HP column (detected by header name or field name)
         headers = self.table_model.fields
         if "_max_hp" in headers:
             max_hp_index = headers.index("_max_hp")
             self.table.setColumnHidden(max_hp_index, True)
+# 🔍 Hide spellbook column if no creature has spellcasting data
+        spellbook_index = self.table_model.fields.index("_spellbook") if "_spellbook" in self.table_model.fields else -1
+
+        if spellbook_index >= 0:
+            has_spellcasters = any(
+                getattr(creature, "_spell_slots", {}) or getattr(creature, "_innate_slots", {})
+                for creature in self.manager.creatures.values()
+            )
+            self.table.setColumnHidden(spellbook_index, not has_spellcasters)
+# ✅ Auto-resize the column if it's shown
+        if has_spellcasters:
+            self.table.resizeColumnToContents(spellbook_index)
+            self.table.setColumnWidth(spellbook_index, max(40, self.table.columnWidth(spellbook_index)))
+
         self.adjust_table_size()
         self.pop_lists()
         self.update_active_init()
 
-    # UI Manipulation
+# =============== UI Manipulation =======================
     def update_active_init(self):
         self.sorted_creatures = list(self.manager.creatures.values())
         if not self.sorted_creatures:
@@ -237,7 +286,6 @@ class Application:
         self.round_counter_label.setText(f"Round: {self.round_counter}")
         self.time_counter_label.setText(f"Time: {self.time_counter} seconds")
 
-        # Let the model know which creature is active
         if hasattr(self.table_model, "set_active_creature"):
             self.table_model.set_active_creature(self.current_name)
     
@@ -515,7 +563,7 @@ class Application:
     def show_statblock(self):
         self.statblock.show()
 
-    # Damage/Healing 
+# ================= Damage/Healing ======================
     def heal_selected_creatures(self):
         self.apply_to_selected_creatures(positive=True)
 
@@ -545,7 +593,7 @@ class Application:
         self.value_input.clear()
         self.update_table()
 
-    # Encounter Builder
+# ================= Encounter Builder =====================
     def save_encounter(self):
         dialog = BuildEncounterWindow(self)
         if dialog.exec_() == QDialog.Accepted:
@@ -600,7 +648,7 @@ class Application:
         else:
             self.load_file_to_manager(filename, manager, monsters=False)
 
-
+# ================== Secondary Windows ======================
     def load_encounter(self):
         dialog = LoadEncounterWindow(self)
         if dialog.exec_() == QDialog.Accepted and dialog.selected_file:
@@ -620,20 +668,6 @@ class Application:
 
             if self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
                 self.active_statblock_image(self.sorted_creatures[self.current_turn])
-
-    # WIP
-    def update_players(self):
-        dialog = UpdatePlayerWindow(self)
-        headers = ['Name', 'Max HP', 'AC']
-        self.player_manager = CreatureManager()
-        self.load_file_to_manager('players.json', self.player_manager)
-        dialog.player_table.setRowCount(len(self.player_manager.creatures.keys()))
-        dialog.player_table.setColumnCount(len(headers))
-        dialog.player_table.setHorizontalHeaderLabels(headers)
-        
-        dialog.resize_table()
-        if dialog.exec_() == QDialog.Accepted:
-            pass
 
     def manage_gist_statuses(self):
         dialog = GistStatusWindow(self)
