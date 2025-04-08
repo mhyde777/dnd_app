@@ -7,6 +7,8 @@ name = "pypi"
 pyqt5 = "*"
 pandas = "*"
 pyqtdarktheme = "*"
+requests = "*"
+dotenv = "*"
 dnd-app-lib = {file = "lib/", editable = true}
 
 [dev-packages]
