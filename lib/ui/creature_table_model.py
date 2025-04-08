@@ -2,6 +2,8 @@ from PyQt5.QtCore import Qt, QAbstractTableModel, QModelIndex, QVariant
 from PyQt5.QtGui import QColor
 from dataclasses import fields as dataclass_fields
 
+SPELL_ICON_COLUMN_NAME = "_spellbook"
+
 class CreatureTableModel(QAbstractTableModel):
     def __init__(self, manager, fields=None, parent=None):
         super().__init__(parent)
@@ -12,7 +14,11 @@ class CreatureTableModel(QAbstractTableModel):
 
         if fields is None and self.manager.creatures:
             sample_creature = next(iter(self.manager.creatures.values()))
-            self.fields = [f.name for f in dataclass_fields(sample_creature)]
+            excluded = {"_spell_slots", "_innate_slots"}
+            sample = next(iter(self.manager.creatures.values()))
+            self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
+            if SPELL_ICON_COLUMN_NAME not in self.fields:
+                self.fields.append(SPELL_ICON_COLUMN_NAME)
         else:
             self.fields = fields or []
 
@@ -33,6 +39,21 @@ class CreatureTableModel(QAbstractTableModel):
         name = self.creature_names[row]
         creature = self.manager.creatures[name]
         attr = self.fields[col]
+        if attr == SPELL_ICON_COLUMN_NAME:
+            from app.creature import CreatureType
+            if creature._type != CreatureType.MONSTER:
+                return QVariant()
+
+            if role == Qt.DisplayRole:
+                has_slots = hasattr(creature, "_spell_slots") and creature._spell_slots
+                has_innate = hasattr(creature, "_innate_slots") and creature._innate_slots
+                if has_slots or has_innate:
+                    return "📖"
+                return ""
+            if role == Qt.TextAlignmentRole:
+                return Qt.AlignCenter
+            return QVariant()
+
         value = getattr(creature, attr)
 
         if role == Qt.DisplayRole:
@@ -108,6 +129,15 @@ class CreatureTableModel(QAbstractTableModel):
             return Qt.ItemIsEnabled
 
         attr = self.fields[index.column()]
+        
+        # 🔒 Make the spellbook icon column read-only
+        if attr == SPELL_ICON_COLUMN_NAME:
+            creature = self.manager.creatures[self.creature_names[index.row()]]
+            from app.creature import CreatureType
+            if creature._type == CreatureType.MONSTER:
+                return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+            return Qt.NoItemFlags  # Unclickable for non-monsters
+
         value = getattr(self.manager.creatures[self.creature_names[index.row()]], attr)
 
         if isinstance(value, bool):
@@ -138,25 +168,39 @@ class CreatureTableModel(QAbstractTableModel):
             '_reaction': 'R',
             '_object_interaction': 'OI',
             '_notes': 'Notes',
-            '_status_time': 'Status'
+            '_status_time': 'Status',
+            '_spellbook': '📖'
+
         }
         return mapping.get(field, field.lstrip('_').replace('_', ' ').title())
 
     def set_fields_from_sample(self):
         if self.manager.creatures:
             sample = next(iter(self.manager.creatures.values()))
-            self.fields = [f.name for f in dataclass_fields(sample)]
+
+            # Always exclude these from table display
+            excluded = {"_spell_slots", "_innate_slots"}
+
+            self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
+
+            if SPELL_ICON_COLUMN_NAME not in self.fields:
+                self.fields.append(SPELL_ICON_COLUMN_NAME)
+
             self.layoutChanged.emit()
 
     def refresh(self):
         self.creature_names = list(self.manager.creatures.keys())
+
         if not self.fields and self.manager.creatures:
             sample = next(iter(self.manager.creatures.values()))
-            self.fields = [f.name for f in dataclass_fields(sample)]
+            excluded = {"_spell_slots", "_innate_slots"}
+            self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
+
+            if SPELL_ICON_COLUMN_NAME not in self.fields:
+                self.fields.append(SPELL_ICON_COLUMN_NAME)
 
         self.layoutChanged.emit()
 
-        # Force dataChanged for all cells (needed for background updates)
         if self.rowCount() > 0 and self.columnCount() > 0:
             top_left = self.index(0, 0)
             bottom_right = self.index(self.rowCount() - 1, self.columnCount() - 1)

@@ -8,12 +8,12 @@ STATUS_PATH = os.path.expanduser("~/.dnd_tracker_config/gist_status.json")
 class LoadEncounterWindow(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Load Encounter from Gist")
+        self.setWindowTitle("Load/Merge Encounter")
         self.selected_file = None
 
         layout = QVBoxLayout(self)
 
-        self.info_label = QLabel("Select a Gist to load:")
+        self.info_label = QLabel("Select an Encounter to load:")
         layout.addWidget(self.info_label)
 
         self.gist_list = QListWidget()
@@ -47,7 +47,7 @@ class LoadEncounterWindow(QDialog):
                         item.setData(Qt.UserRole, filedata["raw_url"])
                         self.gist_list.addItem(item)
         except Exception as e:
-            QMessageBox.warning(self, "Error", f"Failed to load Gists: {e}")
+            QMessageBox.warning(self, "Error", f"Failed to load Encounters: {e}")
             self.reject()
 
     def accept_selection(self):
@@ -56,4 +56,4 @@ class LoadEncounterWindow(QDialog):
             self.selected_file = selected.data(Qt.UserRole)  # Retrieve the raw_url
             self.accept()
         else:
-            QMessageBox.warning(self, "No Selection", "Please select a Gist to load.")
+            QMessageBox.warning(self, "No Selection", "Please select a Encounter to load.")
