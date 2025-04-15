@@ -10,6 +10,7 @@ pyqtdarktheme = "*"
 requests = "*"
 dotenv = "*"
 dnd-app-lib = {file = "lib/", editable = true}
+python-dotenv = "*"
 
 [dev-packages]
 
