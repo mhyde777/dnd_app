@@ -57,3 +57,7 @@ class LoadEncounterWindow(QDialog):
             self.accept()
         else:
             QMessageBox.warning(self, "No Selection", "Please select a Encounter to load.")
+
+    def get_filename(self) -> str:
+        return self.selected_filename  # or whatever variable holds the chosen name
+

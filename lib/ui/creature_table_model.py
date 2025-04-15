@@ -14,7 +14,7 @@ class CreatureTableModel(QAbstractTableModel):
 
         if fields is None and self.manager.creatures:
             sample_creature = next(iter(self.manager.creatures.values()))
-            excluded = {"_spell_slots", "_innate_slots"}
+            excluded = {"_spell_slots", "_innate_slots", "_spell_slots_used", "_innate_slots_used"}
             sample = next(iter(self.manager.creatures.values()))
             self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
             if SPELL_ICON_COLUMN_NAME not in self.fields:
@@ -179,7 +179,7 @@ class CreatureTableModel(QAbstractTableModel):
             sample = next(iter(self.manager.creatures.values()))
 
             # Always exclude these from table display
-            excluded = {"_spell_slots", "_innate_slots"}
+            excluded = {"_spell_slots", "_innate_slots", "_spell_slots_used", "_innate_slots_used"}
 
             self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
 
@@ -193,7 +193,7 @@ class CreatureTableModel(QAbstractTableModel):
 
         if not self.fields and self.manager.creatures:
             sample = next(iter(self.manager.creatures.values()))
-            excluded = {"_spell_slots", "_innate_slots"}
+            excluded = {"_spell_slots", "_innate_slots", "_spell_slots_used", "_innate_slots_used"}
             self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
 
             if SPELL_ICON_COLUMN_NAME not in self.fields:

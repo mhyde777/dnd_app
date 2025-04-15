@@ -1,13 +1,17 @@
+import os
+import json
 from typing import List, Dict, Any
-from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QTableWidget, QDialogButtonBox, QListWidget, QListWidgetItem,
-    QGridLayout, QHBoxLayout, QLineEdit, QPushButton, QLabel, QItemDelegate,
-    QTableWidgetItem
-)
+
 from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QGridLayout,
+    QSpinBox, QLineEdit, QPushButton, QLabel, QCheckBox,
+    QTableWidget, QTableWidgetItem, QHeaderView, QWidget, QGroupBox,
+    QListWidget, QListWidgetItem, QDialogButtonBox, QItemDelegate, QInputDialog
+)
+
+from app.creature import Monster, I_Creature
 from app.manager import CreatureManager
-from app.creature import I_Creature
-import os, json
 from app.gist_utils import list_gists
 
 class AddCombatantWindow(QDialog):
@@ -77,67 +81,158 @@ class RemoveCombatantWindow(QDialog):
         return [item.text() for item in selected_items]
 
 
+
 class BuildEncounterWindow(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Build Encounter")
-        self.builder_layout = QVBoxLayout()
-        
-        # Table Widget
-        self.encounter_table = QTableWidget(21, 4)
-        self.encounter_table.setHorizontalHeaderLabels(["Name", "Initiative", "HP", "AC"])
+        self.layout = QVBoxLayout(self)
+        self.monster_rows = []
 
-        # Filename & Description Fields
-        self.filename_input = QLineEdit(self)
-        self.filename_input.setPlaceholderText("Enter filename (e.g., goblin_ambush.json)")
-        self.description_input = QLineEdit(self)
-        self.description_input.setPlaceholderText("Optional: Gist description")
+        # Add button
+        self.add_button = QPushButton("Add Monster")
+        self.add_button.clicked.connect(self.add_monster_row)
+        self.layout.addWidget(self.add_button)
 
-        self.save_button = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel, self)
-        self.save_button.accepted.connect(self.accept)
-        self.save_button.rejected.connect(self.reject)
+        # Main container
+        self.monster_container = QVBoxLayout()
+        self.layout.addLayout(self.monster_container)
 
-        # Add widgets to layout
-        self.builder_layout.addWidget(QLabel("Filename:"))
-        self.builder_layout.addWidget(self.filename_input)
-        self.builder_layout.addWidget(QLabel("Gist Description:"))
-        self.builder_layout.addWidget(self.description_input)
-        self.builder_layout.addWidget(self.encounter_table)
-        self.builder_layout.addWidget(self.save_button)
+        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+        self.layout.addWidget(self.button_box)
+        self.add_monster_row()
 
-        self.setLayout(self.builder_layout)
-        self.resize_table()
+    def add_monster_row(self):
+        row_container = QVBoxLayout()
+        top_row = QHBoxLayout()
+
+        name_input = QLineEdit()
+        name_input.setPlaceholderText("Name")
+        init_input = QSpinBox()
+        init_input.setMaximum(100)
+        hp_input = QSpinBox()
+        hp_input.setMaximum(1000)
+        ac_input = QSpinBox()
+        ac_input.setMaximum(30)
+        spellcaster_checkbox = QCheckBox("Spellcaster")
+
+        top_row.addWidget(QLabel("Name:"))
+        top_row.addWidget(name_input)
+        top_row.addWidget(QLabel("Init:"))
+        top_row.addWidget(init_input)
+        top_row.addWidget(QLabel("HP:"))
+        top_row.addWidget(hp_input)
+        top_row.addWidget(QLabel("AC:"))
+        top_row.addWidget(ac_input)
+        top_row.addWidget(spellcaster_checkbox)
+
+        # Spellcasting panel (hidden by default)
+        spell_panel = QGroupBox("Spellcasting")
+        spell_panel_layout = QVBoxLayout()
+        spell_panel.setLayout(spell_panel_layout)
+        spell_panel.setVisible(False)
+
+        # Spell slots
+        slot_inputs = {}
+        slot_form = QFormLayout()
+        for level in range(1, 10):
+            box = QSpinBox()
+            box.setMaximum(10)
+            slot_inputs[level] = box
+            slot_form.addRow(f"Level {level} Slots:", box)
+        spell_panel_layout.addLayout(slot_form)
+
+        # Innate spells table
+        innate_table = QTableWidget(0, 2)
+        innate_table.setHorizontalHeaderLabels(["Spell Name", "Uses"])
+        innate_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        spell_panel_layout.addWidget(QLabel("Innate Spells:"))
+        spell_panel_layout.addWidget(innate_table)
+
+        add_innate_button = QPushButton("+ Add Innate Spell")
+        def add_innate_row():
+            row = innate_table.rowCount()
+            innate_table.insertRow(row)
+            innate_table.setItem(row, 0, QTableWidgetItem(""))
+            innate_table.setItem(row, 1, QTableWidgetItem("1"))
+        add_innate_button.clicked.connect(add_innate_row)
+        spell_panel_layout.addWidget(add_innate_button)
+
+        spellcaster_checkbox.toggled.connect(spell_panel.setVisible)
+
+        row_container.addLayout(top_row)
+        row_container.addWidget(spell_panel)
+        self.monster_container.addLayout(row_container)
+
+        self.monster_rows.append({
+            "name": name_input,
+            "init": init_input,
+            "hp": hp_input,
+            "ac": ac_input,
+            "spellcaster": spellcaster_checkbox,
+            "spell_panel": spell_panel,
+            "slots": slot_inputs,
+            "innate_table": innate_table
+        })
 
     def get_data(self):
-        data: List[Dict[str, Any]] = []
-        for row in range(self.encounter_table.rowCount()):
-            name = self.encounter_table.item(row, 0)
-            init = self.encounter_table.item(row, 1)
-            hp = self.encounter_table.item(row, 2)
-            ac = self.encounter_table.item(row, 3)
-            if name and init and hp and ac:
-                data.append({
-                    'Name': name.text(),
-                    'Init': int(init.text()),
-                    'HP': int(hp.text()),
-                    'AC': int(ac.text())
-                })
-        return data
+        monsters = []
+        for row in self.monster_rows:
+            name = row["name"].text().strip()
+            if not name:
+                continue
 
-    def get_metadata(self):
+            monster_data = Monster(
+                name=name,
+                init=row["init"].value(),
+                max_hp=row["hp"].value(),
+                curr_hp=row["hp"].value(),
+                armor_class=row["ac"].value(),
+            )
+
+            if row["spellcaster"].isChecked():
+                # Gather spell slots
+                spell_slots = {
+                    level: box.value()
+                    for level, box in row["slots"].items()
+                    if box.value() > 0
+                }
+
+                # Gather innate spells
+                innate_spells = {}
+                table = row["innate_table"]
+                for r in range(table.rowCount()):
+                    spell = table.item(r, 0)
+                    uses = table.item(r, 1)
+                    if spell and uses:
+                        spell_name = spell.text().strip()
+                        try:
+                            uses_value = int(uses.text())
+                            if spell_name:
+                                innate_spells[spell_name] = uses_value
+                        except ValueError:
+                            continue
+
+                monster_data._spell_slots = spell_slots
+                monster_data._innate_slots = innate_spells
+
+            monsters.append(monster_data.to_dict())
+
+        return monsters
+
+    def get_metadata(self) -> dict:
+        filename, ok = QInputDialog.getText(self, "Save Encounter As", "Enter filename:")
+        if not ok or not filename.strip():
+            return {}
+
+        description, _ = QInputDialog.getText(self, "Description", "Enter description (optional):")
+
         return {
-            "filename": self.filename_input.text().strip(),
-            "description": self.description_input.text().strip()
+            "filename": filename.strip().replace(" ", "_"),
+            "description": description.strip()
         }
-
-    def resize_table(self):
-        self.total_width = self.encounter_table.verticalHeader().width()
-        for column in range(self.encounter_table.columnCount()):
-            self.encounter_table.resizeColumnToContents(column)
-            self.total_width += self.encounter_table.columnWidth(column)
-        self.encounter_table.setFixedWidth(
-            self.total_width + self.encounter_table.verticalScrollBar().width() + self.encounter_table.frameWidth() * 2
-        )
 
 
 class LoadEncounterWindow(QDialog):

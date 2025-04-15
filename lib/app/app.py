@@ -1,3 +1,4 @@
+import pprint
 from typing import Dict, Any
 import json, os, re
 
@@ -142,17 +143,21 @@ class Application:
     def save_state(self):
         from app.gist_utils import create_or_update_gist
 
+        # Build current game state
         state = GameState()
         state.players = [c for c in self.manager.creatures.values() if isinstance(c, Player)]
         state.monsters = [c for c in self.manager.creatures.values() if isinstance(c, Monster)]
         state.current_turn = self.current_turn
         state.round_counter = self.round_counter
         state.time_counter = self.time_counter
+
+        # Convert to full dict — includes spellcasting fields if to_dict() is correct
         save = state.to_dict()
 
         filename = "last_state.json"
         description = "Auto-saved state from initiative tracker"
 
+        # pprint.pprint(save)
         try:
             gist_response = create_or_update_gist(filename, save, description=description)
             # print(f"[DEBUG] Saved last_state.json to Gist: {gist_response['html_url']}")
@@ -178,40 +183,54 @@ class Application:
 
     def load_file_to_manager(self, file_name, manager, monsters=False, merge=False):
         if file_name.startswith("http"):
-            # Load from Gist and parse with custom decoder
             raw = load_gist_content(file_name)
             state = json.loads(json.dumps(raw), object_hook=self.custom_decoder)
         else:
-            # Load from local JSON file
             file_path = self.get_data_path(file_name)
             if not os.path.exists(file_path):
                 return
             with open(file_path, 'r') as file:
                 state = json.load(file, object_hook=self.custom_decoder)
 
-        # Process the file content
-        if monsters:
-            monsters = state.get('monsters', [])
-            for creature in monsters:
+        players = state.get('players', [])
+        monsters_list = state.get('monsters', [])
+
+        if monsters and not merge:
+            # Only add monsters for encounter loading (not merging or replacing)
+            for creature in monsters_list:
                 manager.add_creature(creature)
             manager.sort_creatures()
-        else:
-            # Clear the current creatures in manager (if not merging)
-            manager.creatures.clear()
-            players = state.get('players', [])
-            monsters = state.get('monsters', [])
-            for creature in players + monsters:
+            self.sorted_creatures = list(manager.creatures.values())
+            self.current_creature_name = self.sorted_creatures[0].name if self.sorted_creatures else None
+            self.update_active_init()
+            self.update_table()
+            self.pop_lists()
+            return
+
+        if merge:
+            self.init_tracking_mode(True)
+
+            for creature in monsters_list:
+                name = creature.name
+                counter = 1
+                while name in manager.creatures:
+                    name = f"{creature.name}_{counter}"
+                    counter += 1
+                creature.name = name
                 manager.add_creature(creature)
 
-            # Set turn, round, and time counters if not merging
+        else:
+            # Full replace
+            manager.creatures.clear()
+            for creature in players + monsters_list:
+                manager.add_creature(creature)
+
             self.current_turn = state.get('current_turn', 0)
             self.round_counter = state.get('round_counter', 1)
             self.time_counter = state.get('time_counter', 0)
 
-            # Sort creatures after loading
-            manager.sort_creatures()
+        manager.sort_creatures()
 
-        # Refresh manager and update active turn details
         self.sorted_creatures = list(manager.creatures.values())
         self.current_creature_name = self.sorted_creatures[0].name if self.sorted_creatures else None
 
@@ -610,12 +629,14 @@ class Application:
             self.load_players_to_manager(encounter_manager)
 
             for creature_data in data:
-                creature = Monster(
-                    name=creature_data["Name"],
-                    init=creature_data["Init"],
-                    max_hp=creature_data["HP"],
-                    curr_hp=creature_data["HP"],
-                    armor_class=creature_data["AC"]
+                creature=Monster(
+                    name=creature_data["_name"],
+                    init=creature_data["_init"],
+                    max_hp=creature_data["_max_hp"],
+                    curr_hp=creature_data["_curr_hp"],
+                    armor_class=creature_data["_armor_class"],
+                    spell_slots=creature_data.get("_spell_slots", {}),
+                    innate_slots=creature_data.get("_innate_slots", {})
                 )
                 encounter_manager.add_creature(creature)
 
@@ -680,4 +701,3 @@ class Application:
     def create_or_update_characters(self):
         dialog = UpdateCharactersWindow(self)
         dialog.exec_()
-

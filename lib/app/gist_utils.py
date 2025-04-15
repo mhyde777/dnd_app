@@ -1,4 +1,4 @@
-import requests
+import requests, time
 import json
 import os
 from typing import Optional
@@ -81,12 +81,13 @@ def create_or_update_gist(
 
     return gist_data
 
-
-def load_gist_content(raw_url: str) -> dict:
-    response = requests.get(raw_url)
+def load_gist_content(raw_url):
+    """Load and return JSON content from a raw gist URL with a cache buster."""
+    cache_buster = int(time.time())
+    url = f"{raw_url}?t={cache_buster}"
+    response = requests.get(url)
     response.raise_for_status()
-    return json.loads(response.text)
-
+    return response.json()
 
 def list_gists() -> list:
     token = get_github_token()

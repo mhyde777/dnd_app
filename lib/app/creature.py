@@ -41,6 +41,8 @@ class I_Creature:
     _status_time: int = field(default=-1)
     _spell_slots: dict[int, int] = field(default_factory=dict)
     _innate_slots: dict[str, int] = field(default_factory=dict)
+    _spell_slots_used: dict[int, int] = field(default_factory=dict)
+    _innate_slots_used: dict[str, int] = field(default_factory=dict)
 
     def __gt__(self, other: I_Creature) -> bool:
         if not isinstance(other, I_Creature):
@@ -74,6 +76,8 @@ class I_Creature:
             "_status_time": self.status_time,
             "_spell_slots": self._spell_slots,
             "_innate_slots": self._innate_slots,
+            "_spell_slots_used": self._spell_slots_used,
+            "_innate_slots_used": self._innate_slots_used
         }
 
     @staticmethod
@@ -81,6 +85,11 @@ class I_Creature:
         creature_type = CreatureType(data["_type"])
         spell_slots = data.get("_spell_slots", {})
         innate_slots = data.get("_innate_slots", {})
+        spell_slots_used = data.get("_spell_slots_used")
+        innate_slots_used = data.get("_innate_slots_used")
+        # print("[LOAD CREATURE]", data["_name"])
+        # print("  _innate_slots_used:", data.get("_innate_slots_used"))
+        # print("  _spell_slots_used:", data.get("_spell_slots_used"))
 
         if creature_type == CreatureType.PLAYER:
             return Player(
@@ -97,7 +106,9 @@ class I_Creature:
                 notes=data["_notes"],
                 status_time=data["_status_time"],
                 spell_slots=spell_slots,
-                innate_slots=innate_slots
+                innate_slots=innate_slots,
+                spell_slots_used=spell_slots_used,
+                innate_slots_used=innate_slots_used
             )
         elif creature_type == CreatureType.MONSTER:
             return Monster(
@@ -113,10 +124,13 @@ class I_Creature:
                 notes=data["_notes"],
                 status_time=data["_status_time"],
                 spell_slots=spell_slots,
-                innate_slots=innate_slots
+                innate_slots=innate_slots,
+                spell_slots_used=spell_slots_used,
+                innate_slots_used=innate_slots_used
             )
         else:
             return I_Creature(**data)
+
 
     # Properties
     @property
@@ -183,7 +197,8 @@ class I_Creature:
 class Monster(I_Creature):
     def __init__(self, name, init=0, max_hp=0, curr_hp=0, armor_class=0,
                  movement=0, action=False, bonus_action=False, reaction=False,
-                 notes='', status_time='', spell_slots=None, innate_slots=None):
+                 notes='', status_time='', spell_slots=None, innate_slots=None,
+                 spell_slots_used=None, innate_slots_used=None):
         super().__init__(
             _type=CreatureType.MONSTER,
             _name=name,
@@ -198,7 +213,9 @@ class Monster(I_Creature):
             _notes=notes,
             _status_time=status_time,
             _spell_slots=spell_slots or {},
-            _innate_slots=innate_slots or {}
+            _innate_slots=innate_slots or {},
+            _spell_slots_used=spell_slots_used or {},
+            _innate_slots_used=innate_slots_used or {}
         )
 
 
@@ -206,7 +223,8 @@ class Player(I_Creature):
     def __init__(self, name, init=0, max_hp=0, curr_hp=0, armor_class=0,
                  movement=0, action=False, bonus_action=False, reaction=False,
                  object_interaction=False, notes='', status_time='',
-                 spell_slots=None, innate_slots=None):
+                 spell_slots=None, innate_slots=None, spell_slots_used=None,
+                 innate_slots_used=None):
         super().__init__(
             _type=CreatureType.PLAYER,
             _name=name,
@@ -222,5 +240,7 @@ class Player(I_Creature):
             _notes=notes,
             _status_time=status_time,
             _spell_slots=spell_slots or {},
-            _innate_slots=innate_slots or {}
+            _innate_slots=innate_slots or {},
+            _spell_slots_used=spell_slots_used or {},
+            _innate_slots_used=innate_slots_used or {}
         )
