@@ -9,6 +9,7 @@ from PyQt5.QtCore import Qt
 from app.app import Application
 from app.manager import CreatureManager
 from ui.creature_table_model import CreatureTableModel
+from ui.spellcasting_dropdown import SpellcastingDropdown
 
 
 class InitiativeTracker(QMainWindow, Application): 
@@ -60,7 +61,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.table_model = CreatureTableModel(self.manager)
         self.table = QTableView(self)
         self.table.setModel(self.table_model)
-        self.table.clicked.connect(self.toggle_boolean_cell)
+        self.table.clicked.connect(self.handle_cell_clicked)
 # Ensure that the table's size is fixed and matches its content
         self.table.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
@@ -288,3 +289,27 @@ class InitiativeTracker(QMainWindow, Application):
             setattr(creature, attr, new_value)
             self.table_model.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.BackgroundRole])
             self.update_active_init()
+
+    def handle_cell_clicked(self, index):
+        attr = self.table_model.fields[index.column()]
+        name = self.table_model.creature_names[index.row()]
+        creature = self.manager.creatures[name]
+
+        if attr == "_spellbook":
+            self.show_spellcasting_dropdown(creature, index)
+        else:
+            self.toggle_boolean_cell(index)
+
+    def show_spellcasting_dropdown(self, creature, index):
+        # Close any existing dropdown
+        if hasattr(self, "_active_spell_dropdown") and self._active_spell_dropdown:
+            self._active_spell_dropdown.close()
+
+        dropdown = SpellcastingDropdown(creature, self)
+        self._active_spell_dropdown = dropdown
+
+        rect = self.table.visualRect(index)
+        table_pos = self.table.viewport().mapToGlobal(rect.topLeft())
+
+        dropdown.move(table_pos.x(), table_pos.y() + rect.height())
+        dropdown.show()
