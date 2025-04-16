@@ -18,8 +18,8 @@ class UpdateCharactersWindow(QDialog):
         self.setLayout(self.layout)
 
         self.table = QTableWidget()
-        self.table.setColumnCount(3)
-        self.table.setHorizontalHeaderLabels(["Name", "Max HP", "AC"])
+        self.table.setColumnCount(4)
+        self.table.setHorizontalHeaderLabels(["Name", "Max HP", "AC", "Active"])
         self.layout.addWidget(self.table)
 
         self.buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
@@ -52,10 +52,16 @@ class UpdateCharactersWindow(QDialog):
                     name = player.get("_name", "")
                     hp = player.get("_max_hp", "")
                     ac = player.get("_armor_class", "")
+                    active = player.get("active", True)
 
                     self.table.setItem(row, 0, QTableWidgetItem(str(name)))
                     self.table.setItem(row, 1, QTableWidgetItem(str(hp)))
                     self.table.setItem(row, 2, QTableWidgetItem(str(ac)))
+
+                    checkbox = QTableWidgetItem()
+                    checkbox.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+                    checkbox.setCheckState(Qt.Checked if active else Qt.Unchecked)
+                    self.table.setItem(row, 3, checkbox)
 
                 # Resize table to fit contents
                 self.table.resizeColumnsToContents()
@@ -110,6 +116,7 @@ class UpdateCharactersWindow(QDialog):
             name_item = self.table.item(row, 0)
             hp_item = self.table.item(row, 1)
             ac_item = self.table.item(row, 2)
+            active_item = self.table.item(row, 3)
 
             if name_item and hp_item and ac_item:
                 name = name_item.text().strip()
@@ -117,7 +124,12 @@ class UpdateCharactersWindow(QDialog):
                     try:
                         hp = int(hp_item.text())
                         ac = int(ac_item.text())
-                        players.append(Player(name=name, max_hp=hp, curr_hp=hp, armor_class=ac)._asdict())
+                        if active_item is not None and active_item.flags() & Qt.ItemIsUserCheckable:
+                            active = active_item.checkState() == Qt.Checked
+                        else:
+                            active = True
+                        player = Player(name=name, max_hp=hp, curr_hp=hp, armor_class=ac, active=active)
+                        players.append(player.to_dict())
                     except ValueError:
                         QMessageBox.warning(self, "Invalid Input", f"Non-numeric HP or AC in row {row + 1}")
                         return

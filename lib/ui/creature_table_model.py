@@ -1,6 +1,7 @@
 from PyQt5.QtCore import Qt, QAbstractTableModel, QModelIndex, QVariant
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QColor, QFont
 from dataclasses import fields as dataclass_fields
+import platform
 
 SPELL_ICON_COLUMN_NAME = "_spellbook"
 
@@ -14,7 +15,7 @@ class CreatureTableModel(QAbstractTableModel):
 
         if fields is None and self.manager.creatures:
             sample_creature = next(iter(self.manager.creatures.values()))
-            excluded = {"_spell_slots", "_innate_slots", "_spell_slots_used", "_innate_slots_used"}
+            excluded = {"_spell_slots", "_innate_slots", "_spell_slots_used", "_innate_slots_used", "_active"}
             sample = next(iter(self.manager.creatures.values()))
             self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
             if SPELL_ICON_COLUMN_NAME not in self.fields:
@@ -44,12 +45,18 @@ class CreatureTableModel(QAbstractTableModel):
             if creature._type != CreatureType.MONSTER:
                 return QVariant()
 
-            if role == Qt.DisplayRole:
-                has_slots = hasattr(creature, "_spell_slots") and creature._spell_slots
-                has_innate = hasattr(creature, "_innate_slots") and creature._innate_slots
-                if has_slots or has_innate:
-                    return "📖"
-                return ""
+            has_slots = getattr(creature, "_spell_slots", {})
+            has_innate = getattr(creature, "_innate_slots", {})
+
+            if role == Qt.DisplayRole and (has_slots or has_innate):
+                return "📖"
+
+            # ✅ Only set the font for the emoji column
+            if role == Qt.FontRole:
+                font = QFont("Noto Color Emoji")
+                font.setPointSize(12)
+                return font
+
             if role == Qt.TextAlignmentRole:
                 return Qt.AlignCenter
             return QVariant()
@@ -146,13 +153,22 @@ class CreatureTableModel(QAbstractTableModel):
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if role != Qt.DisplayRole:
-            return QVariant()
-
         if orientation == Qt.Horizontal:
-            return self.field_to_header(self.fields[section])
-        else:
+            field = self.fields[section]
+
+            if role == Qt.DisplayRole:
+                return self.field_to_header(field)
+
+            if role == Qt.FontRole and field == SPELL_ICON_COLUMN_NAME:
+                from PyQt5.QtGui import QFont
+                font = QFont("Noto Color Emoji")
+                font.setPointSize(12)
+                return font
+
+        if orientation == Qt.Vertical and role == Qt.DisplayRole:
             return str(section + 1)
+
+        return QVariant()
 
     def field_to_header(self, field):
         mapping = {
@@ -179,7 +195,7 @@ class CreatureTableModel(QAbstractTableModel):
             sample = next(iter(self.manager.creatures.values()))
 
             # Always exclude these from table display
-            excluded = {"_spell_slots", "_innate_slots", "_spell_slots_used", "_innate_slots_used"}
+            excluded = {"_spell_slots", "_innate_slots", "_spell_slots_used", "_innate_slots_used", "_active"}
 
             self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
 

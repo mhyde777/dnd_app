@@ -17,7 +17,7 @@ from app.creature import (
 )
 from app.save_json import GameState
 from app.manager import CreatureManager
-from app.gist_utils import load_gist_content, create_or_update_gist, load_gist_index
+from app.gist_utils import load_gist_content, create_or_update_gist, load_gist_index, ensure_index_is_complete
 from app.config import get_github_token
 from ui.windows import (
     AddCombatantWindow, RemoveCombatantWindow, BuildEncounterWindow, UpdatePlayerWindow
@@ -48,6 +48,8 @@ class Application:
             prompt = TokenPromptWindow()
             if prompt.exec_() != QDialog.Accepted:
                 raise RuntimeError("GitHub token required to run the app.")
+
+        ensure_index_is_complete()
 
     # JSON Manipulation
     def init_players(self):
@@ -223,6 +225,8 @@ class Application:
             # Full replace
             manager.creatures.clear()
             for creature in players + monsters_list:
+                if isinstance(creature, Player) and not getattr(creature, "active", True):
+                    continue
                 manager.add_creature(creature)
 
             self.current_turn = state.get('current_turn', 0)
@@ -401,11 +405,21 @@ class Application:
                     init=creature_data['Init'],
                     max_hp=creature_data['HP'],
                     curr_hp=creature_data['HP'],
-                    armor_class=creature_data['AC']
+                    armor_class=creature_data['AC'],
+                    spell_slots=creature_data.get("_spell_slots", {}),
+                    innate_slots=creature_data.get("_innate_slots", {})
                 )
                 self.manager.add_creature(creature)
+
+            # ✅ These ensure sorting + spellbook column updates
+            self.manager.sort_creatures()
+            self.table_model.set_fields_from_sample()
+            self.table_model.refresh()
             self.update_table()
+
         self.init_tracking_mode(False)
+        for c in self.manager.creatures.values():
+            print(c.name, c._type, c._spell_slots, c._innate_slots)
 
     def remove_combatant(self):
         self.init_tracking_mode(True)

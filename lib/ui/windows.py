@@ -18,38 +18,146 @@ class AddCombatantWindow(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Add Combatants")
+        self.layout = QVBoxLayout(self)
+        self.combatant_rows = []
 
-        self.add_layout = QVBoxLayout()
+        self.add_button = QPushButton("Add Combatant")
+        self.add_button.clicked.connect(self.add_row)
+        self.layout.addWidget(self.add_button)
 
-        self.add_table = QTableWidget(self)
-        self.add_table.setRowCount(5)
-        self.add_table.setColumnCount(4)
-        self.add_table.setHorizontalHeaderLabels(['Name', 'Init', 'HP', 'AC'])
+        self.combatant_container = QVBoxLayout()
+        self.layout.addLayout(self.combatant_container)
 
-        self.add_layout.addWidget(self.add_table, 1)
-
-        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
+        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
+        self.layout.addWidget(self.button_box)
 
-        self.add_layout.addWidget(self.button_box, 2)
-        self.setLayout(self.add_layout)
-        self.resize(self.add_table.sizeHint().width() + 185, self.sizeHint().height())
+        for _ in range(5):  # Start with 5 rows
+            self.add_row()
+
+    def add_row(self):
+        row_container = QVBoxLayout()
+        top_row = QHBoxLayout()
+
+        name_input = QLineEdit()
+        init_input = QSpinBox()
+        init_input.setRange(-99, 99)
+
+        hp_input = QSpinBox()
+        hp_input.setRange(0, 1000)  # ✅ Default to 0
+        hp_input.setValue(0)
+
+        ac_input = QSpinBox()
+        ac_input.setRange(0, 50)    # ✅ Default to 0
+        ac_input.setValue(0)
+
+        spellcaster_checkbox = QCheckBox("Spellcaster")
+
+        top_row.addWidget(QLabel("Name:"))
+        top_row.addWidget(name_input)
+        top_row.addWidget(QLabel("Init:"))
+        top_row.addWidget(init_input)
+        top_row.addWidget(QLabel("HP:"))
+        top_row.addWidget(hp_input)
+        top_row.addWidget(QLabel("AC:"))
+        top_row.addWidget(ac_input)
+        top_row.addWidget(spellcaster_checkbox)
+
+        # === Spellcasting Panel (Hidden by Default)
+        spell_panel = QGroupBox("Spellcasting")
+        spell_panel_layout = QVBoxLayout()
+        spell_panel.setLayout(spell_panel_layout)
+        spell_panel.setVisible(False)
+
+        # Spell slots 1–9
+        slot_inputs = {}
+        slot_form = QFormLayout()
+        for level in range(1, 10):
+            box = QSpinBox()
+            box.setMaximum(10)
+            slot_inputs[level] = box
+            slot_form.addRow(f"Level {level} Slots:", box)
+        spell_panel_layout.addLayout(slot_form)
+
+        # Innate spells table
+        innate_table = QTableWidget(0, 2)
+        innate_table.setHorizontalHeaderLabels(["Spell Name", "Uses"])
+        innate_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        spell_panel_layout.addWidget(QLabel("Innate Spells:"))
+        spell_panel_layout.addWidget(innate_table)
+
+        add_innate_button = QPushButton("+ Add Innate Spell")
+        def add_innate_row():
+            row = innate_table.rowCount()
+            innate_table.insertRow(row)
+            innate_table.setItem(row, 0, QTableWidgetItem(""))
+            innate_table.setItem(row, 1, QTableWidgetItem("1"))
+        add_innate_button.clicked.connect(add_innate_row)
+        spell_panel_layout.addWidget(add_innate_button)
+
+        # Show/hide spellcasting panel
+        spellcaster_checkbox.toggled.connect(spell_panel.setVisible)
+
+        # Pack row
+        row_container.addLayout(top_row)
+        row_container.addWidget(spell_panel)
+        self.combatant_container.addLayout(row_container)
+
+        self.combatant_rows.append({
+            "name": name_input,
+            "init": init_input,
+            "hp": hp_input,
+            "ac": ac_input,
+            "spellcaster": spellcaster_checkbox,
+            "spell_panel": spell_panel,
+            "slots": slot_inputs,
+            "innate_table": innate_table
+        })
 
     def get_data(self):
-        data: List[Dict[str, Any]] = []
-        for row in range(self.add_table.rowCount()):
-            name = self.add_table.item(row, 0)
-            init = self.add_table.item(row, 1)
-            hp = self.add_table.item(row, 2)
-            ac = self.add_table.item(row, 3)
-            if name and init and hp and ac:
-                data.append({
-                    'Name': name.text(),
-                    'Init': int(init.text()),
-                    'HP': int(hp.text()),
-                    'AC': int(ac.text())
-                })
+        data = []
+        for row in self.combatant_rows:
+            name = row["name"].text().strip()
+            if not name:
+                continue
+
+            creature = {
+                "Name": name,
+                "Init": row["init"].value(),
+                "HP": row["hp"].value(),
+                "AC": row["ac"].value()
+            }
+
+            if row["spellcaster"].isChecked():
+                # Add spell slots
+                spell_slots = {
+                    level: box.value()
+                    for level, box in row["slots"].items()
+                    if box.value() > 0
+                }
+                if spell_slots:
+                    creature["_spell_slots"] = spell_slots
+
+                # Add innate spells
+                innate_spells = {}
+                table = row["innate_table"]
+                for r in range(table.rowCount()):
+                    spell_item = table.item(r, 0)
+                    uses_item = table.item(r, 1)
+                    if spell_item and uses_item:
+                        try:
+                            spell_name = spell_item.text().strip()
+                            uses = int(uses_item.text())
+                            if spell_name:
+                                innate_spells[spell_name] = uses
+                        except ValueError:
+                            continue
+                if innate_spells:
+                    creature["_innate_slots"] = innate_spells
+
+            data.append(creature)
+
         return data
 
 
