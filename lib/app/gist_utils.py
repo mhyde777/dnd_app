@@ -114,3 +114,22 @@ def delete_gist(gist_id: str) -> None:
     response = requests.delete(f"{GITHUB_API_URL}/gists/{gist_id}", headers=headers)
     response.raise_for_status()  # Will raise if deletion failed
 
+def ensure_index_is_complete():
+    index = load_gist_index()
+    updated = False
+
+    try:
+        gists = list_gists()
+        for gist in gists:
+            gist_id = gist["id"]
+            for filename in gist.get("files", {}):
+                if filename.endswith(".json") and filename not in index:
+                    index[filename] = gist_id
+                    updated = True
+    except Exception as e:
+        print(f"[Warning] Failed to check for missing Gist index entries: {e}")
+        return
+
+    if updated:
+        save_gist_index(index)
+        print("[INFO] Gist index updated with missing entries")

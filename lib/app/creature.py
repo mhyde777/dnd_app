@@ -43,6 +43,7 @@ class I_Creature:
     _innate_slots: dict[str, int] = field(default_factory=dict)
     _spell_slots_used: dict[int, int] = field(default_factory=dict)
     _innate_slots_used: dict[str, int] = field(default_factory=dict)
+    _active: bool = field(default=True)
 
     def __gt__(self, other: I_Creature) -> bool:
         if not isinstance(other, I_Creature):
@@ -77,7 +78,8 @@ class I_Creature:
             "_spell_slots": self._spell_slots,
             "_innate_slots": self._innate_slots,
             "_spell_slots_used": self._spell_slots_used,
-            "_innate_slots_used": self._innate_slots_used
+            "_innate_slots_used": self._innate_slots_used,
+            "_active": self._active
         }
 
     @staticmethod
@@ -87,6 +89,7 @@ class I_Creature:
         innate_slots = data.get("_innate_slots", {})
         spell_slots_used = data.get("_spell_slots_used")
         innate_slots_used = data.get("_innate_slots_used")
+        active = data.get("_active", True)
         # print("[LOAD CREATURE]", data["_name"])
         # print("  _innate_slots_used:", data.get("_innate_slots_used"))
         # print("  _spell_slots_used:", data.get("_spell_slots_used"))
@@ -108,7 +111,8 @@ class I_Creature:
                 spell_slots=spell_slots,
                 innate_slots=innate_slots,
                 spell_slots_used=spell_slots_used,
-                innate_slots_used=innate_slots_used
+                innate_slots_used=innate_slots_used,
+                active=active
             )
         elif creature_type == CreatureType.MONSTER:
             return Monster(
@@ -126,7 +130,8 @@ class I_Creature:
                 spell_slots=spell_slots,
                 innate_slots=innate_slots,
                 spell_slots_used=spell_slots_used,
-                innate_slots_used=innate_slots_used
+                innate_slots_used=innate_slots_used,
+                active=active
             )
         else:
             return I_Creature(**data)
@@ -193,12 +198,17 @@ class I_Creature:
     @status_time.setter
     def status_time(self, value: int): self._status_time = value
 
+    @property
+    def active(self) -> bool: return self._active
+    @active.setter
+    def active(self, value: bool): self._active = value
+
 
 class Monster(I_Creature):
     def __init__(self, name, init=0, max_hp=0, curr_hp=0, armor_class=0,
                  movement=0, action=False, bonus_action=False, reaction=False,
                  notes='', status_time='', spell_slots=None, innate_slots=None,
-                 spell_slots_used=None, innate_slots_used=None):
+                 spell_slots_used=None, innate_slots_used=None, active=True):
         super().__init__(
             _type=CreatureType.MONSTER,
             _name=name,
@@ -215,7 +225,8 @@ class Monster(I_Creature):
             _spell_slots=spell_slots or {},
             _innate_slots=innate_slots or {},
             _spell_slots_used=spell_slots_used or {},
-            _innate_slots_used=innate_slots_used or {}
+            _innate_slots_used=innate_slots_used or {},
+            _active=active
         )
 
 
@@ -224,7 +235,7 @@ class Player(I_Creature):
                  movement=0, action=False, bonus_action=False, reaction=False,
                  object_interaction=False, notes='', status_time='',
                  spell_slots=None, innate_slots=None, spell_slots_used=None,
-                 innate_slots_used=None):
+                 innate_slots_used=None, active=True):
         super().__init__(
             _type=CreatureType.PLAYER,
             _name=name,
@@ -242,5 +253,6 @@ class Player(I_Creature):
             _spell_slots=spell_slots or {},
             _innate_slots=innate_slots or {},
             _spell_slots_used=spell_slots_used or {},
-            _innate_slots_used=innate_slots_used or {}
+            _innate_slots_used=innate_slots_used or {},
+            _active=active
         )
