@@ -575,20 +575,26 @@ class Application:
         self.resize_to_fit_screen(base_name)
 
     def resize_to_fit_screen(self, base_name):
-        # self.statblock.clear()
         screen_geometry = QApplication.desktop().availableGeometry(self)
         screen_width = screen_geometry.width()
         screen_height = screen_geometry.height()
-        extensions = self.get_extensions() 
+
+        max_width = int(screen_width * 0.4)   # 40% of screen width
+        max_height = int(screen_height * 0.9) # 90% of screen height
+
+        extensions = self.get_extensions()
         for ext in extensions:
             image_path = self.get_image_path(f'{base_name}.{ext}')
             if os.path.exists(image_path):
                 self.pixmap = QPixmap(image_path)
-                h_shift = screen_width / 2440 if screen_width < 2560 else 1
-                v_shift = screen_height / 1440 if screen_height < 1440 else 1
-                new_size = QSize(int(self.pixmap.width() * h_shift), int(self.pixmap.height() * v_shift))
-                scaled_pixmap = self.pixmap.scaled(new_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                scaled_pixmap = self.pixmap.scaled(
+                    max_width,
+                    max_height,
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation
+                )
                 self.statblock.setPixmap(scaled_pixmap)
+                break
 
     def hide_statblock(self):
         self.statblock.hide()
@@ -715,3 +721,12 @@ class Application:
     def create_or_update_characters(self):
         dialog = UpdateCharactersWindow(self)
         dialog.exec_()
+
+    def on_commit_data(self, editor):
+        # print("[COMMIT] Value committed from editor")
+        self.manager.sort_creatures()
+        self.sorted_creatures = list(self.manager.creatures.values())
+        self.table_model.refresh()
+        self.update_table()
+        self.update_active_init()
+        self.table.clearSelection()

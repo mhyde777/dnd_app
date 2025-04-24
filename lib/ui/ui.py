@@ -61,6 +61,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.table_model = CreatureTableModel(self.manager)
         self.table = QTableView(self)
         self.table.setModel(self.table_model)
+        self.table.itemDelegate().commitData.connect(self.on_commit_data)
         self.table.clicked.connect(self.handle_cell_clicked)
 # Ensure that the table's size is fixed and matches its content
         self.table.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
