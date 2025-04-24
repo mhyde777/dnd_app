@@ -24,8 +24,14 @@ class CreatureManager:
                 del self.creatures[creature_names]
 
     def sort_creatures(self) -> None:
-        # Sort creatures by the initiative value (_init)
-        self.creatures = dict(sorted(self.creatures.items(), key=lambda item: item[1]._init, reverse=True))
+        sorted_creatures = sorted(self.creatures.items(), key=lambda item: item[1].initiative, reverse=True)
+        new_dict = {k: v for k, v in sorted_creatures}
+
+        # print("[SORT] New order:", list(new_dict.keys()))
+
+        # Force reference replacement
+        self.creatures.clear()
+        self.creatures.update(new_dict)
 
     def set_creature_init(self, creature: str, init: int) -> None:
         self.creatures[creature].initiative = init
