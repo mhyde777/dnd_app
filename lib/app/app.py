@@ -229,6 +229,8 @@ class Application:
                     continue
                 manager.add_creature(creature)
 
+# Only assign turn/counter values if we're updating the app's live manager
+        if manager is self.manager:
             self.current_turn = state.get('current_turn', 0)
             self.round_counter = state.get('round_counter', 1)
             self.time_counter = state.get('time_counter', 0)
