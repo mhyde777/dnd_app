@@ -1,5 +1,5 @@
 import pprint
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 import json, os, re
 
 from PyQt5.QtWidgets import(
@@ -32,18 +32,29 @@ from ui.token_prompt import TokenPromptWindow
 class Application:
 
     def __init__(self):
+        # Legacy counters still used by your save/load flows
         self.current_turn = 0
         self.round_counter = 1
         self.time_counter = 0
-        self.tracking_by_name = False
+        self.tracking_by_name = True  # use name-based tracking for stability
         self.base_dir = os.path.dirname(__file__)
-        self.sorted_creatures = []
+
+        # New stable navigation state
+        self.turn_order: List[str] = []   # authoritative order (by init desc, name asc)
+        self.current_idx: int = 0         # pointer into turn_order
+        self.current_creature_name: Optional[str] = None
+
+        # Keep this for compatibility with other methods that reference it,
+        # but we will manage it via build_turn_order()
+        self.sorted_creatures: List[Any] = []
+
         self.boolean_fields = {
             '_action': 'set_creature_action',
             '_bonus_action': 'set_creature_bonus_action',
-            '_reaction': 'set_creature_reaction',
-            '_object_interaction': 'set_creature_object_interaction'
+            '_reaction': 'set_creature_reaction'
+            # '_object_interaction': 'set_creature_object_interaction'
         }
+
         if not get_github_token():
             prompt = TokenPromptWindow()
             if prompt.exec_() != QDialog.Accepted:
@@ -51,35 +62,83 @@ class Application:
 
         ensure_index_is_complete()
 
+    # -----------------------
+    # Core ordering utilities
+    # -----------------------
+    def _creature_list_sorted(self) -> List[Any]:
+        """Deterministic order: initiative DESC, then name ASC."""
+        if not hasattr(self, "manager") or not getattr(self.manager, "creatures", None):
+            return []
+        creatures = list(self.manager.creatures.values())
+
+        def _init(c):
+            try:
+                return int(getattr(c, "initiative", 0) or 0)
+            except Exception:
+                return 0
+
+        def _nm(c):
+            try:
+                return str(getattr(c, "name", "")).lower()
+            except Exception:
+                return ""
+
+        creatures.sort(key=lambda c: (-_init(c), _nm(c)))
+        return creatures
+
+    def build_turn_order(self) -> None:
+        """
+        Rebuild the authoritative turn order when creatures/initiatives change.
+        Also refresh self.sorted_creatures for legacy code paths that read it.
+        """
+        creatures = self._creature_list_sorted()
+        self.sorted_creatures = creatures[:]  # keep legacy list in sync (sorted)
+        self.turn_order = [getattr(c, "name", "") for c in creatures if getattr(c, "name", "")]
+        if not self.turn_order:
+            self.current_idx = 0
+            self.current_creature_name = None
+            self.update_active_ui()
+            return
+
+        # Preserve pointer by name if possible
+        if self.current_creature_name in self.turn_order:
+            self.current_idx = self.turn_order.index(self.current_creature_name)
+        else:
+            if self.current_idx >= len(self.turn_order):
+                self.current_idx = max(0, len(self.turn_order) - 1)
+            self.current_creature_name = self.turn_order[self.current_idx]
+
+        self.update_active_ui()
+
+    def active_name(self) -> Optional[str]:
+        if not self.turn_order:
+            return None
+        self.current_idx = max(0, min(self.current_idx, len(self.turn_order) - 1))
+        return self.turn_order[self.current_idx]
+
+    # ----------------
     # JSON Manipulation
+    # ----------------
     def init_players(self):
         from app.gist_utils import load_gist_index
 
         filename = "players.json"
         
         try:
-            # Load the Gist index and get the Gist ID for players.json
             index = load_gist_index()
-            # print(f"[DEBUG] Loaded Gist index: {index}")
-            
             gist_id = index.get(filename)
-            # print(f"[DEBUG] Looking for Gist ID for {filename}: {gist_id}")
-            
-            # If a Gist ID is found, load the file from the Gist
             if gist_id:
                 raw_url = f"https://gist.githubusercontent.com/{self.get_github_username()}/{gist_id}/raw/{filename}"
-                # print(f"[DEBUG] Found Gist ID. Loading file from Gist: {raw_url}")
                 self.load_file_to_manager(raw_url, self.manager)
             else:
-                # If no Gist ID is found, fallback to local file loading
-                # print("[DEBUG] No Gist ID found for players.json — falling back to local.")
                 self.load_file_to_manager(filename, self.manager)
 
             # After loading, refresh the table model and update UI
             self.table_model.set_fields_from_sample()
             self.table_model.refresh()
-            self.update_table()  # Ensure the table reflects the latest data
-            self.statblock.clear()  # Clear the stat block
+            # Rebuild order after data load
+            self.build_turn_order()
+            self.statblock.clear()
         except Exception as e:
             print(f"[ERROR] Failed to initialize players: {e}")
 
@@ -92,15 +151,15 @@ class Application:
 
         if gist_id:
             raw_url = f"https://gist.githubusercontent.com/{self.get_github_username()}/{gist_id}/raw/{filename}"
-            # print(f"[DEBUG] Loading last_state from Gist URL: {raw_url}")
             self.load_file_to_manager(raw_url, self.manager)
         else:
-            # print("[DEBUG] No gist ID found for last_state.json — falling back to local.")
             self.load_file_to_manager(filename, self.manager)
 
         if self.manager.creatures:
             self.table_model.set_fields_from_sample()
- 
+            # Ensure stable order after load
+            self.build_turn_order()
+
     def save_encounter_to_gist(self, filename: str, description: str = ""):
         from app.gist_utils import create_or_update_gist
 
@@ -108,6 +167,7 @@ class Application:
         state = GameState()
         state.players = [c for c in self.manager.creatures.values() if isinstance(c, Player)]
         state.monsters = [c for c in self.manager.creatures.values() if isinstance(c, Monster)]
+        # Retain legacy counters
         state.current_turn = self.current_turn
         state.round_counter = self.round_counter
         state.time_counter = self.time_counter
@@ -153,35 +213,15 @@ class Application:
         state.round_counter = self.round_counter
         state.time_counter = self.time_counter
 
-        # Convert to full dict — includes spellcasting fields if to_dict() is correct
         save = state.to_dict()
 
         filename = "last_state.json"
         description = "Auto-saved state from initiative tracker"
 
-        # pprint.pprint(save)
         try:
             gist_response = create_or_update_gist(filename, save, description=description)
-            # print(f"[DEBUG] Saved last_state.json to Gist: {gist_response['html_url']}")
         except Exception as e:
             print(f"[ERROR] Failed to save state to Gist: {e}")
-    #
-    # def save_as(self):
-    #     options = QFileDialog.Options()
-    #     file_path, _ = QFileDialog.getSaveFileName(self, "Save File", self.get_data_dir(), "All Files (*);;JSON Files (*.json)", options=options)
-    #     self.save_to_json(file_path, self.manager)
-    #
-    # def save_to_json(self, file, manager):
-    #     file_path = self.get_data_path(file)
-    #     state = GameState()
-    #     state.players = [creature for creature in manager.creatures.values() if isinstance(creature, Player)]
-    #     state.monsters = [creature for creature in manager.creatures.values() if isinstance(creature, Monster)]
-    #     state.current_turn = self.current_turn
-    #     state.round_counter = self.round_counter
-    #     state.time_counter = self.time_counter
-    #     save = state.to_dict()
-    #     with open(file_path, 'w') as f:
-    #         json.dump(save, f, cls=CustomEncoder, indent=4)
 
     def load_file_to_manager(self, file_name, manager, monsters=False, merge=False):
         if file_name.startswith("http"):
@@ -202,16 +242,17 @@ class Application:
             for creature in monsters_list:
                 manager.add_creature(creature)
             manager.sort_creatures()
-            self.sorted_creatures = list(manager.creatures.values())
-            self.current_creature_name = self.sorted_creatures[0].name if self.sorted_creatures else None
-            self.update_active_init()
+            # Rebuild stable order and UI
+            self.build_turn_order()
             self.update_table()
             self.pop_lists()
             return
 
         if merge:
-            self.init_tracking_mode(True)
+            # Preserve current active creature name & counters on merge
+            preserved_active = getattr(self, "current_creature_name", None)
 
+            self.init_tracking_mode(True)
             for creature in monsters_list:
                 name = creature.name
                 counter = 1
@@ -221,15 +262,27 @@ class Application:
                 creature.name = name
                 manager.add_creature(creature)
 
-        else:
-            # Full replace
-            manager.creatures.clear()
-            for creature in players + monsters_list:
-                if isinstance(creature, Player) and not getattr(creature, "active", True):
-                    continue
-                manager.add_creature(creature)
+            # No counter resets here
+            manager.sort_creatures()
+            self.build_turn_order()
 
-# Only assign turn/counter values if we're updating the app's live manager
+            # Try to keep pointer on previously active name
+            if preserved_active in self.turn_order:
+                self.current_creature_name = preserved_active
+                self.current_idx = self.turn_order.index(preserved_active)
+
+            self.update_table()
+            self.pop_lists()
+            return
+
+        # -------- Full replace path (NOT merge) --------
+        manager.creatures.clear()
+        for creature in players + monsters_list:
+            if isinstance(creature, Player) and not getattr(creature, "active", True):
+                continue
+            manager.add_creature(creature)
+
+        # Only assign turn/counter values on full replace
         if manager is self.manager:
             self.current_turn = state.get('current_turn', 0)
             self.round_counter = state.get('round_counter', 1)
@@ -237,10 +290,11 @@ class Application:
 
         manager.sort_creatures()
 
-        self.sorted_creatures = list(manager.creatures.values())
-        self.current_creature_name = self.sorted_creatures[0].name if self.sorted_creatures else None
+        # Build stable order and set initial current creature
+        self.build_turn_order()
+        if self.turn_order and not self.current_creature_name:
+            self.current_creature_name = self.turn_order[0]
 
-        self.update_active_init()
         self.update_table()
         self.pop_lists()
 
@@ -259,61 +313,148 @@ class Application:
         response.raise_for_status()
         return response.json()["login"]
 
+    # ----------------
+    # Table / UI setup
+    # ----------------
     def update_table(self):
+        # 1) Ensure headers/model are ready
         if not self.table_model.fields:
             self.table_model.set_fields_from_sample()
-        self.table_model.refresh()  # This now syncs the creature_names list too
+        self.table_model.refresh()
         self.table.setColumnHidden(0, True)
-        headers = self.table_model.fields
-        if "_max_hp" in headers:
-            max_hp_index = headers.index("_max_hp")
-            self.table.setColumnHidden(max_hp_index, True)
-# 🔍 Hide spellbook column if no creature has spellcasting data
-        spellbook_index = self.table_model.fields.index("_spellbook") if "_spellbook" in self.table_model.fields else -1
 
-        if spellbook_index >= 0:
-            has_spellcasters = any(
-                getattr(creature, "_spell_slots", {}) or getattr(creature, "_innate_slots", {})
-                for creature in self.manager.creatures.values()
-            )
-            self.table.setColumnHidden(spellbook_index, not has_spellcasters)
-# ✅ Auto-resize the column if it's shown
-        if has_spellcasters:
-            self.table.resizeColumnToContents(spellbook_index)
-            self.table.setColumnWidth(spellbook_index, max(40, self.table.columnWidth(spellbook_index)))
+        # Use both the model's internal field names and the *view* model headers
+        fields = list(self.table_model.fields)
+        view_model = self.table.model()
+        column_count = view_model.columnCount() if view_model else len(fields)
 
+        # Helper: map a source column index to the view column index if a proxy is in use
+        def to_view_col(src_col: int) -> int:
+            try:
+                from PyQt5.QtCore import QModelIndex, QAbstractProxyModel  # safe local import
+            except Exception:
+                QAbstractProxyModel = None  # type: ignore
+            if view_model and QAbstractProxyModel and isinstance(view_model, QAbstractProxyModel):
+                src_model = view_model.sourceModel()
+                if src_model is not None:
+                    try:
+                        idx = src_model.index(0, src_col)
+                        mapped = view_model.mapFromSource(idx)
+                        if mapped.isValid():
+                            return mapped.column()
+                    except Exception:
+                        pass
+            return src_col  # assume direct view
+
+        # 2) Hide Max HP column if present
+        if "_max_hp" in fields:
+            self.table.setColumnHidden(to_view_col(fields.index("_max_hp")), True)
+
+        # 3) Always hide Movement ("M") and Object Interaction ("OI") columns
+        hide_aliases = {
+            "_movement", "movement", "M",
+            "_object_interaction", "object_interaction", "OI"
+        }
+        for alias in hide_aliases:
+            if alias in fields:
+                self.table.setColumnHidden(to_view_col(fields.index(alias)), True)
+
+        # 4) Detect spellcasting columns robustly (aliases + header substring "spell")
+        spell_aliases = {
+            "_spellbook", "spellbook", "Spellbook",
+            "_spellcasting", "spellcasting", "Spellcasting",
+            "_spells", "spells", "Spells"
+        }
+
+        # Collect candidate columns from fields
+        spell_cols_view = set()
+        for alias in spell_aliases:
+            if alias in fields:
+                spell_cols_view.add(to_view_col(fields.index(alias)))
+
+        # Also scan the *view's* headers for any "spell" label (case-insensitive)
+        try:
+            from PyQt5.QtCore import Qt
+            for c in range(column_count):
+                header_text = view_model.headerData(c, Qt.Horizontal, Qt.DisplayRole)
+                if isinstance(header_text, str) and ("spell" in header_text.lower()):
+                    spell_cols_view.add(c)
+        except Exception:
+            pass
+
+        # 5) Decide visibility: only show if there is at least one MONSTER caster
+        has_npc_spellcasters = any(
+            (getattr(creature, "_type", None) == CreatureType.MONSTER) and
+            bool(getattr(creature, "_spell_slots", {}) or getattr(creature, "_innate_slots", {}))
+            for creature in self.manager.creatures.values()
+        )
+
+        # Apply hide/show for all detected spellcasting columns
+        for c in spell_cols_view:
+            self.table.setColumnHidden(c, not has_npc_spellcasters)
+
+        # If visible, size the first spell column reasonably
+        if has_npc_spellcasters and spell_cols_view:
+            first = min(spell_cols_view)
+            self.table.resizeColumnToContents(first)
+            self.table.setColumnWidth(first, max(40, self.table.columnWidth(first)))
+
+        # 6) Usual sizing + list refresh; do NOT reorder here
         self.adjust_table_size()
         self.pop_lists()
-        self.update_active_init()
-
-# =============== UI Manipulation =======================
+        self.update_active_ui()
+    # Backwards-compat shim: existing code calls this frequently.
+    # Now it only updates labels/highlight; it no longer resorts or changes indices.
     def update_active_init(self):
-        self.sorted_creatures = list(self.manager.creatures.values())
-        if not self.sorted_creatures:
-            self.active_init_label.setText("Active: None")
-            return
+        self.update_active_ui()
 
-        if self.tracking_by_name:
-            # Check if current_creature_name is set, otherwise use the first creature in the list
-            if not self.current_creature_name and self.sorted_creatures:
-                self.current_creature_name = self.sorted_creatures[0].name
+    # ----------------------------
+    # Active UI (no re-sorting here)
+    # ----------------------------
+    def update_active_ui(self) -> None:
+        """
+        Refresh labels/highlights only. No sorting or pointer changes here.
+        Also disables the Prev button when we're at the absolute start:
+        Round = 1, Time = 0, and the active index is 0 (top of the list).
+        """
+        name = self.active_name()  # uses self.turn_order/self.current_idx; no resorting
 
-            # Find the correct turn by matching the creature's name
-            self.current_turn = next(
-                (i for i, creature in enumerate(self.sorted_creatures) if creature.name == self.current_creature_name),
-                0  # Default to the first creature if no match
-            )
+        # Keep current name in sync for other code paths that read it
+        self.current_creature_name = name
 
-        self.current_creature = self.sorted_creatures[self.current_turn]
-        self.current_name = self.current_creature.name
+        # Labels
+        if hasattr(self, "active_init_label") and self.active_init_label:
+            self.active_init_label.setText(f"Active: {name if name else 'None'}")
 
-        self.active_init_label.setText(f"Active: {self.current_name}")
-        self.round_counter_label.setText(f"Round: {self.round_counter}")
-        self.time_counter_label.setText(f"Time: {self.time_counter} seconds")
+        if hasattr(self, "round_counter_label") and self.round_counter_label:
+            self.round_counter_label.setText(f"Round: {self.round_counter}")
 
-        if hasattr(self.table_model, "set_active_creature"):
-            self.table_model.set_active_creature(self.current_name)
-    
+        if hasattr(self, "time_counter_label") and self.time_counter_label:
+            self.time_counter_label.setText(f"Time: {self.time_counter} seconds")
+
+        # Highlight active row in the table via the model hook (no re-sorting)
+        if hasattr(self, "table_model") and self.table_model:
+            if hasattr(self.table_model, "set_active_creature"):
+                try:
+                    self.table_model.set_active_creature(name or "")
+                except Exception:
+                    pass
+            if hasattr(self.table_model, "refresh"):
+                try:
+                    self.table_model.refresh()
+                except Exception:
+                    pass
+
+        # 🔒 Disable Prev at the absolute start of combat
+        at_absolute_start = (
+            (self.round_counter <= 1) and
+            (self.time_counter <= 0) and
+            (getattr(self, "current_idx", 0) == 0)
+        )
+        if hasattr(self, "prev_btn") and self.prev_btn:
+            # Only enable Prev if we can actually go back
+            self.prev_btn.setEnabled(not at_absolute_start)
+
     def init_tracking_mode(self, by_name):
         self.tracking_by_name = by_name
 
@@ -343,15 +484,13 @@ class Application:
         self.table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.table.setFixedSize(total_width + 19, total_height + 2)  # ✅ extra padding for gutter
 
-# ============== Populate Lists ====================
+    # ============== Populate Lists ====================
     def pop_lists(self):
-        # Populate the list of creatures (names) for both the creature list and monster list
         self.populate_creature_list()
         self.populate_monster_list()
 
     def populate_creature_list(self):
         self.creature_list.clear()
-        # Use the table model to get the list of creature names (assuming your model contains these names)
         for row in range(self.table_model.rowCount()):
             creature_name = self.table_model.creature_names[row]  # Adjust based on your model's data
             self.creature_list.addItem(creature_name)
@@ -365,15 +504,13 @@ class Application:
         unique_monster_names = set()
 
         for row in range(self.table_model.rowCount()):
-            creature_name = self.table_model.creature_names[row]  # Adjust based on your model's data
+            creature_name = self.table_model.creature_names[row]
             creature = self.manager.creatures.get(creature_name)
             
             if creature and creature._type == CreatureType.MONSTER:
-                # Strip the number suffix from monster names (e.g., 'Slaad Tadpole 1' becomes 'Slaad Tadpole')
                 base_name = re.sub(r'\s*\d+$', '', creature_name)
                 unique_monster_names.add(base_name)
 
-        # Add unique monster names to the list
         for name in unique_monster_names:
             self.monster_list.addItem(name)
 
@@ -395,7 +532,7 @@ class Application:
         base_name = non_num_name.strip()
         return base_name
 
-# ================== Edit Menu Actions =====================
+    # ================== Edit Menu Actions =====================
     def add_combatant(self):
         self.init_tracking_mode(True)
         dialog = AddCombatantWindow(self)
@@ -413,10 +550,11 @@ class Application:
                 )
                 self.manager.add_creature(creature)
 
-            # ✅ These ensure sorting + spellbook column updates
+            # ✅ Ensure sorting + fields + stable order
             self.manager.sort_creatures()
             self.table_model.set_fields_from_sample()
             self.table_model.refresh()
+            self.build_turn_order()
             self.update_table()
 
         self.init_tracking_mode(False)
@@ -430,73 +568,109 @@ class Application:
             selected_creatures = dialog.get_selected_creatures()
             for name in selected_creatures:
                 self.manager.rm_creatures(name)
+            # Rebuild order and refresh
+            self.manager.sort_creatures()
+            self.build_turn_order()
             self.update_table()
-            if self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
-                self.active_statblock_image(self.sorted_creatures[self.current_turn])
+
+            # Use current active creature for statblock (if any)
+            name = self.active_name()
+            if name:
+                cr = self.manager.creatures.get(name)
+                if cr and cr._type == CreatureType.MONSTER:
+                    self.active_statblock_image(cr)
+                else:
+                    self.statblock.clear()
             else:
                 self.statblock.clear()
         self.init_tracking_mode(False)
 
-# ====================== Button Logic ======================
+    # ====================== Button Logic ======================
     def next_turn(self):
-        if not self.sorted_creatures:
-            print("[WARNING] No creatures in encounter. Cannot advance turn.")
-            return
+        # Make sure we have a stable order
+        if not self.turn_order:
+            self.build_turn_order()
+            if not self.turn_order:
+                print("[WARNING] No creatures in encounter. Cannot advance turn.")
+                return
 
-        self.current_turn += 1
-        if self.current_turn >= len(self.sorted_creatures):
-            self.current_turn = 0
+        # Advance pointer
+        self.current_idx += 1
+        wrapped = False
+        if self.current_idx >= len(self.turn_order):
+            self.current_idx = 0
+            wrapped = True
+
+        if wrapped:
             self.round_counter += 1
             self.time_counter += 6
-            self.round_counter_label.setText(f"Round: {self.round_counter}")
-            self.time_counter_label.setText(f"Time: {self.time_counter} seconds")
+            # Tick timed statuses down (clamped to 0)
+# Tick only existing numeric timers down; do not create new values
+        for cr in self.manager.creatures.values():
+            st = getattr(cr, "status_time", None)
+            if isinstance(st, int) and st > 0:
+                cr.status_time = max(0, st - 6)
 
-            for creature in self.manager.creatures.values():
-                if creature.status_time:
-                    creature.status_time -= 6
-                creature.action = False
-                creature.bonus_action = False
-                creature.object_interaction = False
-            self.table_model.refresh()
-            self.update_table()
-
-
-        self.current_creature_name = self.sorted_creatures[self.current_turn].name
-        self.manager.creatures[self.current_creature_name].reaction = False
-        self.update_active_init()
-
-        if self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
-            self.active_statblock_image(self.sorted_creatures[self.current_turn])
-    
-    def prev_turn(self):
-        if not self.sorted_creatures:
-            print("[WARNING] No creatures in encounter. Cannot go back.")
+        # Set active by name
+        self.current_creature_name = self.active_name()
+        if not self.current_creature_name:
+            self.update_active_ui()
             return
 
-        # Decrease current_turn and loop back to the last creature if we're at the first one
-        if self.current_turn == 0:
-            self.current_turn = len(self.sorted_creatures) - 1
-            self.round_counter -= 1
-            self.time_counter -= 6
-            self.round_counter_label.setText(f"Round: {self.round_counter}")
-            self.time_counter_label.setText(f"Time: {self.time_counter} seconds")
+        # Reset ONLY active creature's economy at THEIR turn start
+        cr = self.manager.creatures[self.current_creature_name]
+        if hasattr(cr, "action"):
+            cr.action = False
+        if hasattr(cr, "bonus_action"):
+            cr.bonus_action = False
+        if hasattr(cr, "object_interaction"):
+            cr.object_interaction = False
+        if hasattr(cr, "reaction"):
+            cr.reaction = False  # False = unused in your semantics
 
-            # Increment status time for all creatures
-            for creature in self.manager.creatures.values():
-                if creature.status_time:
-                    creature.status_time += 6
+        self.update_active_ui()
 
+        # Monster statblock
+        if getattr(cr, "_type", None) == CreatureType.MONSTER:
+            self.active_statblock_image(cr)
+
+    def prev_turn(self):
+        # Ensure order exists
+        if not self.turn_order:
+            self.build_turn_order()
+            if not self.turn_order:
+                print("[WARNING] No creatures in encounter. Cannot go back.")
+                return
+
+        # Hard stop at the beginning of combat
+        at_absolute_start = (self.round_counter <= 1 and self.time_counter <= 0 and self.current_idx == 0)
+        if at_absolute_start:
+            # optional: beep or show a tiny status message
+            # QApplication.beep()
+            return
+
+        wrapped = False
+        if self.current_idx == 0:
+            self.current_idx = len(self.turn_order) - 1
+            wrapped = True
         else:
-            self.current_turn -= 1
+            self.current_idx -= 1
 
-        self.current_creature_name = self.sorted_creatures[self.current_turn].name
-        self.update_active_init()
+        if wrapped:
+            self.round_counter = max(1, self.round_counter - 1)
+            self.time_counter = max(0, self.time_counter - 6)
+            # (Recommended) no timer rollback; if you do, guard with isinstance(st, int)
 
-        # Update the active statblock image if it's a monster
-        if self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
-            self.active_statblock_image(self.sorted_creatures[self.current_turn])
+        self.current_creature_name = self.active_name()
+        self.update_active_ui()
 
+        cr = self.manager.creatures.get(self.current_creature_name) if self.current_creature_name else None
+        if cr and getattr(cr, "_type", None) == CreatureType.MONSTER:
+            self.active_statblock_image(cr)
+
+    # ----------------
     # Path Functions
+    # ----------------
     def get_image_path(self, filename):
         return os.path.join(self.get_parent_dir(), 'images', filename)
 
@@ -512,7 +686,9 @@ class Application:
     def get_extensions(self):
         return ('png', 'jpg', 'jpeg', 'gif')
 
-    # Change Manager with Changes to Table
+    # -------------------------------
+    # Change Manager with Table Edits
+    # -------------------------------
     def manipulate_manager(self, item):
         row = item.row()
         col = item.column()
@@ -528,11 +704,11 @@ class Application:
             3: (self.manager.set_creature_max_hp, int),
             4: (self.manager.set_creature_curr_hp, int),
             5: (self.manager.set_creature_armor_class, int),
-            6: (self.manager.set_creature_movement, int),
+            # 6: (self.manager.set_creature_movement, int),
             7: (self.manager.set_creature_action, bool),
             8: (self.manager.set_creature_bonus_action, bool),
             9: (self.manager.set_creature_reaction, bool),
-            10: (self.manager.set_creature_object_interaction, bool),
+            # 10: (self.manager.set_creature_object_interaction, bool),
             11: (self.manager.set_creature_notes, str),
             12: (self.manager.set_creature_status_time, int)
         }
@@ -552,10 +728,12 @@ class Application:
         
         # Re-sort the creatures after updating any value
         self.manager.sort_creatures()
+        # Rebuild stable order to reflect any initiative/name change
+        self.build_turn_order()
 
         # Refresh the model and table view
-        self.table_model.refresh()  # Update the model
-        self.update_table()  # Refresh the table view
+        self.table_model.refresh()
+        self.update_table()
 
     def get_value(self, item, data_type):
         text = item.text()
@@ -563,7 +741,9 @@ class Application:
             return text.lower() in ['true', '1', 'yes']
         return data_type(text)
     
+    # -----------
     # Image Label
+    # -----------
     def update_statblock_image(self):
         selected_items = self.monster_list.selectedItems()
         if selected_items:
@@ -572,8 +752,12 @@ class Application:
         else:
             self.statblock.clear()
 
-    def active_statblock_image(self, creature_name):
-        base_name = self.get_base_name(creature_name)
+    def active_statblock_image(self, creature_name_or_obj):
+        # Backward compatibility: accept either name string or creature object
+        if isinstance(creature_name_or_obj, str):
+            base_name = self.get_base_name(self.manager.creatures[creature_name_or_obj])
+        else:
+            base_name = self.get_base_name(creature_name_or_obj)
         self.resize_to_fit_screen(base_name)
 
     def resize_to_fit_screen(self, base_name):
@@ -604,7 +788,7 @@ class Application:
     def show_statblock(self):
         self.statblock.show()
 
-# ================= Damage/Healing ======================
+    # ================= Damage/Healing ======================
     def heal_selected_creatures(self):
         self.apply_to_selected_creatures(positive=True)
 
@@ -634,7 +818,7 @@ class Application:
         self.value_input.clear()
         self.update_table()
 
-# ================= Encounter Builder =====================
+    # ================= Encounter Builder =====================
     def save_encounter(self):
         dialog = BuildEncounterWindow(self)
         if dialog.exec_() == QDialog.Accepted:
@@ -676,7 +860,6 @@ class Application:
                 gist_response = create_or_update_gist(filename, save, description=description)
                 gist_url = gist_response["html_url"]
                 raw_url = list(gist_response["files"].values())[0]["raw_url"]
-                # QMessageBox.information(self, "Saved to Gist", f"Gist created:\n{gist_url}\n\nRaw URL:\n{raw_url}")
             except Exception as e:
                 QMessageBox.warning(self, "Error", f"Failed to save gist:\n{e}")
 
@@ -691,26 +874,31 @@ class Application:
         else:
             self.load_file_to_manager(filename, manager, monsters=False)
 
-# ================== Secondary Windows ======================
+    # ================== Secondary Windows ======================
     def load_encounter(self):
         dialog = LoadEncounterWindow(self)
         if dialog.exec_() == QDialog.Accepted and dialog.selected_file:
             self.load_file_to_manager(dialog.selected_file, self.manager)
-
-            if self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
-                self.active_statblock_image(self.sorted_creatures[self.current_turn])
+            # After load, use the active creature from stable order
+            name = self.active_name()
+            if name:
+                cr = self.manager.creatures.get(name)
+                if cr and cr._type == CreatureType.MONSTER:
+                    self.active_statblock_image(cr)
 
     def merge_encounter(self):
         dialog = LoadEncounterWindow(self)
         if dialog.exec_() == QDialog.Accepted and dialog.selected_file:
             self.load_file_to_manager(dialog.selected_file, self.manager, merge=True)
 
-            # Make sure the correct current_creature_name is set
-            if not self.current_creature_name and self.sorted_creatures:
-                self.current_creature_name = self.sorted_creatures[0].name
+            if not self.current_creature_name and self.turn_order:
+                self.current_creature_name = self.turn_order[0]
 
-            if self.sorted_creatures[self.current_turn]._type == CreatureType.MONSTER:
-                self.active_statblock_image(self.sorted_creatures[self.current_turn])
+            name = self.active_name()
+            if name:
+                cr = self.manager.creatures.get(name)
+                if cr and cr._type == CreatureType.MONSTER:
+                    self.active_statblock_image(cr)
 
     def manage_gist_statuses(self):
         dialog = GistStatusWindow(self)
@@ -727,8 +915,9 @@ class Application:
     def on_commit_data(self, editor):
         # print("[COMMIT] Value committed from editor")
         self.manager.sort_creatures()
-        self.sorted_creatures = list(self.manager.creatures.values())
+        # Keep stable order in sync after edits
+        self.build_turn_order()
         self.table_model.refresh()
         self.update_table()
-        self.update_active_init()
+        self.update_active_ui()
         self.table.clearSelection()
