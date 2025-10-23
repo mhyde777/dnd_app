@@ -66,34 +66,59 @@ class Application:
     # Core ordering utilities
     # -----------------------
     def _creature_list_sorted(self) -> List[Any]:
-        """Deterministic order: initiative DESC, then name ASC."""
-        if not hasattr(self, "manager") or not getattr(self.manager, "creatures", None):
+        """Deterministic order from the manager: initiative DESC, then natural name ASC."""
+        if not getattr(self, "manager", None) or not getattr(self.manager, "creatures", None):
             return []
+
+        # Preferred: use the manager’s canonical ordering if available
+        if hasattr(self.manager, "ordered_items"):
+            try:
+                ordered = self.manager.ordered_items()  # List[Tuple[str, I_Creature]]
+                return [cr for _, cr in ordered]
+            except Exception:
+                pass  # fall back below if something unexpected happens
+
+        # Fallback: compute using manager’s _natural_key without duplicating it here
         creatures = list(self.manager.creatures.values())
 
         def _init(c):
+            v = getattr(c, "initiative", 0)
             try:
-                return int(getattr(c, "initiative", 0) or 0)
+                return int(v)
             except Exception:
-                return 0
+                try:
+                    return int(float(v))
+                except Exception:
+                    return 0
 
-        def _nm(c):
-            try:
-                return str(getattr(c, "name", "")).lower()
-            except Exception:
-                return ""
+        def _nm_key(c):
+            name = getattr(c, "name", "") or ""
+            if hasattr(self.manager, "_natural_key"):
+                return self.manager._natural_key(name)
+            # last-resort basic tie-break (shouldn’t be hit if manager has _natural_key)
+            return [name.lower()]
 
-        creatures.sort(key=lambda c: (-_init(c), _nm(c)))
+        creatures.sort(key=lambda c: (-_init(c), _nm_key(c)))
         return creatures
+
 
     def build_turn_order(self) -> None:
         """
         Rebuild the authoritative turn order when creatures/initiatives change.
-        Also refresh self.sorted_creatures for legacy code paths that read it.
+        Also refresh self.sorted_creatures for any legacy code that reads it.
         """
-        creatures = self._creature_list_sorted()
-        self.sorted_creatures = creatures[:]  # keep legacy list in sync (sorted)
-        self.turn_order = [getattr(c, "name", "") for c in creatures if getattr(c, "name", "")]
+        # Prefer manager’s canonical ordering
+        if hasattr(self.manager, "ordered_items"):
+            ordered = self.manager.ordered_items()  # List[Tuple[str, I_Creature]]
+            creatures = [cr for _, cr in ordered]
+            names = [nm for nm, _ in ordered]
+        else:
+            creatures = self._creature_list_sorted()
+            names = [getattr(c, "name", "") for c in creatures if getattr(c, "name", "")]
+
+        self.sorted_creatures = creatures[:]  # keep legacy list in sync
+        self.turn_order = names
+
         if not self.turn_order:
             self.current_idx = 0
             self.current_creature_name = None
@@ -101,19 +126,22 @@ class Application:
             return
 
         # Preserve pointer by name if possible
-        if self.current_creature_name in self.turn_order:
+        if getattr(self, "current_creature_name", None) in self.turn_order:
             self.current_idx = self.turn_order.index(self.current_creature_name)
         else:
-            if self.current_idx >= len(self.turn_order):
+            if getattr(self, "current_idx", 0) >= len(self.turn_order):
                 self.current_idx = max(0, len(self.turn_order) - 1)
             self.current_creature_name = self.turn_order[self.current_idx]
 
         self.update_active_ui()
 
+
     def active_name(self) -> Optional[str]:
+        if not getattr(self, "turn_order", None):
+            return None
         if not self.turn_order:
             return None
-        self.current_idx = max(0, min(self.current_idx, len(self.turn_order) - 1))
+        self.current_idx = max(0, min(getattr(self, "current_idx", 0), len(self.turn_order) - 1))
         return self.turn_order[self.current_idx]
 
     # ----------------
@@ -602,31 +630,65 @@ class Application:
 
     # ====================== Button Logic ======================
     def next_turn(self):
-        # Make sure we have a stable order
-        if not self.turn_order:
+        # 1) Ensure we have an order
+        if not getattr(self, "turn_order", None):
             self.build_turn_order()
             if not self.turn_order:
                 print("[WARNING] No creatures in encounter. Cannot advance turn.")
                 return
+        else:
+            # 2) Keep it in sync with the manager's canonical order
+            try:
+                manager_names = [nm for nm, _ in self.manager.ordered_items()]
+            except AttributeError:
+                # Fallback if ordered_items() isn't present for some reason
+                manager_names = [getattr(c, "name", "") for c in self._creature_list_sorted() if getattr(c, "name", "")]
+            if self.turn_order != manager_names:
+                prev = getattr(self, "current_creature_name", None)
+                self.turn_order = manager_names
+                if prev in self.turn_order:
+                    self.current_idx = self.turn_order.index(prev)
+                else:
+                    self.current_idx = 0
+                    self.current_creature_name = self.turn_order[0] if self.turn_order else None
 
-        # Advance pointer
+        # 3) Advance pointer
         self.current_idx += 1
         wrapped = False
         if self.current_idx >= len(self.turn_order):
             self.current_idx = 0
             wrapped = True
 
+# 4) On wrap: advance round/time and tick only existing numeric timers
         if wrapped:
             self.round_counter += 1
             self.time_counter += 6
-            # Tick timed statuses down (clamped to 0)
-# Tick only existing numeric timers down; do not create new values
-        for cr in self.manager.creatures.values():
-            st = getattr(cr, "status_time", None)
-            if isinstance(st, int) and st > 0:
-                cr.status_time = max(0, st - 6)
 
-        # Set active by name
+            any_tick = False
+            for cr in self.manager.creatures.values():
+                st = getattr(cr, "status_time", None)
+                # be robust if the table stored a string like "3"
+                try:
+                    st_int = int(st) if st is not None else None
+                except (ValueError, TypeError):
+                    st_int = None
+
+                if st_int is not None and st_int > 0:
+                    # choose one semantics; most DMs prefer "rounds remaining":
+                    cr.status_time = max(0, st_int - 6)  # seconds (if that's your unit)
+                    any_tick = True
+
+            # ⬇️ make sure the table reflects the new values
+            if any_tick:
+                # call whichever refresh you have available
+                if hasattr(self, "update_table") and callable(self.update_table):
+                    self.update_table()
+                elif getattr(self, "ui", None) and hasattr(self.ui, "update_table"):
+                    self.ui.update_table()
+                elif hasattr(self, "refresh") and callable(self.refresh):
+                    self.refresh()
+
+        # 5) Update active
         self.current_creature_name = self.active_name()
         if not self.current_creature_name:
             self.update_active_ui()
@@ -649,21 +711,34 @@ class Application:
         if getattr(cr, "_type", None) == CreatureType.MONSTER:
             self.active_statblock_image(cr)
 
+
     def prev_turn(self):
-        # Ensure order exists
-        if not self.turn_order:
+        # 1) Ensure we have an order and keep it in sync with the manager
+        if not getattr(self, "turn_order", None):
             self.build_turn_order()
             if not self.turn_order:
                 print("[WARNING] No creatures in encounter. Cannot go back.")
                 return
+        else:
+            try:
+                manager_names = [nm for nm, _ in self.manager.ordered_items()]
+            except AttributeError:
+                manager_names = [getattr(c, "name", "") for c in self._creature_list_sorted() if getattr(c, "name", "")]
+            if self.turn_order != manager_names:
+                prev = getattr(self, "current_creature_name", None)
+                self.turn_order = manager_names
+                if prev in self.turn_order:
+                    self.current_idx = self.turn_order.index(prev)
+                else:
+                    self.current_idx = 0
+                    self.current_creature_name = self.turn_order[0] if self.turn_order else None
 
-        # Hard stop at the beginning of combat
-        at_absolute_start = (self.round_counter <= 1 and self.time_counter <= 0 and self.current_idx == 0)
-        if at_absolute_start:
-            # optional: beep or show a tiny status message
-            # QApplication.beep()
+        # 2) Hard stop at the absolute beginning of combat
+        at_abs_start = (self.round_counter <= 1 and self.time_counter <= 0 and self.current_idx == 0)
+        if at_abs_start:
             return
 
+        # 3) Move pointer backward (with wrap detection)
         wrapped = False
         if self.current_idx == 0:
             self.current_idx = len(self.turn_order) - 1
@@ -671,11 +746,35 @@ class Application:
         else:
             self.current_idx -= 1
 
+        # 4) On wrap: revert round/time AND un-tick status timers
         if wrapped:
             self.round_counter = max(1, self.round_counter - 1)
             self.time_counter = max(0, self.time_counter - 6)
-            # (Recommended) no timer rollback; if you do, guard with isinstance(st, int)
 
+            any_tick = False
+            for cr in self.manager.creatures.values():
+                st = getattr(cr, "status_time", None)
+                # Coerce robustly in case UI stored a string
+                try:
+                    st_int = int(st) if st is not None else None
+                except (ValueError, TypeError):
+                    st_int = None
+
+                if st_int is not None and st_int >= 0:
+                    cr.status_time = st_int + 6
+
+                    any_tick = True
+
+            # Ensure table reflects reverted values
+            if any_tick:
+                if hasattr(self, "update_table") and callable(self.update_table):
+                    self.update_table()
+                elif getattr(self, "ui", None) and hasattr(self.ui, "update_table"):
+                    self.ui.update_table()
+                elif hasattr(self, "refresh") and callable(self.refresh):
+                    self.refresh()
+
+        # 5) Update active selection and UI
         self.current_creature_name = self.active_name()
         self.update_active_ui()
 
@@ -803,13 +902,40 @@ class Application:
     def show_statblock(self):
         self.statblock.show()
 
-    # ================= Damage/Healing ======================
+# ================= Damage/Healing ======================
     def heal_selected_creatures(self):
         self.apply_to_selected_creatures(positive=True)
 
     def damage_selected_creatures(self):
         self.apply_to_selected_creatures(positive=False)
-        
+
+    def _prompt_concentration(self, creature_name: str, damage: int) -> bool:
+        """
+        Ask the user if the concentration check succeeded.
+        Returns True if 'Yes' was clicked, False if 'No'.
+        """
+        dc = max(10, damage // 2)
+        msg = QMessageBox(self)
+        msg.setIcon(QMessageBox.Question)
+        msg.setWindowTitle("Concentration Check")
+        msg.setText(
+            f"{creature_name} took {damage} damage.\n"
+            f"Concentration Save DC: {dc}\n\n"
+            "Did they SUCCEED the concentration save?"
+        )
+        yes = msg.addButton("Yes (Succeeded)", QMessageBox.YesRole)
+        no  = msg.addButton("No (Failed)", QMessageBox.NoRole)
+        msg.setDefaultButton(yes)
+        msg.exec_()
+        return msg.clickedButton() is yes
+
+    def _break_concentration(self, creature):
+        """
+        Clear concentration for this creature by setting _status_time to -1.
+        """
+        if hasattr(creature, "_status_time"):
+            setattr(creature, "_status_time", "")
+
     def apply_to_selected_creatures(self, positive: bool):
         try:
             value = int(self.value_input.text())
@@ -823,13 +949,31 @@ class Application:
 
         for item in selected_items:
             creature_name = item.text()
-            creature = self.manager.creatures[creature_name]
-            if creature:
-                if positive:
-                    creature.curr_hp += value
-                else:
-                    creature.curr_hp -= value
-                    creature.curr_hp = max(0, creature.curr_hp)
+            creature = self.manager.creatures.get(creature_name)
+            if not creature:
+                continue
+
+            # Snapshot pre-damage HP and concentration state
+            active_concentration = getattr(creature, "_status_time", -1)
+            pre_hp = creature.curr_hp
+
+            if positive:
+                creature.curr_hp += value
+            else:
+                creature.curr_hp -= value
+                if creature.curr_hp < 0:
+                    creature.curr_hp = 0
+
+                # Only prompt if concentration is active and HP > 0
+                if value > 0 and active_concentration not in (-1, None):
+                    if creature.curr_hp <= 0:
+                        # Unconscious → auto break
+                        self._break_concentration(creature)
+                    else:
+                        succeeded = self._prompt_concentration(creature_name, value)
+                        if not succeeded:
+                            self._break_concentration(creature)
+
         self.value_input.clear()
         self.update_table()
 
