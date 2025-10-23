@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import (
 
 from app.creature import Monster, I_Creature
 from app.manager import CreatureManager
-from app.gist_utils import list_gists
+# from app.gist_utils import list_gists
 
 class AddCombatantWindow(QDialog):
     def __init__(self, parent=None):

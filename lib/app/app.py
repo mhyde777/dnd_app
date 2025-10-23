@@ -17,16 +17,14 @@ from app.creature import (
 )
 from app.save_json import GameState
 from app.manager import CreatureManager
-from app.gist_utils import load_gist_content, create_or_update_gist, load_gist_index, ensure_index_is_complete
-from app.config import get_github_token
+from app.storage_api import StorageAPI
+from app.config import get_storage_api_base, use_storage_api_only
 from ui.windows import (
     AddCombatantWindow, RemoveCombatantWindow, BuildEncounterWindow, UpdatePlayerWindow
 )
 from ui.load_encounter_window import LoadEncounterWindow
-from ui.gist_status import GistStatusWindow
-from ui.delete_gist import DeleteGistWindow
 from ui.update_characters import UpdateCharactersWindow
-from ui.token_prompt import TokenPromptWindow
+# from ui.token_prompt import TokenPromptWindow
 
 
 class Application:
@@ -55,12 +53,14 @@ class Application:
             # '_object_interaction': 'set_creature_object_interaction'
         }
 
-        if not get_github_token():
-            prompt = TokenPromptWindow()
-            if prompt.exec_() != QDialog.Accepted:
-                raise RuntimeError("GitHub token required to run the app.")
-
-        ensure_index_is_complete()
+        # --- Storage API only mode ---
+        self.storage_api: Optional[StorageAPI] = None
+        if use_storage_api_only():
+            base = get_storage_api_base()
+            if not base:
+                raise RuntimeError("STORAGE_API_BASE is not set. Please add it to your .env.")
+            # self._log(f"[INFO] Using Storage API at {base}; disabling all Gist features.")
+            self.storage_api = StorageAPI(base)
 
     # -----------------------
     # Core ordering utilities
@@ -120,19 +120,9 @@ class Application:
     # JSON Manipulation
     # ----------------
     def init_players(self):
-        from app.gist_utils import load_gist_index
-
         filename = "players.json"
-        
         try:
-            index = load_gist_index()
-            gist_id = index.get(filename)
-            if gist_id:
-                raw_url = f"https://gist.githubusercontent.com/{self.get_github_username()}/{gist_id}/raw/{filename}"
-                self.load_file_to_manager(raw_url, self.manager)
-            else:
-                self.load_file_to_manager(filename, self.manager)
-
+            self.load_file_to_manager(filename, self.manager)
             # After loading, refresh the table model and update UI
             self.table_model.set_fields_from_sample()
             self.table_model.refresh()
@@ -143,113 +133,150 @@ class Application:
             print(f"[ERROR] Failed to initialize players: {e}")
 
     def load_state(self):
-        from app.gist_utils import load_gist_index
-
         filename = "last_state.json"
-        index = load_gist_index()
-        gist_id = index.get(filename)
-
-        if gist_id:
-            raw_url = f"https://gist.githubusercontent.com/{self.get_github_username()}/{gist_id}/raw/{filename}"
-            self.load_file_to_manager(raw_url, self.manager)
-        else:
-            self.load_file_to_manager(filename, self.manager)
-
+        self.load_file_to_manager(filename, self.manager)
         if self.manager.creatures:
             self.table_model.set_fields_from_sample()
-            # Ensure stable order after load
             self.build_turn_order()
 
-    def save_encounter_to_gist(self, filename: str, description: str = ""):
-        from app.gist_utils import create_or_update_gist
-
-        # Prepare state from current encounter
+    def save_encounter_to_storage(self, filename: str, description: str = ""):
+        if not self.storage_api:
+            raise RuntimeError("Storage API not configured.")
+        # Prepare state
         state = GameState()
         state.players = [c for c in self.manager.creatures.values() if isinstance(c, Player)]
         state.monsters = [c for c in self.manager.creatures.values() if isinstance(c, Monster)]
-        # Retain legacy counters
         state.current_turn = self.current_turn
         state.round_counter = self.round_counter
         state.time_counter = self.time_counter
-        data = state.to_dict()
+        payload = state.to_dict()
+        # optional: add a description field for your server
+        # if description:
+            # payload["_meta"] = {"description": description}
+        if not filename.endswith(".json"):
+            filename += ".json"
+        self.storage_api.put_json(filename, payload)
+        return {"key": filename}
 
-        # Ensure proper extension
+    def save_as_encounter(self):
+        if not getattr(self, "storage_api", None):
+            QMessageBox.critical(
+                self,
+                "Storage Not Configured",
+                "Storage API is not configured.\n\nSet USE_STORAGE_API_ONLY=1 and STORAGE_API_BASE in your .env."
+            )
+            return
+
+        # ----- Ask for filename -----
+        filename, ok = QInputDialog.getText(
+            self, "Save Encounter As", "Enter filename:", QLineEdit.Normal
+        )
+        if not ok or not filename.strip():
+            return
+        filename = filename.strip().replace(" ", "_")
         if not filename.endswith(".json"):
             filename += ".json"
 
-        # Save to Gist
+        # ----- Optional description -----
+        description, _ = QInputDialog.getText(
+            self, "Description", "Optional description:", QLineEdit.Normal
+        )
+
+        # ----- Build state payload -----
         try:
-            response = create_or_update_gist(filename, data, description)
-            return response  # you can optionally return the Gist URL or metadata
+            state = GameState()
+            state.players = [c for c in self.manager.creatures.values() if isinstance(c, Player)]
+            state.monsters = [c for c in self.manager.creatures.values() if isinstance(c, Monster)]
+            state.current_turn = getattr(self, "current_turn", 0)
+            state.round_counter = getattr(self, "round_counter", 1)
+            state.time_counter = getattr(self, "time_counter", 0)
+
+            payload = state.to_dict()
+            # if description:
+                # payload["_meta"] = {"description": description}
+
+            # ----- Save to Storage -----
+            self.storage_api.put_json(filename, payload)
+
+            QMessageBox.information(
+                self,
+                "Saved",
+                f"Saved to Storage as key:\n{filename}"
+            )
         except Exception as e:
-            raise RuntimeError(f"Failed to save to Gist: {e}")
-
-    def save_as_encounter(self):
-        from PyQt5.QtWidgets import QInputDialog, QLineEdit, QMessageBox
-
-        filename, ok = QInputDialog.getText(self, "Save Encounter As", "Enter filename:", QLineEdit.Normal)
-        if not ok or not filename.strip():
-            return
-
-        filename = filename.strip().replace(" ", "_")
-
-        description, _ = QInputDialog.getText(self, "Description", "Optional description:", QLineEdit.Normal)
-
-        try:
-            result = self.save_encounter_to_gist(filename, description)
-            gist_url = result["html_url"]
-            QMessageBox.information(self, "Saved", f"Gist created:\n{gist_url}")
-        except Exception as e:
-            QMessageBox.critical(self, "Error", str(e))
+            QMessageBox.critical(self, "Error", f"Failed to save: {e}")
 
     def save_state(self):
-        from app.gist_utils import create_or_update_gist
-
-        # Build current game state
+        # --- Build current game state ---
         state = GameState()
         state.players = [c for c in self.manager.creatures.values() if isinstance(c, Player)]
         state.monsters = [c for c in self.manager.creatures.values() if isinstance(c, Monster)]
-        state.current_turn = self.current_turn
-        state.round_counter = self.round_counter
-        state.time_counter = self.time_counter
+        state.current_turn = getattr(self, "current_turn", 0)
+        state.round_counter = getattr(self, "round_counter", 1)
+        state.time_counter = getattr(self, "time_counter", 0)
 
-        save = state.to_dict()
-
+        save_data = state.to_dict()
         filename = "last_state.json"
         description = "Auto-saved state from initiative tracker"
 
         try:
-            gist_response = create_or_update_gist(filename, save, description=description)
+            # --- Preferred: save to Storage API ---
+            if getattr(self, "storage_api", None):
+                # Optional metadata block
+                # save_data["_meta"] = {"description": description}
+                self.storage_api.put_json(filename, save_data)
+                print("[INFO] Saved state to Storage API as last_state.json")
+            else:
+                # --- Fallback: save to local file ---
+                with open(filename, "w", encoding="utf-8") as f:
+                    json.dump(save_data, f, ensure_ascii=False, indent=2)
+                print("[INFO] Saved state locally as last_state.json")
         except Exception as e:
-            print(f"[ERROR] Failed to save state to Gist: {e}")
+            print(f"[ERROR] Failed to save state: {e}")
 
     def load_file_to_manager(self, file_name, manager, monsters=False, merge=False):
-        if file_name.startswith("http"):
-            raw = load_gist_content(file_name)
-            state = json.loads(json.dumps(raw), object_hook=self.custom_decoder)
-        else:
+        state = None
+
+        try:
+            # --- Decide source: Storage key vs local file ---
             file_path = self.get_data_path(file_name)
-            if not os.path.exists(file_path):
-                return
-            with open(file_path, 'r') as file:
-                state = json.load(file, object_hook=self.custom_decoder)
 
-        players = state.get('players', [])
-        monsters_list = state.get('monsters', [])
+            if getattr(self, "storage_api", None) and not os.path.exists(file_path):
+                # Treat file_name as a Storage key
+                raw = self.storage_api.get_json(file_name)
+                if raw is None:
+                    self._log(f"[WARN] Storage key not found: {file_name}")
+                    return
+                # Run through your custom decoder
+                state = json.loads(json.dumps(raw), object_hook=self.custom_decoder)
+            else:
+                # Local file fallback (dev/offline)
+                if not os.path.exists(file_path):
+                    self._log(f"[WARN] Local file not found: {file_path}")
+                    return
+                with open(file_path, "r", encoding="utf-8") as f:
+                    state = json.load(f, object_hook=self.custom_decoder)
 
+        except Exception as e:
+            self._log(f"[ERROR] Failed to load '{file_name}': {e}")
+            return
+
+        # ----- Extract lists -----
+        players = state.get("players", [])
+        monsters_list = state.get("monsters", [])
+
+        # ===== Encounter-only add (not merge/replace): only add monsters =====
         if monsters and not merge:
-            # Only add monsters for encounter loading (not merging or replacing)
             for creature in monsters_list:
                 manager.add_creature(creature)
             manager.sort_creatures()
-            # Rebuild stable order and UI
             self.build_turn_order()
             self.update_table()
             self.pop_lists()
             return
 
+        # ===== Merge path: add monsters with unique names; keep counters/active =====
         if merge:
-            # Preserve current active creature name & counters on merge
             preserved_active = getattr(self, "current_creature_name", None)
 
             self.init_tracking_mode(True)
@@ -262,12 +289,10 @@ class Application:
                 creature.name = name
                 manager.add_creature(creature)
 
-            # No counter resets here
             manager.sort_creatures()
             self.build_turn_order()
 
-            # Try to keep pointer on previously active name
-            if preserved_active in self.turn_order:
+            if preserved_active in getattr(self, "turn_order", []):
                 self.current_creature_name = preserved_active
                 self.current_idx = self.turn_order.index(preserved_active)
 
@@ -275,24 +300,24 @@ class Application:
             self.pop_lists()
             return
 
-        # -------- Full replace path (NOT merge) --------
+        # ===== Full replace (default): clear, load players+monsters, apply counters =====
         manager.creatures.clear()
         for creature in players + monsters_list:
+            # Skip inactive players on full replace
             if isinstance(creature, Player) and not getattr(creature, "active", True):
                 continue
             manager.add_creature(creature)
 
-        # Only assign turn/counter values on full replace
         if manager is self.manager:
-            self.current_turn = state.get('current_turn', 0)
-            self.round_counter = state.get('round_counter', 1)
-            self.time_counter = state.get('time_counter', 0)
+            self.current_turn = state.get("current_turn", 0)
+            self.round_counter = state.get("round_counter", 1)
+            self.time_counter = state.get("time_counter", 0)
 
         manager.sort_creatures()
 
-        # Build stable order and set initial current creature
+        # Build order and set initial current creature if needed
         self.build_turn_order()
-        if self.turn_order and not self.current_creature_name:
+        if self.turn_order and not getattr(self, "current_creature_name", None):
             self.current_creature_name = self.turn_order[0]
 
         self.update_table()
@@ -302,16 +327,6 @@ class Application:
         if '_type' in data:
             return I_Creature.from_dict(data)
         return data
-
-    def get_github_username(self):
-        from app.config import get_github_token
-        import requests
-
-        token = get_github_token()
-        headers = {"Authorization": f"token {token}"}
-        response = requests.get("https://api.github.com/user", headers=headers)
-        response.raise_for_status()
-        return response.json()["login"]
 
     # ----------------
     # Table / UI setup
@@ -821,58 +836,55 @@ class Application:
     # ================= Encounter Builder =====================
     def save_encounter(self):
         dialog = BuildEncounterWindow(self)
-        if dialog.exec_() == QDialog.Accepted:
-            data = dialog.get_data()
-            metadata = dialog.get_metadata()
+        if dialog.exec_() != QDialog.Accepted:
+            return
 
-            filename = metadata["filename"].replace(" ", "_")
-            if not filename.endswith(".json"):
-                filename += ".json"
-            description = metadata["description"]
+        data = dialog.get_data()
+        metadata = dialog.get_metadata()
 
-            # Build encounter manager with player + added monster data
-            encounter_manager = CreatureManager()
-            self.load_players_to_manager(encounter_manager)
+        filename = metadata["filename"].replace(" ", "_")
+        if not filename.endswith(".json"):
+            filename += ".json"
+        description = metadata.get("description", "")
 
-            for creature_data in data:
-                creature=Monster(
-                    name=creature_data["_name"],
-                    init=creature_data["_init"],
-                    max_hp=creature_data["_max_hp"],
-                    curr_hp=creature_data["_curr_hp"],
-                    armor_class=creature_data["_armor_class"],
-                    spell_slots=creature_data.get("_spell_slots", {}),
-                    innate_slots=creature_data.get("_innate_slots", {})
-                )
-                encounter_manager.add_creature(creature)
+        # Build encounter manager with player + added monster data
+        encounter_manager = CreatureManager()
+        self.load_players_to_manager(encounter_manager)
 
-            # Save state
-            state = GameState()
-            state.players = [c for c in encounter_manager.creatures.values() if isinstance(c, Player)]
-            state.monsters = [c for c in encounter_manager.creatures.values() if isinstance(c, Monster)]
-            state.current_turn = 0
-            state.round_counter = 1
-            state.time_counter = 0
-            save = state.to_dict()
+        for creature_data in data:
+            creature = Monster(
+                name=creature_data["_name"],
+                init=creature_data["_init"],
+                max_hp=creature_data["_max_hp"],
+                curr_hp=creature_data["_curr_hp"],
+                armor_class=creature_data["_armor_class"],
+                spell_slots=creature_data.get("_spell_slots", {}),
+                innate_slots=creature_data.get("_innate_slots", {})
+            )
+            encounter_manager.add_creature(creature)
 
-            # Save to Gist
-            try:
-                gist_response = create_or_update_gist(filename, save, description=description)
-                gist_url = gist_response["html_url"]
-                raw_url = list(gist_response["files"].values())[0]["raw_url"]
-            except Exception as e:
-                QMessageBox.warning(self, "Error", f"Failed to save gist:\n{e}")
+        # Save state
+        state = GameState()
+        state.players = [c for c in encounter_manager.creatures.values() if isinstance(c, Player)]
+        state.monsters = [c for c in encounter_manager.creatures.values() if isinstance(c, Monster)]
+        state.current_turn = 0
+        state.round_counter = 1
+        state.time_counter = 0
+        payload = state.to_dict()
+        # if description:
+            # payload["_meta"] = {"description": description}
+
+        try:
+            if not getattr(self, "storage_api", None):
+                raise RuntimeError("Storage API is not configured.")
+            self.storage_api.put_json(filename, payload)
+            QMessageBox.information(self, "Saved", f"Saved encounter to Storage as:\n{filename}")
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to save encounter:\n{e}")
 
     def load_players_to_manager(self, manager):
         filename = "players.json"
-        index = load_gist_index()
-        gist_id = index.get(filename)
-
-        if gist_id:
-            raw_url = f"https://gist.githubusercontent.com/{self.get_github_username()}/{gist_id}/raw/{filename}"
-            self.load_file_to_manager(raw_url, manager, monsters=False)
-        else:
-            self.load_file_to_manager(filename, manager, monsters=False)
+        self.load_file_to_manager(filename, manager, monsters=False)
 
     # ================== Secondary Windows ======================
     def load_encounter(self):
@@ -900,13 +912,23 @@ class Application:
                 if cr and cr._type == CreatureType.MONSTER:
                     self.active_statblock_image(cr)
 
-    def manage_gist_statuses(self):
-        dialog = GistStatusWindow(self)
-        dialog.exec_()
+    def manage_encounter_statuses(self):
+        from ui.storage_status import StorageStatusWindow
+        if not getattr(self, "storage_api", None):
+            QMessageBox.information(self, "Unavailable", "Storage API not configured.")
+            return
+        dlg = StorageStatusWindow(self.storage_api, self)
+        dlg.exec_()
 
-    def delete_gists(self):
-        dialog = DeleteGistWindow(self)
-        dialog.exec_()
+    def delete_encounters(self):
+        from ui.delete_storage import DeleteStorageWindow
+        if not getattr(self, "storage_api", None):
+            QMessageBox.information(self, "Unavailable", "Storage API not configured.")
+            return
+        dlg = DeleteStorageWindow(self.storage_api, self)
+        if dlg.exec_() == QDialog.Accepted:
+            # Optional: refresh any open pickers or cached lists here
+            pass
 
     def create_or_update_characters(self):
         dialog = UpdateCharactersWindow(self)
@@ -921,3 +943,8 @@ class Application:
         self.update_table()
         self.update_active_ui()
         self.table.clearSelection()
+
+    def _log(self, msg: str) -> None:
+        """Lightweight logger used throughout the app."""
+        print(msg)
+
