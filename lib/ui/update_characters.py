@@ -6,7 +6,7 @@ from PyQt5.QtCore import Qt
 import os, json
 
 from app.creature import Player
-from app.gist_utils import load_gist_index, load_gist_content, create_or_update_gist
+# from app.gist_utils import load_gist_index, load_gist_content, create_or_update_gist
 
 
 class UpdateCharactersWindow(QDialog):

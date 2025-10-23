@@ -10,6 +10,7 @@ from app.app import Application
 from app.manager import CreatureManager
 from ui.creature_table_model import CreatureTableModel
 from ui.spellcasting_dropdown import SpellcastingDropdown
+from app.config import use_storage_api_only
 
 
 class InitiativeTracker(QMainWindow, Application): 
@@ -200,13 +201,13 @@ class InitiativeTracker(QMainWindow, Application):
         self.edit_menu.addAction(self.add_button)
         self.edit_menu.addAction(self.rmv_button)
 
-        self.active_gists = QAction("Activate/Deactivate Encounters", self)
-        self.active_gists.triggered.connect(self.manage_gist_statuses)
-        self.encounter_menu.addAction(self.active_gists)
+        self.active_encounters = QAction("Activate/Deactivate Encounters", self)
+        self.active_encounters.triggered.connect(self.manage_encounter_statuses)
+        self.encounter_menu.addAction(self.active_encounters)
 
-        self.delete_gists_button = QAction("Delete Encounter", self)
-        self.delete_gists_button.triggered.connect(self.delete_gists)
-        self.encounter_menu.addAction(self.delete_gists_button)
+        self.delete_encounters_button = QAction("Delete Encounter", self)
+        self.delete_encounters_button.triggered.connect(self.delete_encounters)
+        self.encounter_menu.addAction(self.delete_encounters_button)
 
         self.update_characters_action = QAction("Create/Update Characters", self)
         self.update_characters_action.triggered.connect(self.create_or_update_characters)
