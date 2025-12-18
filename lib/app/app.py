@@ -465,6 +465,12 @@ class Application:
         # Keep current name in sync for other code paths that read it
         self.current_creature_name = name
 
+        if hasattr(self, "_sync_conditions_panel_from_selection"):
+            try:
+                self._sync_conditions_panel_from_selection()
+            except Exception:
+                pass
+
         # Labels
         if hasattr(self, "active_init_label") and self.active_init_label:
             self.active_init_label.setText(f"Active: {name if name else 'None'}")
@@ -931,10 +937,21 @@ class Application:
 
     def _break_concentration(self, creature):
         """
-        Clear concentration for this creature by setting _status_time to -1.
+        Remove the 'Concentrating' condition from the creature.
+        Optionally also clear _status_time if you were using it to track a timer.
         """
-        if hasattr(creature, "_status_time"):
+        conds = set(getattr(creature, "conditions", []) or [])
+        conds = {c for c in conds if str(c).strip().lower() != "concentrating"}
+        creature.conditions = sorted(conds)
+        
+        try:
+            creature.status_time = ""
+        except Exception:
             setattr(creature, "_status_time", "")
+ 
+    def _is_concentrating(self, creature) -> bool:
+        conds = getattr(creature, "conditions", []) or []
+        return any(str(c).strip().lower() == "concentrating" for c in conds)
 
     def apply_to_selected_creatures(self, positive: bool):
         try:
@@ -954,7 +971,6 @@ class Application:
                 continue
 
             # Snapshot pre-damage HP and concentration state
-            active_concentration = getattr(creature, "_status_time", -1)
             pre_hp = creature.curr_hp
 
             if positive:
@@ -964,13 +980,13 @@ class Application:
                 if creature.curr_hp < 0:
                     creature.curr_hp = 0
 
-                # Only prompt if concentration is active and HP > 0
-                if value > 0 and active_concentration not in (-1, None):
+                damage_taken = max(0, pre_hp - creature.curr_hp)
+
+                if damage_taken > 0 and self._is_concentrating(creature):
                     if creature.curr_hp <= 0:
-                        # Unconscious → auto break
                         self._break_concentration(creature)
                     else:
-                        succeeded = self._prompt_concentration(creature_name, value)
+                        succeeded = self._prompt_concentration(creature_name, damage_taken)
                         if not succeeded:
                             self._break_concentration(creature)
 
