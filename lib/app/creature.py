@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 from dataclasses import dataclass, field
 import json
 from enum import Enum
@@ -38,6 +38,7 @@ class I_Creature:
     _reaction: bool = field(default=False)
     _object_interaction: bool = field(default=False)
     _notes: str = field(default="")
+    _conditions: List[str] = field(default_factory=list)
     _status_time: int = field(default=-1)
     _spell_slots: dict[int, int] = field(default_factory=dict)
     _innate_slots: dict[str, int] = field(default_factory=dict)
@@ -74,6 +75,7 @@ class I_Creature:
             "_reaction": self.reaction,
             "_object_interaction": self.object_interaction,
             "_notes": self.notes,
+            "_conditions": self.conditions,
             "_status_time": self.status_time,
             "_spell_slots": self._spell_slots,
             "_innate_slots": self._innate_slots,
@@ -85,6 +87,7 @@ class I_Creature:
     @staticmethod
     def from_dict(data: Dict[str, Any]) -> I_Creature:
         creature_type = CreatureType(data["_type"])
+        conditions = data.get("_conditions", [])
         spell_slots = data.get("_spell_slots", {})
         innate_slots = data.get("_innate_slots", {})
         spell_slots_used = data.get("_spell_slots_used")
@@ -107,6 +110,7 @@ class I_Creature:
                 reaction=data["_reaction"],
                 object_interaction=data["_object_interaction"],
                 notes=data["_notes"],
+                conditions = conditions,
                 status_time=data["_status_time"],
                 spell_slots=spell_slots,
                 innate_slots=innate_slots,
@@ -126,6 +130,7 @@ class I_Creature:
                 bonus_action=data["_bonus_action"],
                 reaction=data["_reaction"],
                 notes=data["_notes"],
+                conditions=conditions,
                 status_time=data["_status_time"],
                 spell_slots=spell_slots,
                 innate_slots=innate_slots,
@@ -194,6 +199,16 @@ class I_Creature:
     def notes(self, value: str): self._notes = value
 
     @property
+    def conditions(self) -> List[str]:
+        return sorted(set(self._conditions))
+    @conditions.setter
+    def conditions(self, value):
+        if value is None:
+            self._conditions = []
+            return
+        self._conditions = [str(v) for v in value]
+
+    @property
     def status_time(self) -> int: return self._status_time
     @status_time.setter
     def status_time(self, value: int): self._status_time = value
@@ -207,7 +222,7 @@ class I_Creature:
 class Monster(I_Creature):
     def __init__(self, name, init=0, max_hp=0, curr_hp=0, armor_class=0,
                  movement=0, action=False, bonus_action=False, reaction=False,
-                 notes='', status_time='', spell_slots=None, innate_slots=None,
+                 notes='', conditions=None, status_time='', spell_slots=None, innate_slots=None,
                  spell_slots_used=None, innate_slots_used=None, active=True):
         super().__init__(
             _type=CreatureType.MONSTER,
@@ -221,6 +236,7 @@ class Monster(I_Creature):
             _bonus_action=bonus_action,
             _reaction=reaction,
             _notes=notes,
+            _conditions=(conditions or []),
             _status_time=status_time,
             _spell_slots=spell_slots or {},
             _innate_slots=innate_slots or {},
@@ -233,7 +249,7 @@ class Monster(I_Creature):
 class Player(I_Creature):
     def __init__(self, name, init=0, max_hp=0, curr_hp=0, armor_class=0,
                  movement=0, action=False, bonus_action=False, reaction=False,
-                 object_interaction=False, notes='', status_time='',
+                 object_interaction=False, notes='', conditions=None, status_time='',
                  spell_slots=None, innate_slots=None, spell_slots_used=None,
                  innate_slots_used=None, active=True):
         super().__init__(
@@ -249,6 +265,7 @@ class Player(I_Creature):
             _reaction=reaction,
             _object_interaction=object_interaction,
             _notes=notes,
+            _conditions=(conditions or []),
             _status_time=status_time,
             _spell_slots=spell_slots or {},
             _innate_slots=innate_slots or {},

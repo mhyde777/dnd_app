@@ -11,9 +11,9 @@ from app.manager import CreatureManager
 from ui.creature_table_model import CreatureTableModel
 from ui.spellcasting_dropdown import SpellcastingDropdown
 from app.config import use_storage_api_only
+from ui.conditions_dropdown import ConditionsDropdown, DEFAULT_CONDITIONS
 
-
-class InitiativeTracker(QMainWindow, Application): 
+class InitiativeTracker(QMainWindow, Application):
     def __init__(self):
         super().__init__()
         self.center()
@@ -64,9 +64,8 @@ class InitiativeTracker(QMainWindow, Application):
         self.table.setModel(self.table_model)
         self.table.itemDelegate().commitData.connect(self.on_commit_data)
         self.table.clicked.connect(self.handle_cell_clicked)
-# Ensure that the table's size is fixed and matches its content
+        # Ensure that the table's size is fixed and matches its content
         self.table.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-
 
         self.table_widget = QWidget()
         self.table_layout = QVBoxLayout(self.table_widget)
@@ -87,6 +86,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.dam_layout = QVBoxLayout()
         self.creature_list = QListWidget(self)
         self.creature_list.setSelectionMode(QListWidget.MultiSelection)
+
         self.value_input = QLineEdit(self)
 
         self.heal_button = QPushButton("Heal", self)
@@ -156,7 +156,6 @@ class InitiativeTracker(QMainWindow, Application):
         self.file_menu = self.menu_bar.addMenu("&File")
         self.characters_menu = self.file_menu.addMenu("Characters")
 
-
         self.edit_menu = self.menu_bar.addMenu("&Edit")
         self.encounter_menu = self.edit_menu.addMenu("Encounters")
 
@@ -213,18 +212,17 @@ class InitiativeTracker(QMainWindow, Application):
         self.update_characters_action.triggered.connect(self.create_or_update_characters)
         self.characters_menu.addAction(self.update_characters_action)
 
-
     def update_size_constraints(self):
         # Get the current screen where the app is being displayed
         current_screen = QDesktopWidget().screenNumber(self)
         screen = QDesktopWidget().screenGeometry(current_screen)
-        
+
         self.screen_width = screen.width()
         self.screen_height = screen.height()
-        
+
         # Set the maximum size to the screen size to avoid going beyond bounds
         self.setMaximumSize(self.screen_width, self.screen_height)
-        
+
         # Optionally set the window size to be full screen on the current screen
         self.setWindowState(self.windowState() | Qt.WindowMaximized)
 
@@ -299,8 +297,12 @@ class InitiativeTracker(QMainWindow, Application):
 
         if attr == "_spellbook":
             self.show_spellcasting_dropdown(creature, index)
-        else:
-            self.toggle_boolean_cell(index)
+            return
+        if attr == "_conditions":
+            self.show_conditions_dropdown(creature, index)
+            return
+
+        self.toggle_boolean_cell(index)
 
     def show_spellcasting_dropdown(self, creature, index):
         # Close any existing dropdown
@@ -309,6 +311,23 @@ class InitiativeTracker(QMainWindow, Application):
 
         dropdown = SpellcastingDropdown(creature, self)
         self._active_spell_dropdown = dropdown
+
+        rect = self.table.visualRect(index)
+        table_pos = self.table.viewport().mapToGlobal(rect.topLeft())
+
+        dropdown.move(table_pos.x(), table_pos.y() + rect.height())
+        dropdown.show()
+
+    def show_conditions_dropdown(self, creature, index):
+        # Close any existing conditions dropdown
+        if hasattr(self, "_active_conditions_dropdown") and self._active_conditions_dropdown:
+            try:
+                self._active_conditions_dropdown.close()
+            except Exception:
+                pass
+
+        dropdown = ConditionsDropdown(creature, parent=self, condition_names=DEFAULT_CONDITIONS)
+        self._active_conditions_dropdown = dropdown
 
         rect = self.table.visualRect(index)
         table_pos = self.table.viewport().mapToGlobal(rect.topLeft())

@@ -3,6 +3,24 @@ from PyQt5.QtGui import QColor, QFont
 from dataclasses import fields as dataclass_fields
 
 SPELL_ICON_COLUMN_NAME = "_spellbook"
+_COND_ABBR = {
+    "Blinded": "Bli",
+    "Charmed": "Cha",
+    "Concentrating": "Conc",
+    "Deafened": "Dea",
+    "Exhaustion": "Exh",
+    "Frightened": "Fgt",
+    "Grappled": "Grp",
+    "Incapacitated": "Inc",
+    "Invisible": "Inv",
+    "Paralyzed": "Par",
+    "Petrified": "Pet",
+    "Poisoned": "Poi",
+    "Prone": "Pro",
+    "Restrained": "Res",
+    "Stunned": "Stun",
+    "Unconscious": "Unc",
+}
 
 class CreatureTableModel(QAbstractTableModel):
     def __init__(self, manager, fields=None, parent=None):
@@ -12,11 +30,18 @@ class CreatureTableModel(QAbstractTableModel):
         self.selected_index = None
         self.view = parent
 
+        # Build fields from a sample creature if not provided
         if fields is None and self.manager.creatures:
-            sample_creature = next(iter(self.manager.creatures.values()))
-            excluded = {"_spell_slots", "_innate_slots", "_spell_slots_used", "_innate_slots_used", "_active"}
+            excluded = {
+                "_spell_slots",
+                "_innate_slots",
+                "_spell_slots_used",
+                "_innate_slots_used",
+                "_active",
+            }
             sample = next(iter(self.manager.creatures.values()))
             self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
+
             if SPELL_ICON_COLUMN_NAME not in self.fields:
                 self.fields.append(SPELL_ICON_COLUMN_NAME)
         else:
@@ -36,17 +61,47 @@ class CreatureTableModel(QAbstractTableModel):
 
         row = index.row()
         col = index.column()
+
+        # Guard against stale row indices
+        if row < 0 or row >= len(self.creature_names):
+            return QVariant()
+
         name = self.creature_names[row]
-        creature = self.manager.creatures[name]
+        creature = self.manager.creatures.get(name)
+        if creature is None:
+            return QVariant()
+
         attr = self.fields[col]
 
+        # Conditions: display as comma-separated string (read-only)
+        if attr == "_conditions":
+            try:
+                conds = getattr(creature, "conditions", []) or []
+                conds = list(conds)
+            except Exception:
+                conds = []
+
+            if role == Qt.DisplayRole:
+                if not conds:
+                    return ""
+                abbrs = [_COND_ABBR.get(c, c[:4]) for c in conds]
+                return " • ".join(abbrs)
+
+            if role == Qt.ToolTipRole:
+                return "\n".join(conds) if conds else ""
+
+            if role == Qt.TextAlignmentRole:
+                return Qt.AlignCenter
+
+        # Spellbook icon column
         if attr == SPELL_ICON_COLUMN_NAME:
             from app.creature import CreatureType
+
             if creature._type != CreatureType.MONSTER:
                 return QVariant()
 
-            has_slots = getattr(creature, "_spell_slots", {})
-            has_innate = getattr(creature, "_innate_slots", {})
+            has_slots = getattr(creature, "_spell_slots", {}) or {}
+            has_innate = getattr(creature, "_innate_slots", {}) or {}
 
             if role == Qt.DisplayRole and (has_slots or has_innate):
                 return "📖"
@@ -58,9 +113,14 @@ class CreatureTableModel(QAbstractTableModel):
 
             if role == Qt.TextAlignmentRole:
                 return Qt.AlignCenter
+
             return QVariant()
 
-        value = getattr(creature, attr)
+        # Default: read raw attribute value
+        try:
+            value = getattr(creature, attr)
+        except Exception:
+            return QVariant()
 
         if role == Qt.DisplayRole:
             if isinstance(value, bool):
@@ -73,21 +133,25 @@ class CreatureTableModel(QAbstractTableModel):
             return Qt.AlignCenter
 
         if role == Qt.BackgroundRole:
-            is_boolean = isinstance(value, bool)
-            if is_boolean:
+            # Boolean columns: green/red
+            if isinstance(value, bool):
                 return QColor("#006400") if value else QColor("darkred")
 
+            # HP-based coloring + active row
             curr_hp = getattr(creature, "_curr_hp", -1)
             max_hp = getattr(creature, "_max_hp", -1)
 
             if isinstance(curr_hp, int) and isinstance(max_hp, int) and max_hp > 0:
                 hp_ratio = curr_hp / max_hp
+
                 if curr_hp == 0:
                     return QColor("red") if name == self.active_creature_name else QColor("darkRed")
-                elif hp_ratio <= 0.5:
+
+                if hp_ratio <= 0.5:
                     return QColor("#7a663a") if name == self.active_creature_name else QColor("#5e4e2a")
-                elif name == self.active_creature_name:
-                    return QColor('#006400')
+
+                if name == self.active_creature_name:
+                    return QColor("#006400")
 
         return QVariant()
 
@@ -97,18 +161,29 @@ class CreatureTableModel(QAbstractTableModel):
 
         row = index.row()
         col = index.column()
+
+        if row < 0 or row >= len(self.creature_names):
+            return False
+
         name = self.creature_names[row]
-        creature = self.manager.creatures[name]
+        creature = self.manager.creatures.get(name)
+        if creature is None:
+            return False
+
         attr = self.fields[col]
 
-        # print(f"[SETDATA] {name} - {attr} -> {value}")
+        # Explicitly block edits to conditions in-table (use the checkbox panel instead)
+        if attr == "_conditions":
+            return False
 
         try:
-            if isinstance(getattr(creature, attr), bool):
+            current = getattr(creature, attr)
+
+            if isinstance(current, bool):
                 setattr(creature, attr, value == Qt.Checked)
-            elif isinstance(getattr(creature, attr), int):
+            elif isinstance(current, int):
                 setattr(creature, attr, int(value))
-            elif isinstance(getattr(creature, attr), str):
+            elif isinstance(current, str):
                 setattr(creature, attr, str(value))
             else:
                 return False
@@ -117,11 +192,10 @@ class CreatureTableModel(QAbstractTableModel):
             self.deselect_active_cell()
 
             if attr == "_init" and self.view:
-                # print("[DEBUG] Scheduling initiative refresh...")
                 QTimer.singleShot(0, self.view.handle_initiative_update)
 
             return True
-        except (ValueError, TypeError):
+        except (ValueError, TypeError, AttributeError):
             return False
 
     def deselect_active_cell(self):
@@ -133,26 +207,47 @@ class CreatureTableModel(QAbstractTableModel):
         if not index.isValid():
             return Qt.ItemIsEnabled
 
-        attr = self.fields[index.column()]
+        row = index.row()
+        col = index.column()
+
+        if row < 0 or row >= len(self.creature_names):
+            return Qt.ItemIsEnabled
+
+        attr = self.fields[col]
+        creature = self.manager.creatures.get(self.creature_names[row])
+
         if attr == SPELL_ICON_COLUMN_NAME:
-            creature = self.manager.creatures[self.creature_names[index.row()]]
+            if creature is None:
+                return Qt.NoItemFlags
+
             from app.creature import CreatureType
+
             if creature._type == CreatureType.MONSTER:
                 return Qt.ItemIsEnabled | Qt.ItemIsSelectable
             return Qt.NoItemFlags
 
-        value = getattr(self.manager.creatures[self.creature_names[index.row()]], attr)
+        if attr == "_conditions":
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+
+        if creature is None:
+            return Qt.NoItemFlags
+
+        try:
+            value = getattr(creature, attr)
+        except Exception:
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
         if isinstance(value, bool):
             return Qt.ItemIsEnabled
-        else:
-            return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
+        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if orientation == Qt.Horizontal:
             field = self.fields[section]
+
             if role == Qt.DisplayRole:
                 return self.field_to_header(field)
+
             if role == Qt.FontRole and field == SPELL_ICON_COLUMN_NAME:
                 font = QFont("Noto Color Emoji")
                 font.setPointSize(12)
@@ -165,49 +260,68 @@ class CreatureTableModel(QAbstractTableModel):
 
     def field_to_header(self, field):
         mapping = {
-            '_type': '',
-            '_name': 'Name',
-            '_init': 'Init',
-            '_curr_hp': 'Curr HP',
-            '_max_hp': 'Max HP',
-            '_armor_class': 'AC',
-            '_movement': 'M',
-            '_action': 'A',
-            '_bonus_action': 'BA',
-            '_reaction': 'R',
-            '_object_interaction': 'OI',
-            '_notes': 'Notes',
-            '_status_time': 'Status',
-            '_spellbook': '📖'
+            "_type": "",
+            "_name": "Name",
+            "_init": "Init",
+            "_curr_hp": "Curr HP",
+            "_max_hp": "Max HP",
+            "_armor_class": "AC",
+            "_movement": "M",
+            "_action": "A",
+            "_bonus_action": "BA",
+            "_reaction": "R",
+            "_object_interaction": "OI",
+            "_notes": "Notes",
+            "_conditions": "Conditions",
+            "_status_time": "Status",
+            "_spellbook": "📖",
         }
-        return mapping.get(field, field.lstrip('_').replace('_', ' ').title())
+        return mapping.get(field, field.lstrip("_").replace("_", " ").title())
 
     def set_fields_from_sample(self):
-        if self.manager.creatures:
-            sample = next(iter(self.manager.creatures.values()))
-            excluded = {"_spell_slots", "_innate_slots", "_spell_slots_used", "_innate_slots_used", "_active"}
-            self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
-            if SPELL_ICON_COLUMN_NAME not in self.fields:
-                self.fields.append(SPELL_ICON_COLUMN_NAME)
-            self.layoutChanged.emit()
+        if not self.manager.creatures:
+            return
+
+        excluded = {
+            "_spell_slots",
+            "_innate_slots",
+            "_spell_slots_used",
+            "_innate_slots_used",
+            "_active",
+        }
+        sample = next(iter(self.manager.creatures.values()))
+        self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
+
+        if SPELL_ICON_COLUMN_NAME not in self.fields:
+            self.fields.append(SPELL_ICON_COLUMN_NAME)
+
+        self.layoutChanged.emit()
 
     def refresh(self):
+        # Always sort by initiative desc
         sorted_items = sorted(
             self.manager.creatures.items(),
             key=lambda item: item[1].initiative,
-            reverse=True
+            reverse=True,
         )
         self.creature_names = [name for name, _ in sorted_items]
-        # print("[REFRESH] Sorted creature_names:", self.creature_names)
 
+        # If fields were never initialized (edge-case), rebuild them consistently
         if not self.fields and self.manager.creatures:
+            excluded = {
+                "_spell_slots",
+                "_innate_slots",
+                "_spell_slots_used",
+                "_innate_slots_used",
+                "_active",
+            }
             sample = next(iter(self.manager.creatures.values()))
-            excluded = {"_spell_slots", "_innate_slots", "_spell_slots_used", "_innate_slots_used"}
             self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
             if SPELL_ICON_COLUMN_NAME not in self.fields:
                 self.fields.append(SPELL_ICON_COLUMN_NAME)
 
         self.layoutChanged.emit()
+
         if self.rowCount() > 0 and self.columnCount() > 0:
             top_left = self.index(0, 0)
             bottom_right = self.index(self.rowCount() - 1, self.columnCount() - 1)
@@ -215,12 +329,16 @@ class CreatureTableModel(QAbstractTableModel):
 
     def set_active_creature(self, name: str):
         self.active_creature_name = name
+        if self.rowCount() <= 0 or self.columnCount() <= 0:
+            return
         self.dataChanged.emit(
             self.index(0, 0),
             self.index(self.rowCount() - 1, self.columnCount() - 1),
-            [Qt.BackgroundRole]
+            [Qt.BackgroundRole],
         )
 
     def set_creatures(self, creatures):
-        self.creatures = creatures
-        self.layoutChanged.emit()
+        # Keep the model consistent with how everything else reads creatures
+        self.manager.creatures = creatures
+        self.refresh()
+
