@@ -24,6 +24,7 @@ from ui.windows import (
 )
 from ui.load_encounter_window import LoadEncounterWindow
 from ui.update_characters import UpdateCharactersWindow
+from ui.death_saves_dialog import DeathSavesDialog
 # from ui.token_prompt import TokenPromptWindow
 
 
@@ -531,7 +532,7 @@ class Application:
 
         self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.table.setFixedSize(total_width + 19, total_height + 2)  # ✅ extra padding for gutter
+        self.table.setFixedSize(total_width + 2, total_height + 2)  # ✅ extra padding for gutter
 
     # ============== Populate Lists ====================
     def pop_lists(self):
@@ -712,6 +713,7 @@ class Application:
             cr.reaction = False  # False = unused in your semantics
 
         self.update_active_ui()
+        self._maybe_prompt_death_saves(cr)
 
         # Monster statblock
         if getattr(cr, "_type", None) == CreatureType.MONSTER:
@@ -1103,6 +1105,43 @@ class Application:
         self.update_table()
         self.update_active_ui()
         self.table.clearSelection()
+
+    def _maybe_prompt_death_saves(self, creature):
+        """
+        Only prompt for Players at 0 HP who are not already stable/dead.
+        """
+        try:
+            from app.creature import CreatureType
+            if getattr(creature, "_type", None) != CreatureType.PLAYER:
+                return
+        except Exception:
+            return
+
+        try:
+            if int(getattr(creature, "curr_hp", -1)) != 0:
+                return
+        except Exception:
+            return
+
+        # Already stable or dead? Then don't pop.
+        succ = int(getattr(creature, "_death_successes", 0) or 0)
+        fail = int(getattr(creature, "_death_failures", 0) or 0)
+        stable = bool(getattr(creature, "_death_stable", False))
+
+        if stable or fail >= 3:
+            return
+
+        dlg = DeathSavesDialog(creature, parent=self)
+        dlg.exec_()
+
+        # If they became stable or dead, you may want to refresh the table
+        try:
+            if hasattr(self, "update_table"):
+                self.update_table()
+            elif hasattr(self, "table_model"):
+                self.table_model.refresh()
+        except Exception:
+            pass
 
     def _log(self, msg: str) -> None:
         """Lightweight logger used throughout the app."""

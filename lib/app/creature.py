@@ -44,6 +44,9 @@ class I_Creature:
     _innate_slots: dict[str, int] = field(default_factory=dict)
     _spell_slots_used: dict[int, int] = field(default_factory=dict)
     _innate_slots_used: dict[str, int] = field(default_factory=dict)
+    _death_successes: int = field(default=0)
+    _death_failures: int = field(default=0)
+    _death_stable: bool = field(default=False)
     _active: bool = field(default=True)
 
     def __gt__(self, other: I_Creature) -> bool:
@@ -81,6 +84,9 @@ class I_Creature:
             "_innate_slots": self._innate_slots,
             "_spell_slots_used": self._spell_slots_used,
             "_innate_slots_used": self._innate_slots_used,
+            "_death_successes": self._death_successes,
+            "_death_failures": self._death_failures,
+            "_death_stable": self._death_stable,
             "_active": self._active
         }
 
@@ -92,6 +98,9 @@ class I_Creature:
         innate_slots = data.get("_innate_slots", {})
         spell_slots_used = data.get("_spell_slots_used")
         innate_slots_used = data.get("_innate_slots_used")
+        death_successes = data.get("_death_successes", 0)
+        death_failures = data.get("_death_failures", 0)
+        death_stable = data.get("_death_stable", False)
         active = data.get("_active", True)
         # print("[LOAD CREATURE]", data["_name"])
         # print("  _innate_slots_used:", data.get("_innate_slots_used"))
@@ -116,6 +125,9 @@ class I_Creature:
                 innate_slots=innate_slots,
                 spell_slots_used=spell_slots_used,
                 innate_slots_used=innate_slots_used,
+                death_successes=death_successes,
+                death_failures=death_failures,
+                death_stable=death_stable,
                 active=active
             )
         elif creature_type == CreatureType.MONSTER:
@@ -214,6 +226,21 @@ class I_Creature:
     def status_time(self, value: int): self._status_time = value
 
     @property
+    def death_successes(self) -> int: return self._death_successes
+    @death_successes.setter
+    def death_successes(self, v: int): self._death_successes = int(v)
+
+    @property
+    def death_failures(self) -> int: return self._death_failures
+    @death_failures.setter
+    def death_failures(self, v: int): self._death_failures = int(v)
+
+    @property
+    def death_stable(self) -> bool: return self._death_stable
+    @death_stable.setter
+    def death_stable(self, v: bool): self._death_stable = bool(v)
+
+    @property
     def active(self) -> bool: return self._active
     @active.setter
     def active(self, value: bool): self._active = value
@@ -251,7 +278,7 @@ class Player(I_Creature):
                  movement=0, action=False, bonus_action=False, reaction=False,
                  object_interaction=False, notes='', conditions=None, status_time='',
                  spell_slots=None, innate_slots=None, spell_slots_used=None,
-                 innate_slots_used=None, active=True):
+                 innate_slots_used=None, death_successes=0, death_failures=0, death_stable=False, active=True):
         super().__init__(
             _type=CreatureType.PLAYER,
             _name=name,
@@ -271,5 +298,8 @@ class Player(I_Creature):
             _innate_slots=innate_slots or {},
             _spell_slots_used=spell_slots_used or {},
             _innate_slots_used=innate_slots_used or {},
+            _death_successes=death_successes,
+            _death_failures=death_failures,
+            _death_stable=death_stable,
             _active=active
         )
