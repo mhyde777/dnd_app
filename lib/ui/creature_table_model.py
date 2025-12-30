@@ -37,6 +37,9 @@ class CreatureTableModel(QAbstractTableModel):
                 "_innate_slots",
                 "_spell_slots_used",
                 "_innate_slots_used",
+                "_death_successes",
+                "_death_failures",
+                "_death_stable",
                 "_active",
             }
             sample = next(iter(self.manager.creatures.values()))
@@ -136,6 +139,33 @@ class CreatureTableModel(QAbstractTableModel):
             # Boolean columns: green/red
             if isinstance(value, bool):
                 return QColor("#006400") if value else QColor("darkred")
+           
+            # Death save visuals (Players only)
+            try:
+                succ = int(getattr(creature, "_death_successes", 0) or 0)
+                fail = int(getattr(creature, "_death_failures", 0) or 0)
+                stable = bool(getattr(creature, "_death_stable", False))
+            except Exception:
+                succ = fail = 0
+                stable = False
+
+            is_active = (name == self.active_creature_name)
+
+            # dead = gray (slightly lighter if active)
+            if fail >= 3:
+                return QColor("#808080") if is_active else QColor("#6b6b6b")
+
+            # stable = blue (slightly brighter if active)
+            if stable:
+                return QColor("#3a74c8") if is_active else QColor("#2b5aa6")
+
+            if role == Qt.ForegroundRole:
+                try:
+                    fail = int(getattr(creature, "_death_failures", 0) or 0)
+                except Exception:
+                    fail = 0
+                if fail >= 3:
+                    return QColor("#e6e6e6")  # light text on gray
 
             # HP-based coloring + active row
             curr_hp = getattr(creature, "_curr_hp", -1)
@@ -287,6 +317,9 @@ class CreatureTableModel(QAbstractTableModel):
             "_innate_slots",
             "_spell_slots_used",
             "_innate_slots_used",
+            "_death_successes",
+            "_death_failures",
+            "_death_stable",
             "_active",
         }
         sample = next(iter(self.manager.creatures.values()))

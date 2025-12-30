@@ -26,6 +26,7 @@ class InitiativeTracker(QMainWindow, Application):
             self.load_state()
             self.table_model.set_fields_from_sample()
             self.table_model.refresh()
+            self.update_table()
             self.update_active_init()  # ✅ <- This is what updates the labels!
             self.pop_lists()
         except Exception as e:
@@ -64,6 +65,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.table.setModel(self.table_model)
         self.table.itemDelegate().commitData.connect(self.on_commit_data)
         self.table.clicked.connect(self.handle_cell_clicked)
+        self.installEventFilter(self)
         # Ensure that the table's size is fixed and matches its content
         self.table.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
@@ -334,3 +336,43 @@ class InitiativeTracker(QMainWindow, Application):
 
         dropdown.move(table_pos.x(), table_pos.y() + rect.height())
         dropdown.show()
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape:
+            # Clear table selection
+            if hasattr(self, "table"):
+                self.table.clearSelection()
+                self.table.setCurrentIndex(self.table.model().index(-1, -1))
+
+            # Also close any open dropdowns
+            if hasattr(self, "_active_conditions_dropdown"):
+                try:
+                    self._active_conditions_dropdown.close()
+                except Exception:
+                    pass
+                self._active_conditions_dropdown = None
+
+            if hasattr(self, "_active_spell_dropdown"):
+                try:
+                    self._active_spell_dropdown.close()
+                except Exception:
+                    pass
+                self._active_spell_dropdown = None
+
+            return  # swallow Esc so it doesn't propagate
+
+        super().keyPressEvent(event)
+
+    def eventFilter(self, obj, event):
+        if event.type() == event.MouseButtonPress:
+            # If the click target is NOT inside the table, clear selection
+            if hasattr(self, "table"):
+                table_rect = self.table.rect()
+                table_pos = self.table.mapFromGlobal(event.globalPos())
+
+                if not table_rect.contains(table_pos):
+                    self.table.clearSelection()
+                    self.table.setCurrentIndex(self.table.model().index(-1, -1))
+
+        return super().eventFilter(obj, event)
+
