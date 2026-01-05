@@ -3,7 +3,7 @@ from typing import Dict, Any, List, Optional
 import json, os, re
 
 from PyQt5.QtWidgets import(
-   QDialog, QMessageBox,
+   QDialog, QMessageBox, QWidget,
     QApplication, QFileDialog, QInputDialog, QLineEdit
 ) 
 from PyQt5.QtGui import (
@@ -25,6 +25,7 @@ from ui.windows import (
 from ui.load_encounter_window import LoadEncounterWindow
 from ui.update_characters import UpdateCharactersWindow
 from ui.death_saves_dialog import DeathSavesDialog
+from ui.enter_initiatives_dialog import EnterInitiativesDialog
 # from ui.token_prompt import TokenPromptWindow
 
 
@@ -269,7 +270,7 @@ class Application:
         except Exception as e:
             print(f"[ERROR] Failed to save state: {e}")
 
-    def load_file_to_manager(self, file_name, manager, monsters=False, merge=False):
+    def load_file_to_manager(self, file_name, manager, monsters=False, merge=False, prompt_missing_inits=False):
         state = None
 
         try:
@@ -337,25 +338,54 @@ class Application:
 
         # ===== Full replace (default): clear, load players+monsters, apply counters =====
         manager.creatures.clear()
-        for creature in players + monsters_list:
-            # Skip inactive players on full replace
+
+        active_players = []
+        for creature in players:
             if isinstance(creature, Player) and not getattr(creature, "active", True):
                 continue
+            active_players.append(creature)
+
+        monsters_only = list(monsters_list)
+
+        # Prompt for missing player initiatives only when explicitly requested (e.g., Load Encounter)
+        if prompt_missing_inits:
+            missing_players = [
+                p for p in active_players
+                if getattr(p, "initiative", 0) in (None, 0, "") or getattr(p, "initiative", 0) <= 0
+            ]
+            if missing_players:
+                dlg = EnterInitiativesDialog(missing_players, parent=self if isinstance(self, QWidget) else None)
+                if dlg.exec_() == QDialog.Accepted:
+                    entered_values = dlg.initiatives()
+                    for p in missing_players:
+                        entered = entered_values.get(getattr(p, "name", ""), None)
+                        if entered is not None:
+                            try:
+                                p.initiative = int(entered)
+                            except (TypeError, ValueError):
+                                p.initiative = 0
+
+        for creature in active_players + monsters_only:
             manager.add_creature(creature)
 
         if manager is self.manager:
             self.current_turn = state.get("current_turn", 0)
             self.round_counter = state.get("round_counter", 1)
             self.time_counter = state.get("time_counter", 0)
+            # Reset active pointer for a fresh encounter load
+            self.current_idx = 0
+            self.current_creature_name = None
 
         manager.sort_creatures()
 
-        # Build order and set initial current creature if needed
+        # Build order and set initial current creature to the top
         self.build_turn_order()
-        if self.turn_order and not getattr(self, "current_creature_name", None):
+        if self.turn_order:
             self.current_creature_name = self.turn_order[0]
+            self.current_idx = 0
 
         self.update_table()
+        self.update_active_ui()
         self.pop_lists()
 
     def custom_decoder(self, data: Dict[str, Any]) -> Any:
@@ -1058,7 +1088,7 @@ class Application:
     def load_encounter(self):
         dialog = LoadEncounterWindow(self)
         if dialog.exec_() == QDialog.Accepted and dialog.selected_file:
-            self.load_file_to_manager(dialog.selected_file, self.manager)
+            self.load_file_to_manager(dialog.selected_file, self.manager, prompt_missing_inits=True)
             # After load, use the active creature from stable order
             name = self.active_name()
             if name:
