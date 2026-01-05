@@ -11,8 +11,13 @@ requests = "*"
 dotenv = "*"
 dnd-app-lib = {file = "lib/", editable = true}
 python-dotenv = "*"
+pyinstaller = "*"
 
 [dev-packages]
+pyinstaller = "*"
+
+[scripts]
+package = "./package.sh"
 
 [requires]
 python_version = "3.10"

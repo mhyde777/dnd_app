@@ -1,33 +1,33 @@
-import pprint
 from typing import Dict, Any, List, Optional
-import json, os, re
+import json, os, re, sys
+from pathlib import Path
+from dotenv import load_dotenv
 
 from PyQt5.QtWidgets import(
-   QDialog, QMessageBox, QWidget,
-    QApplication, QFileDialog, QInputDialog, QLineEdit
+   QDialog, QMessageBox,
+    QApplication, QInputDialog, QLineEdit
 ) 
 from PyQt5.QtGui import (
         QPixmap, QFont
 )
-from PyQt5.QtCore import (
-    Qt, QSize
-)
+from PyQt5.QtCore import Qt
 from app.creature import (
-    I_Creature, Player, Monster, CustomEncoder, CreatureType
+    I_Creature, Player, Monster, CreatureType
 )
 from app.save_json import GameState
 from app.manager import CreatureManager
 from app.storage_api import StorageAPI
 from app.config import get_storage_api_base, use_storage_api_only
 from ui.windows import (
-    AddCombatantWindow, RemoveCombatantWindow, BuildEncounterWindow, UpdatePlayerWindow
+    AddCombatantWindow, RemoveCombatantWindow, BuildEncounterWindow
 )
 from ui.load_encounter_window import LoadEncounterWindow
 from ui.update_characters import UpdateCharactersWindow
 from ui.death_saves_dialog import DeathSavesDialog
 from ui.enter_initiatives_dialog import EnterInitiativesDialog
-# from ui.token_prompt import TokenPromptWindow
 
+load_dotenv(Path.home() / "dnd_tracker_config" / ".env")
+load_dotenv(override=False)
 
 class Application:
 
@@ -264,7 +264,8 @@ class Application:
                 print("[INFO] Saved state to Storage API as last_state.json")
             else:
                 # --- Fallback: save to local file ---
-                with open(filename, "w", encoding="utf-8") as f:
+                file_path = self.get_data_path(filename)
+                with open(file_path, "w", encoding="utf-8") as f:
                     json.dump(save_data, f, ensure_ascii=False, indent=2)
                 print("[INFO] Saved state locally as last_state.json")
         except Exception as e:
@@ -911,12 +912,19 @@ class Application:
         return os.path.join(self.get_parent_dir(), 'images', filename)
 
     def get_data_path(self, filename):
-        return os.path.join(self.get_parent_dir(), 'data', filename)
+        return os.path.join(self.get_data_dir(), filename)
 
     def get_data_dir(self):
-        return os.path.join(self.get_parent_dir(), 'data')
-    
+        if getattr(sys, "frozen", False):
+            data_dir = os.path.expanduser("~/dnd_tracker_config/data")
+        else:
+            data_dir = os.path.join(self.get_parent_dir(), 'data')
+        os.makedirs(data_dir, exist_ok=True)
+        return data_dir
+
     def get_parent_dir(self):
+        if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+            return sys._MEIPASS
         return os.path.abspath(os.path.join(self.base_dir, '../../'))
 
     def get_extensions(self):
