@@ -34,4 +34,4 @@ def use_storage_api_only() -> bool:
     """
     If set, we ignore any Gist codepaths entirely.
     """
-    return os.getenv("USE_STORAGE_API_ONLY", "1").strip() not in ("", "0", "false", "False")
+    return os.getenv("USE_STORAGE_API_ONLY", "0").strip() not in ("", "0", "false", "False")

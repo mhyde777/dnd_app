@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import (
     QPushButton, QToolBar, QWidget,
     QHBoxLayout, QMainWindow, QListWidget,
     QAction, QMenuBar, QDesktopWidget, QTableView,
-    QSizePolicy
+    QSizePolicy, QMessageBox
 )
 from PyQt5.QtCore import Qt
 from app.app import Application
@@ -21,6 +21,10 @@ class InitiativeTracker(QMainWindow, Application):
         self.setWindowTitle("DnD Combat Tracker")
         self.manager = CreatureManager()
         self.initUI()
+
+        warning = getattr(self, "storage_api_warning", None)
+        if warning:
+            QMessageBox.warning(self, "Storage API", warning)
 
         try:
             self.load_state()
@@ -375,4 +379,3 @@ class InitiativeTracker(QMainWindow, Application):
                     self.table.setCurrentIndex(self.table.model().index(-1, -1))
 
         return super().eventFilter(obj, event)
-

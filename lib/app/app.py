@@ -4,7 +4,7 @@ import json, os, re
 
 from PyQt5.QtWidgets import(
    QDialog, QMessageBox,
-    QApplication, QFileDialog
+    QApplication, QFileDialog, QInputDialog, QLineEdit
 ) 
 from PyQt5.QtGui import (
         QPixmap, QFont
@@ -56,12 +56,18 @@ class Application:
 
         # --- Storage API only mode ---
         self.storage_api: Optional[StorageAPI] = None
+        self.storage_api_warning: Optional[str] = None
         if use_storage_api_only():
             base = get_storage_api_base()
             if not base:
-                raise RuntimeError("STORAGE_API_BASE is not set. Please add it to your .env.")
-            # self._log(f"[INFO] Using Storage API at {base}; disabling all Gist features.")
-            self.storage_api = StorageAPI(base)
+                self.storage_api_warning = (
+                    "USE_STORAGE_API_ONLY is enabled, but STORAGE_API_BASE is missing.\n\n"
+                    "Either set STORAGE_API_BASE (e.g., http://127.0.0.1:8000) or remove "
+                    "USE_STORAGE_API_ONLY to use local files"
+                )
+            else:
+                # self._log(f"[INFO] Using Storage API at {base}; disabling all Gist features.")
+                self.storage_api = StorageAPI(base)
 
     # -----------------------
     # Core ordering utilities
@@ -1146,4 +1152,3 @@ class Application:
     def _log(self, msg: str) -> None:
         """Lightweight logger used throughout the app."""
         print(msg)
-
