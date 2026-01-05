@@ -335,11 +335,11 @@ class Application:
 
             self.update_table()
             self.pop_lists()
-            self._maybe_prompt_enter_initiatives(manaager, prompt_for_initiatives and not merge)
+            self._maybe_prompt_enter_initiatives(manager, prompt_for_initiatives and not merge)
             return
 
         # ===== Full replace (default): clear, load players+monsters, apply counters =====
-        pending_inits: List[Players] = []
+        pending_inits: List[Player] = []
         manager.creatures.clear()
         for creature in players + monsters_list:
             # Skip inactive players on full replace
@@ -354,7 +354,7 @@ class Application:
             self.round_counter = state.get("round_counter", 1)
             self.time_counter = state.get("time_counter", 0)
 
-        if pending_inits:
+        if pending_inits and prompt_for_initiatives:
             self._prompt_missing_initiatives(pending_inits)
 
         manager.sort_creatures()
@@ -418,7 +418,7 @@ class Application:
         try:
             dialog = EnterInitiativesDialog(players, parent=self)
             if dialog.exec_() == QDialog.Accepted:
-                entries = dialog.get.initiatives()
+                entries = dialog.get_initiatives()
                 for player in players:
                     if player.name in entries:
                         player.initiative = entries[player.name]

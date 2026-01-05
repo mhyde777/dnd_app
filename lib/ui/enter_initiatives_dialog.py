@@ -32,8 +32,8 @@ class EnterInitiativesDialog(QDialog):
             row.addWidget(QLabel(player.name))
 
             spin = QSpinBox()
-            spin.setRange(1,50)
-            spin.setValue(0)
+            spin.setRange(1, 50)
+            spin.setValue(1)
             self._inputs[player.name] = spin
             row.addWidget(spin)
 
@@ -50,4 +50,4 @@ class EnterInitiativesDialog(QDialog):
         """
         Return initiatives keyed by player name.
         """
-        return {name: spin.value() for name, spin in self._input.items()}
+        return {name: spin.value() for name, spin in self._inputs.items()}
