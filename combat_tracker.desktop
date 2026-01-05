@@ -4,8 +4,10 @@ Type=Application
 
 Name=Combat Tracker
 
-Path=/opt/combat_tracker
+# Path=/opt/combat_tracker
 
-Exec=/opt/combat_tracker/combat_tracker
+Exec=/home/mason/Documents/dnd_app/package/opt/combat_tracker/combat_tracker
 
 Icon=combat_tracker
+Terminal=false
+Categories=Game;

@@ -30,6 +30,26 @@ This project uses **pipenv** as the primary dependency manager, driven by the `P
     python main.py 
     ```
 
+## Packaging the app {PyInstaller}
+The packagin flow builds a standalone binary and Linux application folder layout.
+
+1. Install dependencies (including PyIntsaller):
+    ```bash
+    pip install -r requirements.txt pyinstaller 
+    ```
+2. Build the executable and package directory:
+    ```bash
+    ../package.sh    
+    ```
+3. The bundled app is availalbe at:
+    ```text
+    dist/combat_tracker/
+    ```
+    A Linux-ready folder layout is staged at:
+    ```text
+    package/
+    ```
+
 ## Storage API Configuration
 The app can optionally persist encounters to a storage API. Configuration is controlled by two environmental variables (e.g., in a `.env` file next to `main.py`):
 
