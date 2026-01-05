@@ -332,11 +332,14 @@ class CreatureTableModel(QAbstractTableModel):
 
     def refresh(self):
         # Always sort by initiative desc
-        sorted_items = sorted(
-            self.manager.creatures.items(),
-            key=lambda item: item[1].initiative,
-            reverse=True,
-        )
+        if hasattr(self.manager, "ordered_items"):
+            sorted_items = self.manager.ordered_items()
+        else:
+            sorted_items = sorted(
+                self.manager.creatures.items(),
+                key=lambda item: item[1].initiative,
+                reverse=True,
+            )
         self.creature_names = [name for name, _ in sorted_items]
 
         # If fields were never initialized (edge-case), rebuild them consistently
