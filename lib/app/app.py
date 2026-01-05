@@ -3,7 +3,7 @@ from typing import Dict, Any, List, Optional
 import json, os, re
 
 from PyQt5.QtWidgets import(
-   QDialog, QMessageBox,
+   QDialog, QMessageBox, QWidget,
     QApplication, QFileDialog, QInputDialog, QLineEdit
 ) 
 from PyQt5.QtGui import (
@@ -25,6 +25,7 @@ from ui.windows import (
 from ui.load_encounter_window import LoadEncounterWindow
 from ui.update_characters import UpdateCharactersWindow
 from ui.death_saves_dialog import DeathSavesDialog
+from ui.enter_initiatives_dialog import EnterInitiativesDialog
 # from ui.token_prompt import TokenPromptWindow
 
 
@@ -269,7 +270,7 @@ class Application:
         except Exception as e:
             print(f"[ERROR] Failed to save state: {e}")
 
-    def load_file_to_manager(self, file_name, manager, monsters=False, merge=False):
+    def load_file_to_manager(self, file_name, manager, monsters=False, merge=False, prompt_for_initiatives: bool = False):
         state = None
 
         try:
@@ -308,6 +309,7 @@ class Application:
             self.build_turn_order()
             self.update_table()
             self.pop_lists()
+            self._maybe_prompt_enter_initiatives(manager, prompt_for_initiatives and not merge)
             return
 
         # ===== Merge path: add monsters with unique names; keep counters/active =====
@@ -333,30 +335,95 @@ class Application:
 
             self.update_table()
             self.pop_lists()
+            self._maybe_prompt_enter_initiatives(manaager, prompt_for_initiatives and not merge)
             return
 
         # ===== Full replace (default): clear, load players+monsters, apply counters =====
+        pending_inits: List[Players] = []
         manager.creatures.clear()
         for creature in players + monsters_list:
             # Skip inactive players on full replace
             if isinstance(creature, Player) and not getattr(creature, "active", True):
                 continue
             manager.add_creature(creature)
+            if isinstance(creature, Player) and self._player_needs_initiative(creature):
+                pending_inits.append(creature)
 
         if manager is self.manager:
             self.current_turn = state.get("current_turn", 0)
             self.round_counter = state.get("round_counter", 1)
             self.time_counter = state.get("time_counter", 0)
 
+        if pending_inits:
+            self._prompt_missing_initiatives(pending_inits)
+
         manager.sort_creatures()
 
         # Build order and set initial current creature if needed
         self.build_turn_order()
-        if self.turn_order and not getattr(self, "current_creature_name", None):
+        if self.turn_order:
             self.current_creature_name = self.turn_order[0]
+            self.current_idx = 0
+        else:
+            self.current_creature_name = None
+            self.current_idx = 0
 
         self.update_table()
+        self.update_active_init()
         self.pop_lists()
+        self._maybe_prompt_enter_initiatives(manager, prompt_for_initiatives and not merge)
+
+    def _maybe_prompt_enter_initiatives(self, manager: CreatureManager, should_prompt: bool) -> None:
+        """
+        Optionally remind the user to fill in initiatives for a freshly loaded encounter.
+        Skipped for merge flows to keep additive behavior intact.
+        """
+        if not should_prompt:
+            return
+        try:
+            creatures = getattr(manager, "creatures", {}) or {}
+        except Exception:
+            return
+
+        missing = []
+        for name, creature in creatures.items():
+            try:
+                init_val = getattr(creature, "initiative", 0)
+            except Exception:
+                continue
+            if init_val in (None, "", 0):
+                missing.append(name)
+
+        if not missing:
+            return
+
+        QMessageBox.information(
+            self,
+            "Enter initiatives",
+            "Enter initiatives for this encounter before starting combat.",
+        )
+
+    def _player_needs_initiative(self, player: Player) -> bool:
+        value = getattr(player, "initiative", None)
+        if value is None:
+            return True
+        try:
+            return int(value) <= 0 
+        except Exception:
+            return True
+
+    def _prompt_missing_initiatives(self, players: List[Player]) -> None:
+        if not players:
+            return
+        try:
+            dialog = EnterInitiativesDialog(players, parent=self)
+            if dialog.exec_() == QDialog.Accepted:
+                entries = dialog.get.initiatives()
+                for player in players:
+                    if player.name in entries:
+                        player.initiative = entries[player.name]
+        except Exception as e:
+            self._log(f"[WARN] Initiative prompt failed: {e}")
 
     def custom_decoder(self, data: Dict[str, Any]) -> Any:
         if '_type' in data:
@@ -510,6 +577,47 @@ class Application:
         if hasattr(self, "prev_btn") and self.prev_btn:
             # Only enable Prev if we can actually go back
             self.prev_btn.setEnabled(not at_absolute_start)
+
+    def handle_initiative_update(self):
+        """
+        Prompt the user after an initiative edit and ensure the active UI/statblock reflect the lastest turn order regardless of the dialog choice.
+        """
+        if getattr(self, "_initiative_dialog_open", False):
+            return
+        
+        self._initiative_dialog_open = True
+        try:
+            dialog = QMessageBox(self)
+            dialog.setWindowTitle("Initiaitve Changed")
+            dialog.setText("Initiaitves were updated. Rebuild the turn order now?")
+            dialog.setIcon(QMessageBox.Question)
+            apply_btn = dialog.addButton("Apply", QMessageBox.AcceptedRole)
+            dialog.addButton("Skip", QMessageBox.RejectedRole)
+            dialog.exec_()
+
+            applied = dialog.clickedButton() is apply_btn
+
+            if applied:
+                self.manager.sort_creatures()
+                self.build_turn_order()
+                self.update_table()
+                QMessageBox.information(
+                    self,
+                    "Initiatives Updated",
+                    "Initiatives applied and turn order rebuilt",
+                )
+            else:
+                self.table_model.refresh()
+                self.update_table()
+        finally:
+            self._initiative_dialog_open = False
+
+        self.update_active_init()
+        active_name = self.active_name()
+        if active_name:
+            cr = self.manager.creatures.get(active_name)
+            if cr and getattr(cr, "_type", None) == CreatureType.MONSTER:
+                self.active_statblock_image(cr)
 
     def init_tracking_mode(self, by_name):
         self.tracking_by_name = by_name
@@ -1058,7 +1166,7 @@ class Application:
     def load_encounter(self):
         dialog = LoadEncounterWindow(self)
         if dialog.exec_() == QDialog.Accepted and dialog.selected_file:
-            self.load_file_to_manager(dialog.selected_file, self.manager)
+            self.load_file_to_manager(dialog.selected_file, self.manager, prompt_for_initiatives=True)
             # After load, use the active creature from stable order
             name = self.active_name()
             if name:
@@ -1069,7 +1177,7 @@ class Application:
     def merge_encounter(self):
         dialog = LoadEncounterWindow(self)
         if dialog.exec_() == QDialog.Accepted and dialog.selected_file:
-            self.load_file_to_manager(dialog.selected_file, self.manager, merge=True)
+            self.load_file_to_manager(dialog.selected_file, self.manager, merge=True, prompt_for_initiatives=False)
 
             if not self.current_creature_name and self.turn_order:
                 self.current_creature_name = self.turn_order[0]
