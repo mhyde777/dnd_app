@@ -2,29 +2,21 @@ import os
 import json
 from dotenv import load_dotenv
 
-load_dotenv()  # Automatically load .env in project root
-
 CONFIG_DIR = os.path.expanduser("~/.dnd_tracker_config")
-TOKEN_PATH = os.path.join(CONFIG_DIR, "token.json")
 
-# def get_github_token():
-#  # 1. Try token.json
-#  if os.path.exists(TOKEN_PATH):
-#      with open(TOKEN_PATH, "r") as f:
-#          return json.load(f).get("token")
-#  
-#  # 2. Try .env fallback
-#  return os.getenv("GITHUB_TOKEN")
-#
-# def save_github_token(token: str):
-#  os.makedirs(CONFIG_DIR, exist_ok=True)
-#  with open(TOKEN_PATH, "w") as f:
-#      json.dump({"token": token}, f)
+def get_config_dir() -> str:
+    return CONFIG_DIR
+
+def get_config_path(filename: str) -> str:
+    return os.path.join(CONFIG_DIR, filename)
+
+load_dotenv(get_config_path(".env"), override=False)
+
+TOKEN_PATH = get_config_path("token.json")
 
 # ---- Storage API config ----
 def get_storage_api_key() -> str:
     return os.getenv("STORAGE_API_KEY", "").strip()
-
 def get_storage_api_base() -> str:
     """
     Base URL for Storage API, e.g.:
@@ -35,6 +27,6 @@ def get_storage_api_base() -> str:
 
 def use_storage_api_only() -> bool:
     """
-    If set, we ignore any Gist codepaths entirely.
+    If set, use the Storage API and skip any local persistence fallbacks.
     """
     return os.getenv("USE_STORAGE_API_ONLY", "0").strip() not in ("", "0", "false", "False")

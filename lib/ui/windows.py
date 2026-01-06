@@ -1,18 +1,13 @@
 import os
-import json
-from typing import List, Dict, Any
 
-from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QGridLayout,
+    QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
     QSpinBox, QLineEdit, QPushButton, QLabel, QCheckBox,
-    QTableWidget, QTableWidgetItem, QHeaderView, QWidget, QGroupBox,
-    QListWidget, QListWidgetItem, QDialogButtonBox, QItemDelegate, QInputDialog
+    QTableWidget, QTableWidgetItem, QHeaderView, QGroupBox,
+    QListWidget, QListWidgetItem, QDialogButtonBox, QInputDialog
 )
 
-from app.creature import Monster, I_Creature
-from app.manager import CreatureManager
-# from app.gist_utils import list_gists
+from app.creature import Monster
 
 class AddCombatantWindow(QDialog):
     def __init__(self, parent=None):
@@ -363,20 +358,6 @@ class LoadEncounterWindow(QDialog):
 
         self.setLayout(self.load_layout)
 
-    def populate_file_list(self):
-        try:
-            # List files from Gist
-            gists = list_gists()  # This should return a list of gists
-            for gist in gists:
-                # Extract the file name from the 'files' dictionary
-                for file_name in gist['files']:
-                    self.file_list.addItem(file_name)  # Add the file name (string) to the list
-
-        except Exception as e:
-            print(f"Error while populating file list: {e}")
-            # Optionally handle the case where there are no Gists, maybe fallback to local files
-            print(f"Directory {self.get_data_path()} not found.")
-
     def on_item_clicked(self, item):
         self.selected_file = item.text().replace(' ','_')
 
@@ -409,20 +390,6 @@ class MergeEncounterWindow(QDialog):
         self.merge_layout.addWidget(self.merge_button)
 
         self.setLayout(self.merge_layout)
-
-    def populate_file_list(self):
-        try:
-            # List files from Gist
-            gists = list_gists()  # This should return a list of gists
-            for gist in gists:
-                # Assuming 'gist' contains the file name and Gist ID
-                file_name = gist['files'].keys()  # or extract the filename from Gist data
-                self.file_list.addItem(file_name)  # Populate the file list with the file names
-
-        except Exception as e:
-            print(f"Error while populating file list: {e}")
-            # Optionally handle the case where there are no Gists, maybe fallback to local files
-            print(f"Directory {self.get_data_path()} not found.")
 
     def on_item_clicked(self, item):
         self.selected_file = item.text().replace(' ','_')

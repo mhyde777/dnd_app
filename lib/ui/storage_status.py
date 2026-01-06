@@ -7,14 +7,15 @@ from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QListWidget, QListWidgetItem,
     QPushButton, QHBoxLayout, QMessageBox
 )
+from app.config import get_config_path
 
-STATUS_PATH = os.path.expanduser("~/.dnd_tracker_config/gist_status.json")
+STATUS_PATH = get_config_path("encounter_status.json")
 
 
 class StorageStatusWindow(QDialog):
     """
     Toggle active/inactive for encounters stored in the Storage API.
-    We write flags back to ~/.dnd_tracker_config/gist_status.json.
+    We write flags back to the shared config directory's encounter_status.json.
     """
     def __init__(self, storage_api, parent=None):
         super().__init__(parent)
@@ -102,4 +103,3 @@ class StorageStatusWindow(QDialog):
             self.status[key] = (it.checkState() == Qt.Checked)
         self._save_status()
         self.accept()
-

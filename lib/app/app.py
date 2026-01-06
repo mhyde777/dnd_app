@@ -1,6 +1,5 @@
 from typing import Dict, Any, List, Optional
 import json, os, re, sys
-from pathlib import Path
 from dotenv import load_dotenv
 
 from PyQt5.QtWidgets import(
@@ -17,7 +16,7 @@ from app.creature import (
 from app.save_json import GameState
 from app.manager import CreatureManager
 from app.storage_api import StorageAPI
-from app.config import get_storage_api_base, use_storage_api_only
+from app.config import get_storage_api_base, use_storage_api_only, get_config_path
 from ui.windows import (
     AddCombatantWindow, RemoveCombatantWindow, BuildEncounterWindow
 )
@@ -26,8 +25,8 @@ from ui.update_characters import UpdateCharactersWindow
 from ui.death_saves_dialog import DeathSavesDialog
 from ui.enter_initiatives_dialog import EnterInitiativesDialog
 
-load_dotenv(Path.home() / "dnd_tracker_config" / ".env")
-load_dotenv(override=False)
+load_dotenv(get_config_path(".env"), override=False)
+# load_dotenv(override=False)
 
 class Application:
 
@@ -69,7 +68,7 @@ class Application:
                     "USE_STORAGE_API_ONLY to use local files"
                 )
             else:
-                # self._log(f"[INFO] Using Storage API at {base}; disabling all Gist features.")
+                # self._log(f"[INFO] Using Storage API at {base}.")
                 self.storage_api = StorageAPI(base)
 
     # -----------------------
@@ -918,7 +917,7 @@ class Application:
 
     def get_data_dir(self):
         if getattr(sys, "frozen", False):
-            data_dir = os.path.expanduser("~/dnd_tracker_config/data")
+            data_dir = get_config_path("data")
         else:
             data_dir = os.path.join(self.get_parent_dir(), 'data')
         os.makedirs(data_dir, exist_ok=True)

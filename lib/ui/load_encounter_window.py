@@ -8,11 +8,10 @@ from PyQt5.QtWidgets import (
     QPushButton, QMessageBox, QHBoxLayout
 )
 
-from app.config import get_storage_api_base, use_storage_api_only
+from app.config import get_storage_api_base, use_storage_api_only, get_config_path
 from app.storage_api import StorageAPI
 
-STATUS_PATH = os.path.expanduser("~/.dnd_tracker_config/gist_status.json")
-
+STATUS_PATH = get_config_path("storage_status.json")
 
 class LoadEncounterWindow(QDialog):
     """
@@ -35,9 +34,9 @@ class LoadEncounterWindow(QDialog):
         self.info_label = QLabel("Select an Encounter to load:")
         layout.addWidget(self.info_label)
 
-        self.gist_list = QListWidget()
-        self.gist_list.setSelectionMode(QListWidget.SingleSelection)
-        layout.addWidget(self.gist_list)
+        self.encounter_list = QListWidget()
+        self.encounter_list.setSelectionMode(QListWidget.SingleSelection)
+        layout.addWidget(self.encounter_list)
 
         # Buttons
         row = QHBoxLayout()
@@ -58,10 +57,10 @@ class LoadEncounterWindow(QDialog):
                 raise RuntimeError("Storage API not configured.")
 
             # reuse existing status file for active/inactive toggles
-            gist_status = {}
+            encounter_status = {}
             if os.path.exists(STATUS_PATH):
                 with open(STATUS_PATH, "r") as f:
-                    gist_status = json.load(f)
+                    encounter_status = json.load(f)
 
             items = self.storage_api.list()
             for filename in items:
@@ -69,21 +68,21 @@ class LoadEncounterWindow(QDialog):
                     isinstance(filename, str)
                     and filename.endswith(".json")
                     and filename not in ("players.json", "last_state.json")
-                    and gist_status.get(filename, True)  # default active
+                    and encounter_status.get(filename, True)  # default active
                 ):
                     display = filename.replace("_", " ").replace(".json", "")
                     item = QListWidgetItem(display)
                     item.setData(Qt.UserRole, filename)  # store Storage key
-                    self.gist_list.addItem(item)
+                    self.encounter_list.addItem(item)
 
-            if self.gist_list.count() == 0:
+            if self.encounter_list.count() == 0:
                 self.info_label.setText("No encounters found in Storage.")
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to load encounters: {e}")
             self.reject()
 
     def on_load_clicked(self):
-        item = self.gist_list.currentItem()
+        item = self.encounter_list.currentItem()
         if not item:
             QMessageBox.information(self, "No Selection", "Please select an Encounter.")
             return

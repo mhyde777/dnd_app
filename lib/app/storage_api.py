@@ -147,7 +147,7 @@ class StorageAPI:
         #Candidate endpoints your server might expose
         candidates = [
             self._items_url(),          # .../v1/encounters/itmes (your original guess)
-            self._ecnounters_url(),     # .../v1/_encounters      (often used for listing)
+            self._encounters_url(),     # .../v1/_encounters      (often used for listing)
         ]
         return self._list_from_candidates(candidates)
 
