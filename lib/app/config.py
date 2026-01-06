@@ -22,6 +22,9 @@ TOKEN_PATH = os.path.join(CONFIG_DIR, "token.json")
 #      json.dump({"token": token}, f)
 
 # ---- Storage API config ----
+def get_storage_api_key() -> str:
+    return os.getenv("STORAGE_API_KEY", "").strip()
+
 def get_storage_api_base() -> str:
     """
     Base URL for Storage API, e.g.:

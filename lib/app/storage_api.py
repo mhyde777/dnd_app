@@ -2,6 +2,7 @@
 from __future__ import annotations
 import json
 from typing import Optional, Any, Dict, Iterable, List
+import os
 
 import requests
 from requests import Response
@@ -25,6 +26,11 @@ class StorageAPI:
             raise ValueError("StorageAPI base_url is required")
         self.base_url = base_url.rstrip("/")
         self.session = session or requests.Session()
+        self.api_key = os.getenv("STORAGE_API_KEY", "").strip()
+
+        # ✅ attach API key for every request made by this Session
+        if self.api_key:
+            self.session.headers.update({"X-Api-Key": self.api_key})
 
     # ----- URL helpers -----
 
@@ -36,6 +42,11 @@ class StorageAPI:
 
     def _item_url(self, key: str) -> str:
         return f"{self._encounters_url()}/{key}"
+
+    def _headers(self) -> dict:
+        if getattr(self, "api_key", ""):
+            return {"X-Api-Key": self.api_key}
+        return {}
 
     # ----- Response helpers -----
 
