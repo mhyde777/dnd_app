@@ -6,7 +6,7 @@ APP_NAME="combat_tracker"
 USER_APPS_DIR="${HOME}/.local/share/applications"
 
 # NEW: config location
-CONFIG_DIR="${HOME}/dnd_tracker_config"
+CONFIG_DIR="${HOME}/.dnd_tracker_config"
 CONFIG_ENV="${CONFIG_DIR}/.env"
 
 # Ensure we run inside the pipenv environment
@@ -54,8 +54,8 @@ find "$ROOT_DIR/package/usr/share" -type f -exec chmod 644 -- {} +
 # ------------------------------------------------------------
 mkdir -p "$CONFIG_DIR"
 
-if [[ -f "$ROOT_DIR/dnd_app/.env" ]]; then
-  cp "$ROOT_DIR/dnd_app/.env" "$CONFIG_ENV"
+if [[ -f "$ROOT_DIR/.env" ]]; then
+  cp "$ROOT_DIR/.env" "$CONFIG_ENV"
   chmod 600 "$CONFIG_ENV"
   echo "Installed .env -> $CONFIG_ENV"
 else
