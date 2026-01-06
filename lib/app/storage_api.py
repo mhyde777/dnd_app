@@ -1,5 +1,6 @@
 # app/storage_api.py
 from __future__ import annotations
+import base64
 import json
 from typing import Optional, Any, Dict, Iterable, List
 import os
@@ -43,6 +44,15 @@ class StorageAPI:
     def _item_url(self, key: str) -> str:
         return f"{self._encounters_url()}/{key}"
 
+    def _images_url(self) -> str:
+        return f"{self.base_url}/v1/images"
+
+    def _images_items_url(self) -> str:
+        return f"{self._images_url()}/items"
+
+    def _image_item_url(self, key: str) -> str:
+        return f"{self._images_url()}/{key}"
+
     def _headers(self) -> dict:
         if getattr(self, "api_key", ""):
             return {"X-Api-Key": self.api_key}
@@ -68,20 +78,9 @@ class StorageAPI:
         """
         return {"data": data}  # change to {"data": data} if your server expects wrapper
 
-    # ----- Core ops -----
-    def list(self) -> List[str]:
-        """
-        Return a list of item keys (e.g., ["Goblin_Caves.json", "players.json", ...]).
-        Tries multiple endpoints and normalizes a variety of response shapes.
-        """
+    def _list_from_candidates(self, candidates: Iterable[str]) -> List[str]:
         import requests
         from requests import HTTPError
-
-        # Candidate endpoints your server might expose
-        candidates = [
-            self._items_url(),         # .../v1/encounters/items   (your original guess)
-            self._encounters_url(),    # .../v1/encounters         (often used for listing)
-        ]
 
         last_err = None
         for url in candidates:
@@ -118,9 +117,6 @@ class StorageAPI:
                                     if out:
                                         return out
 
-                    # Sometimes the listing is nested one more level deep
-                    # e.g., {"data": {"items": [...]}} handled above via loop
-
                 # 3) List of dicts at top level
                 if isinstance(payload, list) and all(isinstance(x, dict) for x in payload):
                     out: List[str] = []
@@ -142,6 +138,28 @@ class StorageAPI:
 
         # None of the candidates worked
         raise RuntimeError(f"StorageAPI.list() failed: {last_err}")
+
+    def list(self) -> List[str]:
+        """
+        Return a list of item keys (e.g., ["Goblin_Caves.json", "players.json", ...]).
+        Tries multiple endpoints and normalizes a variets of response shapes.
+        """
+        #Candidate endpoints your server might expose
+        candidates = [
+            self._items_url(),          # .../v1/encounters/itmes (your original guess)
+            self._ecnounters_url(),     # .../v1/_encounters      (often used for listing)
+        ]
+        return self._list_from_candidates(candidates)
+
+    def list_images(self) -> List[str]:
+        """
+        Return a list of image keys (e.g., ["Gbolin.png", ...]).
+        """
+        candidates = [
+            self._images_items_url(),
+            self._images_url(),
+        ]
+        return self._list_from_candidates(candidates)
 
     def get(self, key: str) -> Optional[dict]:
         """
@@ -189,6 +207,14 @@ class StorageAPI:
         except Exception as e:
             raise RuntimeError(f"StorageAPI.delete({key}) failed: {e}") from e
 
+    def delete_image(self, key: str) -> None:
+        try:
+            r: Response = self.session.delete(self._image_item_url(key), timeout=8)
+            if r.status_code not in (200, 204, 404):
+                r.raise_for_status()
+        except Exception as e:
+            raise RuntimeError(f"StorageAPI.delete_image({key}) failed: {e}") from e
+
     # ----- Helpers tailored to your app’s JSON encoding -----
 
     def put_json(self, key: str, obj: dict) -> None:
@@ -200,3 +226,49 @@ class StorageAPI:
     def get_json(self, key: str) -> Optional[dict]:
         """GET and ensure dict result (or None)."""
         return self.get(key)
+
+    @staticmethod
+    def _decode_image_payload(payload: Any) -> Optional[bytes]:
+        if isinstance(payload, dict):
+            for key in ("data", "content", "base64", "image"):
+                if key in payload:
+                    payload = payload[key]
+                    break
+        if isinstance(payload, str):
+            text = payload.strip()
+            if text.startswith("data:") and "," in text:
+                text = text.split(",", 1)[1]
+            try:
+                return base64.b64decode(text, validate=False)
+            except Exception:
+                return None
+        return None
+
+    def get_image_bytes(self, key: str) -> Optional[bytes]:
+        try:
+            r: Response = self.session.get(self._image_item_url(key), timeout=8)
+            if r.status_code == 404:
+                return None
+            r.raise_for_status()
+            content_type = r.headers.get("Content-Type", "")
+            if "application/json" in content_type or "text/json" in content_type:
+                payload = r.json()
+                payload = self._unwrap_data(payload)
+                decoded = self._decode_image_payload(payload)
+                if decoded:
+                    return decoded
+                return None
+            return r.content
+        except Exception as e:
+            raise RuntimeError(f"StorageAPI.get_image_bytes({key}) failed: {e}") from e
+
+    def put_image_bytes(self, key: str, data: bytes, content_type: Optional[str] = None) -> None:
+        try:
+            headers = self._headers()
+            if content_type:
+                headers = {**headers, "Content-Type": content_type}
+            r: Response = self.session.put(self._image_item_url(key), data=data, headers=headers, timeout=20)
+            r.raise_for_status()
+        except Exception as e:
+            raise RuntimeError(f"StorageAPI.put_image_bytes({key}) failed: {e}") from e
+            
