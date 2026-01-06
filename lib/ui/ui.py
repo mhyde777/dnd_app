@@ -163,7 +163,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.characters_menu = self.file_menu.addMenu("Characters")
 
         self.edit_menu = self.menu_bar.addMenu("&Edit")
-        self.encounter_menu = self.edit_menu.addMenu("Encounters")
+        self.encounter_menu = self.menu_bar.addMenu("&Encounters")
         self.images_menu = self.menu_bar.addMenu("&Images")
 
         self.filetool_bar = QToolBar("File", self)

@@ -20,7 +20,7 @@ from app.creature import Player
 
 class UpdateCharactersWindow(QDialog):
     """
-    Create/Update Players (no Gists).
+    Create/Update Players.
     Reads/writes players.json via Storage API if configured, else local data/players.json.
 
     File format supported on load:
