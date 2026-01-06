@@ -1,5 +1,4 @@
 import os
-import json
 from dotenv import load_dotenv
 
 CONFIG_DIR = os.path.expanduser("~/.dnd_tracker_config")

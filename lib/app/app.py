@@ -26,7 +26,7 @@ from ui.death_saves_dialog import DeathSavesDialog
 from ui.enter_initiatives_dialog import EnterInitiativesDialog
 
 load_dotenv(get_config_path(".env"), override=False)
-# load_dotenv(override=False)
+load_dotenv(override=False)
 
 class Application:
 
