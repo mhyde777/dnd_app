@@ -5,6 +5,10 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_NAME="combat_tracker"
 USER_APPS_DIR="${HOME}/.local/share/applications"
 
+# NEW: config location
+CONFIG_DIR="${HOME}/dnd_tracker_config"
+CONFIG_ENV="${CONFIG_DIR}/.env"
+
 # Ensure we run inside the pipenv environment
 if [[ -z "${PIPENV_ACTIVE:-}" ]]; then
   exec pipenv run "$ROOT_DIR/package.sh" "$@"
@@ -44,6 +48,19 @@ cp "$ROOT_DIR/combat_tracker.desktop" \
   "$ROOT_DIR/package/usr/share/applications"
 
 find "$ROOT_DIR/package/usr/share" -type f -exec chmod 644 -- {} +
+
+# ------------------------------------------------------------
+# NEW: Install / overwrite runtime .env
+# ------------------------------------------------------------
+mkdir -p "$CONFIG_DIR"
+
+if [[ -f "$ROOT_DIR/dnd_app/.env" ]]; then
+  cp "$ROOT_DIR/dnd_app/.env" "$CONFIG_ENV"
+  chmod 600 "$CONFIG_ENV"
+  echo "Installed .env -> $CONFIG_ENV"
+else
+  echo "WARNING: dnd_app/.env not found; skipping env install" >&2
+fi
 
 # ------------------------------------------------------------
 # Dev install (user-local GNOME launcher)

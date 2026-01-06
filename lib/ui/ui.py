@@ -164,6 +164,7 @@ class InitiativeTracker(QMainWindow, Application):
 
         self.edit_menu = self.menu_bar.addMenu("&Edit")
         self.encounter_menu = self.edit_menu.addMenu("Encounters")
+        self.images_menu = self.menu_bar.addMenu("&Images")
 
         self.filetool_bar = QToolBar("File", self)
         self.addToolBar(self.filetool_bar)
@@ -217,6 +218,10 @@ class InitiativeTracker(QMainWindow, Application):
         self.update_characters_action = QAction("Create/Update Characters", self)
         self.update_characters_action.triggered.connect(self.create_or_update_characters)
         self.characters_menu.addAction(self.update_characters_action)
+
+        self.manage_images_action = QAction("Mange Images", self)
+        self.manage_images_action.triggered.connect(self.manage_images)
+        self.images_menu.addAction(self.manage_images_action)
 
     def update_size_constraints(self):
         # Get the current screen where the app is being displayed

@@ -48,6 +48,8 @@ class Application:
         # but we will manage it via build_turn_order()
         self.sorted_creatures: List[Any] = []
 
+        self.image_cache: Dict[str, bytes] = {}
+
         self.boolean_fields = {
             '_action': 'set_creature_action',
             '_bonus_action': 'set_creature_bonus_action',
@@ -930,6 +932,20 @@ class Application:
     def get_extensions(self):
         return ('png', 'jpg', 'jpeg', 'gif')
 
+    def get_image_bytes(self, filename: str) -> Optional[bytes]:
+        if filename in self.image_cache:
+            return self.image_cache[filename]
+        if not getattr(self, "storage_api", None):
+            return None
+        try:
+            data = self.storage_api.get_image_bytes(filename)
+        except Exception as e:
+            self._log(f"[WARN] Failed to fetch image '{filename}' from storage: {e}")
+            return None
+        if data:
+            self.image_cache[filename] = data
+            return data
+
     # -------------------------------
     # Change Manager with Table Edits
     # -------------------------------
@@ -1014,9 +1030,18 @@ class Application:
 
         extensions = self.get_extensions()
         for ext in extensions:
-            image_path = self.get_image_path(f'{base_name}.{ext}')
+            filename = f'{base_name}.{ext}'
+            image_path = self.get_image_path(filename)
+            pixmap = None
             if os.path.exists(image_path):
-                self.pixmap = QPixmap(image_path)
+                pixmap = QPixmap(image_path)
+            else:
+                data = self.get_image_bytes(filename)
+                if data:
+                    pixmap = QPixmap()
+                    pixmap.loadFromData(data)
+            if pixmap and not pixmap.isNull():
+                self.pixmap = pixmap
                 scaled_pixmap = self.pixmap.scaled(
                     max_width,
                     max_height,
@@ -1213,6 +1238,15 @@ class Application:
         if dlg.exec_() == QDialog.Accepted:
             # Optional: refresh any open pickers or cached lists here
             pass
+    
+    def manage_images(self):
+        from ui.manage_images import ManageImagesWindow
+        if not getattr(self, "storage_api", None):
+            QMessageBox.information(self, "Unavailable", "Storage API not configured.")
+            return
+        dlg = ManageImagesWindow(self.storage_api, self)
+        if dlg.exec_() == QDialog.Accpted and getattr(dlg, "updated", False):
+            self.image_cache.clear()
 
     def create_or_update_characters(self):
         dialog = UpdateCharactersWindow(self)
