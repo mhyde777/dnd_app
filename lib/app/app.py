@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import(
     QApplication, QInputDialog, QLineEdit
 ) 
 from PyQt5.QtGui import (
-        QPixmap, QFont
+        QPixmap, QFont, QPixmapCache
 )
 from PyQt5.QtCore import Qt
 from app.creature import (
@@ -1024,29 +1024,42 @@ class Application:
         screen_width = screen_geometry.width()
         screen_height = screen_geometry.height()
 
-        max_width = int(screen_width * 0.4)   # 40% of screen width
-        max_height = int(screen_height * 0.9) # 90% of screen height
+        max_width = int(screen_width * 0.4)
+        max_height = int(screen_height * 0.9)
 
         extensions = self.get_extensions()
         for ext in extensions:
-            filename = f'{base_name}.{ext}'
+            filename = f"{base_name}.{ext}"
             image_path = self.get_image_path(filename)
             pixmap = None
-            if os.path.exists(image_path):
+
+            # 1) Prefer server (prevents stale local cache)
+            data = self.get_image_bytes(filename)
+            if data:
+                pixmap = QPixmap()
+                pixmap.loadFromData(data)
+
+                # Keep local cache in sync (overwrite)
+                try:
+                    os.makedirs(os.path.dirname(image_path), exist_ok=True)
+                    with open(image_path, "wb") as f:
+                        f.write(data)
+                except Exception:
+                    pass
+
+            # 2) Fallback to local file if server didn't return anything
+            if (pixmap is None or pixmap.isNull()) and os.path.exists(image_path):
                 pixmap = QPixmap(image_path)
-            else:
-                data = self.get_image_bytes(filename)
-                if data:
-                    pixmap = QPixmap()
-                    pixmap.loadFromData(data)
+
             if pixmap and not pixmap.isNull():
                 self.pixmap = pixmap
                 scaled_pixmap = self.pixmap.scaled(
-                    max_width,
-                    max_height,
-                    Qt.KeepAspectRatio,
-                    Qt.SmoothTransformation
+                    max_width, max_height, Qt.KeepAspectRatio, Qt.SmoothTransformation
                 )
+
+                # Clear Qt pixmap cache before updating display
+                QPixmapCache.clear()
+
                 self.statblock.setPixmap(scaled_pixmap)
                 break
 
@@ -1166,6 +1179,7 @@ class Application:
                 max_hp=creature_data["_max_hp"],
                 curr_hp=creature_data["_curr_hp"],
                 armor_class=creature_data["_armor_class"],
+                death_saves_prompt=creature_data.get("_death_saves_prompt", False),
                 spell_slots=creature_data.get("_spell_slots", {}),
                 innate_slots=creature_data.get("_innate_slots", {})
             )
@@ -1244,7 +1258,7 @@ class Application:
             QMessageBox.information(self, "Unavailable", "Storage API not configured.")
             return
         dlg = ManageImagesWindow(self.storage_api, self)
-        if dlg.exec_() == QDialog.Accpted and getattr(dlg, "updated", False):
+        if dlg.exec_() == QDialog.Accepted and getattr(dlg, "updated", False):
             self.image_cache.clear()
 
     def create_or_update_characters(self):
@@ -1263,12 +1277,16 @@ class Application:
 
     def _maybe_prompt_death_saves(self, creature):
         """
-        Only prompt for Players at 0 HP who are not already stable/dead.
+        Prompt for Players at 0 HP (always) and Monsters when enabled.
         """
         try:
             from app.creature import CreatureType
-            if getattr(creature, "_type", None) != CreatureType.PLAYER:
-                return
+            creature_type = getattr(creature, "_type", None)
+            if creature_type == CreatureType.PLAYER:
+                pass
+            elif creature_type == CreatureType.MONSTER:
+                if not bool(getattr(creature, "_death_saves_prompt", False)):
+                    return
         except Exception:
             return
 

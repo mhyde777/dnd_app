@@ -47,6 +47,7 @@ class I_Creature:
     _death_successes: int = field(default=0)
     _death_failures: int = field(default=0)
     _death_stable: bool = field(default=False)
+    _death_saves_prompt: bool = field(default=False)
     _active: bool = field(default=True)
 
     def __gt__(self, other: I_Creature) -> bool:
@@ -87,6 +88,7 @@ class I_Creature:
             "_death_successes": self._death_successes,
             "_death_failures": self._death_failures,
             "_death_stable": self._death_stable,
+            "_death_saves_prompt": self._death_saves_prompt,
             "_active": self._active
         }
 
@@ -101,6 +103,7 @@ class I_Creature:
         death_successes = data.get("_death_successes", 0)
         death_failures = data.get("_death_failures", 0)
         death_stable = data.get("_death_stable", False)
+        death_saves_prompt = data.get("_death_saves_prompt", False)
         active = data.get("_active", True)
         # print("[LOAD CREATURE]", data["_name"])
         # print("  _innate_slots_used:", data.get("_innate_slots_used"))
@@ -148,6 +151,7 @@ class I_Creature:
                 innate_slots=innate_slots,
                 spell_slots_used=spell_slots_used,
                 innate_slots_used=innate_slots_used,
+                death_saves_prompt=bool(death_saves_prompt) if death_saves_prompt is not None else False,
                 active=active
             )
         else:
@@ -241,6 +245,11 @@ class I_Creature:
     def death_stable(self, v: bool): self._death_stable = bool(v)
 
     @property
+    def death_saves_prompt(self) -> bool: return self._death_saves_prompt
+    @death_saves_prompt.setter
+    def death_saves_prompt(self, v: bool): self._death_saves_prompt = bool(v)
+
+    @property
     def active(self) -> bool: return self._active
     @active.setter
     def active(self, value: bool): self._active = value
@@ -250,7 +259,7 @@ class Monster(I_Creature):
     def __init__(self, name, init=0, max_hp=0, curr_hp=0, armor_class=0,
                  movement=0, action=False, bonus_action=False, reaction=False,
                  notes='', conditions=None, status_time='', spell_slots=None, innate_slots=None,
-                 spell_slots_used=None, innate_slots_used=None, active=True):
+                 spell_slots_used=None, innate_slots_used=None, death_saves_prompt=False, active=True):
         super().__init__(
             _type=CreatureType.MONSTER,
             _name=name,
@@ -269,6 +278,7 @@ class Monster(I_Creature):
             _innate_slots=innate_slots or {},
             _spell_slots_used=spell_slots_used or {},
             _innate_slots_used=innate_slots_used or {},
+            _death_saves_prompt=bool(death_saves_prompt),
             _active=active
         )
 
@@ -301,5 +311,6 @@ class Player(I_Creature):
             _death_successes=death_successes,
             _death_failures=death_failures,
             _death_stable=death_stable,
+            _death_saves_prompt=True,
             _active=active
         )

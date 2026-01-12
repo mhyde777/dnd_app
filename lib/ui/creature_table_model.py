@@ -40,6 +40,7 @@ class CreatureTableModel(QAbstractTableModel):
                 "_death_successes",
                 "_death_failures",
                 "_death_stable",
+                "_death_saves_prompt",
                 "_active",
             }
             sample = next(iter(self.manager.creatures.values()))
@@ -320,6 +321,7 @@ class CreatureTableModel(QAbstractTableModel):
             "_death_successes",
             "_death_failures",
             "_death_stable",
+            "_death_saves_prompt",
             "_active",
         }
         sample = next(iter(self.manager.creatures.values()))
@@ -349,6 +351,7 @@ class CreatureTableModel(QAbstractTableModel):
                 "_innate_slots",
                 "_spell_slots_used",
                 "_innate_slots_used",
+                "_death_saves_prompt",
                 "_active",
             }
             sample = next(iter(self.manager.creatures.values()))
@@ -377,4 +380,3 @@ class CreatureTableModel(QAbstractTableModel):
         # Keep the model consistent with how everything else reads creatures
         self.manager.creatures = creatures
         self.refresh()
-
