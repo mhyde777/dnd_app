@@ -263,12 +263,38 @@ class StorageAPI:
             raise RuntimeError(f"StorageAPI.get_image_bytes({key}) failed: {e}") from e
 
     def put_image_bytes(self, key: str, data: bytes, content_type: Optional[str] = None) -> None:
+        """
+        Upload image bytes to Storage API.
+
+        Server expects:
+          POST /v1/images/upload
+          multipart/form-data: file=<uploaded file>, optional folder=<subdir>
+          Header: X-Api-Key
+        """
         try:
+            # Parse optional folder from key (supports "folder/name.png" or just "name.png")
+            folder = ""
+            filename = key.replace("\\", "/").strip("/")
+            if "/" in filename:
+                folder, filename = filename.rsplit("/", 1)
+
             headers = self._headers()
-            if content_type:
-                headers = {**headers, "Content-Type": content_type}
-            r: Response = self.session.put(self._image_item_url(key), data=data, headers=headers, timeout=20)
+            # IMPORTANT: do NOT set Content-Type here; requests will set multipart boundary.
+            files = {
+                "file": (filename, data, content_type or "application/octet-stream"),
+            }
+            form = {}
+            if folder:
+                form["folder"] = folder
+
+            r: Response = self.session.post(
+                f"{self.base_url}/v1/images/upload",
+                headers=headers,
+                files=files,
+                data=form,
+                timeout=20,
+            )
             r.raise_for_status()
         except Exception as e:
             raise RuntimeError(f"StorageAPI.put_image_bytes({key}) failed: {e}") from e
-            
+

@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import (
 from app.config import get_storage_api_base, use_storage_api_only, get_config_path
 from app.storage_api import StorageAPI
 
-STATUS_PATH = get_config_path("storage_status.json")
+STATUS_PATH = get_config_path("encounter_status.json")
 
 class LoadEncounterWindow(QDialog):
     """
