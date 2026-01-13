@@ -1,0 +1,21 @@
+{
+    "id": "dnd-initiative-tracker",
+    "title": "DnD Initiative Tracker",
+    "description": "A FoundryVTT module that mirrors the DnD Combat Tracker initiative workflow with turn navigation, action economy toggles, and quick damage/heal controls",
+    "version": "0.1.0",
+    "authors": [
+        {
+            "name": "DnD App"
+        }
+    ],
+    "compatibility": {
+        "minimum": "11",
+        "verified": "12"
+    },
+    "scripts": [
+        "scripts/initiative-tracker.js"
+    ],
+    "styles": [
+        "styles/initiative-tracker.css"
+    ]
+}

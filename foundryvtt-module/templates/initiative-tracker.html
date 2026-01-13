@@ -1,0 +1,97 @@
+<section class="tracker-shell">
+  <header class="tracker-header">
+    <div class="tracker-header__labels">
+      <div class="tracker-header__item">
+        <span class="tracker-header__label">Active</span>
+        <span class="tracker-header__value">{{activeName}}</span>
+      </div>
+      <div class="tracker-header__item">
+        <span class="tracker-header__label">Round</span>
+        <span class="tracker-header__value">{{round}}</span>
+      </div>
+      <div class="tracker-header__item">
+        <span class="tracker-header__label">Time</span>
+        <span class="tracker-header__value">{{time}} seconds</span>
+      </div>
+    </div>
+    <div class="tracker-header__controls">
+      <button type="button" class="tracker-nav" data-direction="prev" {{#if disablePrev}}disabled{{/if}}>
+        Prev
+      </button>
+      <button type="button" class="tracker-nav" data-direction="next" {{#if disableNext}}disabled{{/if}}>
+        Next
+      </button>
+    </div>
+  </header>
+
+  {{#if hasCombat}}
+  <section class="tracker-table">
+    <div class="tracker-table__row tracker-table__row--header">
+      <div class="tracker-table__cell"></div>
+      <div class="tracker-table__cell">Name</div>
+      <div class="tracker-table__cell">Init</div>
+      <div class="tracker-table__cell">HP</div>
+      <div class="tracker-table__cell">AC</div>
+      <div class="tracker-table__cell">Conditions</div>
+      <div class="tracker-table__cell">Action</div>
+      <div class="tracker-table__cell">Bonus</div>
+      <div class="tracker-table__cell">Reaction</div>
+    </div>
+    {{#each combatants}}
+    <div class="tracker-table__row {{#if isActive}}is-active{{/if}}" data-combatant-id="{{id}}">
+      <div class="tracker-table__cell">
+        <input type="checkbox" class="tracker-combatant-select" data-combatant-id="{{id}}" />
+      </div>
+      <div class="tracker-table__cell tracker-table__cell--name">
+        <img class="tracker-avatar" src="{{img}}" alt="{{name}}" />
+        <span>{{name}}</span>
+      </div>
+      <div class="tracker-table__cell">{{initiative}}</div>
+      <div class="tracker-table__cell">{{hp}}</div>
+      <div class="tracker-table__cell">{{ac}}</div>
+      <div class="tracker-table__cell">
+        {{#if conditions.length}}
+          <ul class="tracker-conditions">
+            {{#each conditions}}
+              <li>{{this}}</li>
+            {{/each}}
+          </ul>
+        {{else}}
+          <span class="tracker-muted">None</span>
+        {{/if}}
+      </div>
+      <div class="tracker-table__cell">
+        <button type="button" class="tracker-toggle" data-combatant-id="{{id}}" data-action="action">
+          {{#if actions.action}}✔{{else}}○{{/if}}
+        </button>
+      </div>
+      <div class="tracker-table__cell">
+        <button type="button" class="tracker-toggle" data-combatant-id="{{id}}" data-action="bonus">
+          {{#if actions.bonus}}✔{{else}}○{{/if}}
+        </button>
+      </div>
+      <div class="tracker-table__cell">
+        <button type="button" class="tracker-toggle" data-combatant-id="{{id}}" data-action="reaction">
+          {{#if actions.reaction}}✔{{else}}○{{/if}}
+        </button>
+      </div>
+    </div>
+    {{/each}}
+  </section>
+
+  <section class="tracker-damage">
+    <label class="tracker-damage__label" for="tracker-damage-amount">Damage/Heal</label>
+    <input id="tracker-damage-amount" type="number" min="0" placeholder="Amount" />
+    <div class="tracker-damage__buttons">
+      <button type="button" class="tracker-apply" data-amount="damage">Damage</button>
+      <button type="button" class="tracker-apply" data-amount="heal">Heal</button>
+    </div>
+    <p class="tracker-muted">Select combatants above to apply damage or healing.</p>
+  </section>
+  {{else}}
+  <section class="tracker-empty">
+    <p>No active combat encounter. Start combat in Foundry to use the initiative tracker.</p>
+  </section>
+  {{/if}}
+</section>
+

@@ -1,0 +1,124 @@
+.dnd-initiative-tracker .tracker-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.dnd-initiative-tracker .tracker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.dnd-initiative-tracker .tracker-header__labels {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.dnd-initiative-tracker .tracker-header__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.dnd-initiative-tracker .tracker-header__label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.dnd-initiative-tracker .tracker-header__value {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.dnd-initiative-tracker .tracker-header__controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.dnd-initiative-tracker .tracker-nav {
+  min-width: 80px;
+}
+
+.dnd-initiative-tracker .tracker-table {
+  border: 1px solid var(--color-border-light-primary);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.dnd-initiative-tracker .tracker-table__row {
+  display: grid;
+  grid-template-columns: 40px 2fr 0.8fr 1fr 0.8fr 2fr 0.6fr 0.6fr 0.6fr;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.dnd-initiative-tracker .tracker-table__row--header {
+  background: var(--color-bg-option);
+  font-weight: 600;
+}
+
+.dnd-initiative-tracker .tracker-table__row.is-active {
+  background: rgba(0, 128, 255, 0.15);
+}
+
+.dnd-initiative-tracker .tracker-table__cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dnd-initiative-tracker .tracker-table__cell--name {
+  gap: 0.75rem;
+}
+
+.dnd-initiative-tracker .tracker-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.dnd-initiative-tracker .tracker-conditions {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+}
+
+.dnd-initiative-tracker .tracker-toggle {
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 50%;
+}
+
+.dnd-initiative-tracker .tracker-damage {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dnd-initiative-tracker .tracker-damage__buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.dnd-initiative-tracker .tracker-empty {
+  padding: 1rem;
+  border: 1px dashed var(--color-border-light-primary);
+  border-radius: 8px;
+}
+
+.dnd-initiative-tracker .tracker-muted {
+  opacity: 0.7;
+  font-size: 0.85rem;
+}
+
