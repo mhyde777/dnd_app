@@ -80,3 +80,6 @@ STORAGE_API_BASE=http://127.0.0.1:800
 ### Running without the Storage service
 
 Leave `USE_STORAGE_API_ONLY` unset (or set it to `0`) to kep using the built-in local JSOn files. If you enable `USE_STORAGE_API_ONLY` without providing `STORAGE_API_BASE`, the app will start but show a warning explaining how the to fix the configuration so you are not blocked while the Storage service is offline.
+
+## FoundryVTT Module
+The `foundryvtt-module/` directory contains a FoundryVTT module adaptation of the initiative tracker. It provides turn navigation, action economy toggles, and quick damage/heal tools driven by the active Foundry combat encounter. See `foundryvtt-module/README.md` for installation and usage details.
