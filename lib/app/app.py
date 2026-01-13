@@ -17,6 +17,7 @@ from app.save_json import GameState
 from app.manager import CreatureManager
 from app.storage_api import StorageAPI
 from app.config import get_storage_api_base, use_storage_api_only, get_config_path
+from app.player_view_server import PlayerViewServer
 from ui.windows import (
     AddCombatantWindow, RemoveCombatantWindow, BuildEncounterWindow
 )
@@ -55,6 +56,11 @@ class Application:
             '_reaction': 'set_creature_reaction'
             # '_object_interaction': 'set_creature_object_interaction'
         }
+        
+        self.player_view_live = True
+        self.player_view_snapshot: Optional[Dict[str, Any]] = None
+        self.player_view_server = PlayerViewServer(self.get_player_view_payload)
+        self.player_view_server.start()
 
         # --- Storage API only mode ---
         self.storage_api: Optional[StorageAPI] = None
@@ -144,7 +150,6 @@ class Application:
 
         self.update_active_ui()
 
-
     def active_name(self) -> Optional[str]:
         if not getattr(self, "turn_order", None):
             return None
@@ -152,6 +157,70 @@ class Application:
             return None
         self.current_idx = max(0, min(getattr(self, "current_idx", 0), len(self.turn_order) - 1))
         return self.turn_order[self.current_idx]
+
+    def get_player_view_payload(self) -> Dict[str, Any]:
+        if not self.player_view_live and self.player_view_snapshot is not None:
+            return self.player_view_snapshot
+
+        payload = self._build_player_vew_payload()
+        if not self.player_view_live:
+            self.player_view_snapshot = payload
+        return payload
+
+    def set_player_view_paused(self, paused: bool) -> None:
+        if paused and self.player_view_live:
+            self.player_view_live = False
+            self.player_view_snapshot = self._build_player_vew_payload()
+            return
+        if not paused and not self.player_view_live:
+            self.player_view_live = True
+            self.player_view_snapshot = None
+
+    def _build_player_vew_payload(self) -> Dict[str, Any]:
+        if not getattr(self, "manager", None) or not getattr(self.manager, "creatures", None):
+            return {
+                "round": self.round_counter,
+                "time": self.time_counter,
+                "current_name": None,
+                "current_hidden": False,
+                "combatants": [],
+                "live": self.player_view_live,
+            }
+
+        active_name = self.active_name()
+        active_creature = self.manager.creatures.get(active_name) if active_name else None
+        active_visible = bool(getattr(active_creature, "player_visible", False)) if active_creature else False
+
+        if hasattr(self.manager, "ordered_items"):
+            ordered = self.manager.ordered_items()
+        else:
+            ordered = sorted(
+                self.manager.creatures.items(),
+                key=lambda item: getattr(item[1], "initiative", 0),
+                reverse=True,
+            )
+
+        combatants = []
+        for _, creature in ordered:
+            if not bool(getattr(creature, "player_visible", False)):
+                continue
+            combatants.append(
+                {
+                    "name": getattr(creature, "name", ""),
+                    "initiative": getattr(creature, "initiative", ""),
+                    "conditions": ", ".join(getattr(creature, "conditions", []) or []),
+                    "Notes": getattr(creature, "public notes", "") or "",
+                }
+            )
+
+        return {
+            "round": self.round_counter,
+            "time": self.time_counter,
+            "current_name": active_name if active_visible else None,
+            "current_hidden": current_hidden, 
+            "combatants": combatants,
+            "live": self.player_view_live,
+        }
 
     # ----------------
     # JSON Manipulation
@@ -477,6 +546,14 @@ class Application:
         for alias in hide_aliases:
             if alias in fields:
                 self.table.setColumnHidden(to_view_col(fields.index(alias)), True)
+
+        # 3b) Show player visibility column only when monsters exists
+        if "_player_visible" in fields:
+            has_monsters = any(
+                getattr(creature, "_type", None) == CreatureType.MONSTER
+                for creature in self.manager.creatures.values()
+            )
+            self.table.setColumnHidden(to_view_col(fields.index("_player_visible")), not has_monsters)
 
         # 4) Detect spellcasting columns robustly (aliases + header substring "spell")
         spell_aliases = {

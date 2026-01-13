@@ -38,8 +38,8 @@ class UpdateCharactersWindow(QDialog):
         self.layout = QVBoxLayout(self)
 
         self.table = QTableWidget()
-        self.table.setColumnCount(4)
-        self.table.setHorizontalHeaderLabels(["Name", "Max HP", "AC", "Active"])
+        self.table.setColumnCount(5)
+        self.table.setHorizontalHeaderLabels(["Name", "Max HP", "AC", "Active", "Notes"])
         self.layout.addWidget(self.table)
 
         # Buttons row: Add Character (left) + Save/Cancel (right)
@@ -185,7 +185,17 @@ class UpdateCharactersWindow(QDialog):
         except Exception:
             ac = 0
         active = bool(active)
-        return Player(name=name, max_hp=max_hp, curr_hp=max_hp, armor_class=ac, active=active)
+        public_notes = d.get("_public_notes", d.get("public_notes", "")) or ""
+        player_visible = d.get("_player_visible", True)
+        return Player(
+            name=name,
+            max_hp=max_hp,
+            curr_hp=max_hp,
+            armor_class=ac,
+            active=active,
+            public_notes=public_notes,
+            player_visible=player_visible,
+        )
 
     def _set_row(self, row: int, pl: Player):
         # Name
@@ -203,6 +213,11 @@ class UpdateCharactersWindow(QDialog):
         active_item.setCheckState(Qt.Checked if bool(getattr(pl, "active", True)) else Qt.Unchecked)
         self.table.setItem(row, 3, active_item)
 
+        #Public Notes
+        self.table.setItem(
+            row, 4, QTableWidgetItem(str(getattr(pl, "public_notes", "") or ""))
+        )
+
     def _init_row(self, row: int):
         self.table.setItem(row, 0, QTableWidgetItem(""))
         self.table.setItem(row, 1, QTableWidgetItem(""))
@@ -212,6 +227,8 @@ class UpdateCharactersWindow(QDialog):
         active_item.setFlags(active_item.flags() | Qt.ItemIsUserCheckable)
         active_item.setCheckState(Qt.Checked)
         self.table.setItem(row, 3, active_item)
+
+        self.table.setItem(row, 4, QTableWidgetItem(""))
 
     def save_players(self):
         players_out: List[Dict[str, Any]] = []
@@ -225,6 +242,7 @@ class UpdateCharactersWindow(QDialog):
             max_hp_item = self.table.item(row, 1)
             ac_item = self.table.item(row, 2)
             active_item = self.table.item(row, 3)
+            public_notes_item = self.table.item(row, 4)
 
             try:
                 max_hp = int((max_hp_item.text().strip() if max_hp_item else "0") or 0)
@@ -239,7 +257,15 @@ class UpdateCharactersWindow(QDialog):
             if active_item is not None:
                 active = active_item.checkState() == Qt.Checked
 
-            pl = Player(name=name, max_hp=max_hp, curr_hp=max_hp, armor_class=ac, active=active)
+            public_notes = (public_notes_item.text().strip() if public_notes_item else "")
+            pl = Player(
+                name=name,
+                max_hp=max_hp,
+                curr_hp=max_hp,
+                armor_class=ac,
+                active=active,
+                public_notes=public_notes,
+            )
             players_out.append(pl.to_dict())
 
         payload = {"players": players_out}
@@ -255,4 +281,3 @@ class UpdateCharactersWindow(QDialog):
             pass
 
         self.accept()
-
