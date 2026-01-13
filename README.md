@@ -31,7 +31,7 @@ This project uses **pipenv** as the primary dependency manager, driven by the `P
     ```
 
 ## Packaging the app {PyInstaller}
-The packagin flow builds a standalone binary and Linux application folder layout.
+The packagin flow builds a standalone binary and Linux or Windows application folder layout.
 
 1. Install dependencies (including PyIntsaller):
     ```bash
@@ -41,6 +41,10 @@ The packagin flow builds a standalone binary and Linux application folder layout
     ```bash
     ../package.sh    
     ```
+    or, on Windows (Git-Bash):
+    ```bash
+    ./package_WIN.sh
+    ```
 3. The bundled app is availalbe at:
     ```text
     dist/combat_tracker/
@@ -48,6 +52,10 @@ The packagin flow builds a standalone binary and Linux application folder layout
     A Linux-ready folder layout is staged at:
     ```text
     package/
+    ```
+    A Windows-readh folder layout is staged at:
+    ```text
+    package_win/
     ```
 
 ## Storage API Configuration
