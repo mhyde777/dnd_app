@@ -38,6 +38,8 @@ class I_Creature:
     _reaction: bool = field(default=False)
     _object_interaction: bool = field(default=False)
     _notes: str = field(default="")
+    _public_notes: bool = field(default=True)
+    _player_visible: bool = field(default=True)
     _conditions: List[str] = field(default_factory=list)
     _status_time: int = field(default=-1)
     _spell_slots: dict[int, int] = field(default_factory=dict)
@@ -79,6 +81,8 @@ class I_Creature:
             "_reaction": self.reaction,
             "_object_interaction": self.object_interaction,
             "_notes": self.notes,
+            "_public_notes": self.public_notes,
+            "_player_visible": self.player_visible,
             "_conditions": self.conditions,
             "_status_time": self.status_time,
             "_spell_slots": self._spell_slots,
@@ -96,6 +100,8 @@ class I_Creature:
     def from_dict(data: Dict[str, Any]) -> I_Creature:
         creature_type = CreatureType(data["_type"])
         conditions = data.get("_conditions", [])
+        public_notes = data.get("_public_notes", "")
+        player_visible = data.get("_player_visible")
         spell_slots = data.get("_spell_slots", {})
         innate_slots = data.get("_innate_slots", {})
         spell_slots_used = data.get("_spell_slots_used")
@@ -110,6 +116,8 @@ class I_Creature:
         # print("  _spell_slots_used:", data.get("_spell_slots_used"))
 
         if creature_type == CreatureType.PLAYER:
+            if player_visible is None:
+                player_visible = True
             return Player(
                 name=data["_name"],
                 init=data["_init"],
@@ -122,6 +130,8 @@ class I_Creature:
                 reaction=data["_reaction"],
                 object_interaction=data["_object_interaction"],
                 notes=data["_notes"],
+                public_notes=public_notes,
+                player_visible=player_visible,
                 conditions = conditions,
                 status_time=data["_status_time"],
                 spell_slots=spell_slots,
@@ -134,6 +144,8 @@ class I_Creature:
                 active=active
             )
         elif creature_type == CreatureType.MONSTER:
+            if player_visible is None:
+                player_visible = False
             return Monster(
                 name=data["_name"],
                 init=data["_init"],
@@ -145,6 +157,8 @@ class I_Creature:
                 bonus_action=data["_bonus_action"],
                 reaction=data["_reaction"],
                 notes=data["_notes"],
+                public_notes=public_notes,
+                player_visible=player_visible,
                 conditions=conditions,
                 status_time=data["_status_time"],
                 spell_slots=spell_slots,
@@ -215,6 +229,16 @@ class I_Creature:
     def notes(self, value: str): self._notes = value
 
     @property
+    def public_notes(self) -> str: return self._public_notes
+    @public_notes.setter
+    def public_notes(self, value: str): self._public_notes = value
+
+    @property
+    def player_visible(self) -> bool: return self._player_visible
+    @player_visible.setter
+    def player_visible(self, value: bool): self._player_visible = bool(value)
+
+    @property
     def conditions(self) -> List[str]:
         return sorted(set(self._conditions))
     @conditions.setter
@@ -258,8 +282,9 @@ class I_Creature:
 class Monster(I_Creature):
     def __init__(self, name, init=0, max_hp=0, curr_hp=0, armor_class=0,
                  movement=0, action=False, bonus_action=False, reaction=False,
-                 notes='', conditions=None, status_time='', spell_slots=None, innate_slots=None,
-                 spell_slots_used=None, innate_slots_used=None, death_saves_prompt=False, active=True):
+                 notes='', public_notes='', player_visible=False, conditions=None, status_time='',
+                 spell_slots=None, innate_slots=None, spell_slots_used=None,
+                 innate_slots_used=None, death_saves_prompt=False, active=True):
         super().__init__(
             _type=CreatureType.MONSTER,
             _name=name,
@@ -272,6 +297,8 @@ class Monster(I_Creature):
             _bonus_action=bonus_action,
             _reaction=reaction,
             _notes=notes,
+            _public_notes=public_notes,
+            _player_visible=bool(player_visible),
             _conditions=(conditions or []),
             _status_time=status_time,
             _spell_slots=spell_slots or {},
@@ -286,8 +313,8 @@ class Monster(I_Creature):
 class Player(I_Creature):
     def __init__(self, name, init=0, max_hp=0, curr_hp=0, armor_class=0,
                  movement=0, action=False, bonus_action=False, reaction=False,
-                 object_interaction=False, notes='', conditions=None, status_time='',
-                 spell_slots=None, innate_slots=None, spell_slots_used=None,
+                 object_interaction=False, notes='', public_notes='', player_visible=True,
+                 conditions=None, status_time='', spell_slots=None, innate_slots=None, spell_slots_used=None,
                  innate_slots_used=None, death_successes=0, death_failures=0, death_stable=False, active=True):
         super().__init__(
             _type=CreatureType.PLAYER,
@@ -302,6 +329,8 @@ class Player(I_Creature):
             _reaction=reaction,
             _object_interaction=object_interaction,
             _notes=notes,
+            _public_notes=public_notes,
+            _player_visible=bool(player_visible),
             _conditions=(conditions or []),
             _status_time=status_time,
             _spell_slots=spell_slots or {},

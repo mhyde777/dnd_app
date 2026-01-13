@@ -97,6 +97,23 @@ class CreatureTableModel(QAbstractTableModel):
             if role == Qt.TextAlignmentRole:
                 return Qt.AlignCenter
 
+        if attr == "_player_visible":
+            from app.creature import CreatureType
+
+            if creature._type != CreatureType.MONSTER:
+                return QVariant()
+
+            if role == Qt.CheckStateRole:
+                return Qt.Checked if getattr(creature, "player_visible", False) else Qt.Unchecked
+
+            if role == Qt.DisplayRole:
+                return ""
+
+            if role == Qt.TextAlignmentRole:
+                return Qt.AlignCenter
+
+            return QVariant()
+
         # Spellbook icon column
         if attr == SPELL_ICON_COLUMN_NAME:
             from app.creature import CreatureType
@@ -262,6 +279,13 @@ class CreatureTableModel(QAbstractTableModel):
 
         if creature is None:
             return Qt.NoItemFlags
+        
+        if attr == "_player_visible":
+            from app.creature import CreatureType
+
+            if creature._type != CreatureType.MONSTER:
+                return Qt.NoItemFlags
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable
 
         try:
             value = getattr(creature, attr)
@@ -302,7 +326,9 @@ class CreatureTableModel(QAbstractTableModel):
             "_bonus_action": "BA",
             "_reaction": "R",
             "_object_interaction": "OI",
-            "_notes": "Notes",
+            "_notes": "DM Notes",
+            "_public_notes": "Notes",
+            "_player_visible": "Show",
             "_conditions": "Conditions",
             "_status_time": "Status",
             "_spellbook": "📖",
