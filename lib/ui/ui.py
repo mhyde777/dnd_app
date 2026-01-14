@@ -298,6 +298,12 @@ class InitiativeTracker(QMainWindow, Application):
 
         name = self.table_model.creature_names[row]
         creature = self.manager.creatures[name]
+        
+        if attr == "_player_visible":
+            from app.creature import CreatureType
+
+            if creature._type != CreatureType.MONSTER:
+                return
 
         if attr == "_player_visible":
             from app.creature import CreatureType
@@ -391,6 +397,15 @@ class InitiativeTracker(QMainWindow, Application):
             return  # swallow Esc so it doesn't propagate
 
         super().keyPressEvent(event)
+    
+    def closeEvent(self, event):
+        server = getattr(self, "player_view_server", None)
+        if server is not None:
+            try:
+                server.stop()
+            except Exception:
+                pass
+        super().closeEvent(event)
 
     def closeEvent(self, event):
         server = getattr(self, "player_view_server", None)
