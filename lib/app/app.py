@@ -62,6 +62,11 @@ class Application:
         self.player_view_server = PlayerViewServer(self.get_player_view_payload)
         self.player_view_server.start()
 
+        self.player_view_live = True
+        self.player_view_snapshot: Optional[Dict[str, Any]] = None
+        self.player_view_server = PlayerViewServer(self.get_player_view_payload)
+        self.player_view_server.start()
+
         # --- Storage API only mode ---
         self.storage_api: Optional[StorageAPI] = None
         self.storage_api_warning: Optional[str] = None
@@ -162,7 +167,18 @@ class Application:
         if not self.player_view_live and self.player_view_snapshot is not None:
             return self.player_view_snapshot
 
-        payload = self._build_player_vew_payload()
+        try:
+            payload = self._build_player_view_payload()
+        except Exception as exc:
+            print(f"[PlayerView] Failed to build payload: {exc}")
+            payload = {
+                "round": self.round_counter,
+                "time": self.time_counter,
+                "current_name": None,
+                "current_hidden": False,
+                "combatants": [],
+                "live": self.player_view_live,
+            }
         if not self.player_view_live:
             self.player_view_snapshot = payload
         return payload
@@ -170,13 +186,16 @@ class Application:
     def set_player_view_paused(self, paused: bool) -> None:
         if paused and self.player_view_live:
             self.player_view_live = False
-            self.player_view_snapshot = self._build_player_vew_payload()
+            self.player_view_snapshot = self.get_player_view_payload()
             return
         if not paused and not self.player_view_live:
             self.player_view_live = True
             self.player_view_snapshot = None
 
     def _build_player_vew_payload(self) -> Dict[str, Any]:
+        return self._build_player_view_payload()
+
+    def _build_player_view_payload(self) -> Dict[str, Any]:
         if not getattr(self, "manager", None) or not getattr(self.manager, "creatures", None):
             return {
                 "round": self.round_counter,
@@ -190,6 +209,7 @@ class Application:
         active_name = self.active_name()
         active_creature = self.manager.creatures.get(active_name) if active_name else None
         active_visible = bool(getattr(active_creature, "player_visible", False)) if active_creature else False
+        current_hidden = bool(active_creature) and not active_visible
 
         if hasattr(self.manager, "ordered_items"):
             ordered = self.manager.ordered_items()
@@ -209,7 +229,7 @@ class Application:
                     "name": getattr(creature, "name", ""),
                     "initiative": getattr(creature, "initiative", ""),
                     "conditions": ", ".join(getattr(creature, "conditions", []) or []),
-                    "Notes": getattr(creature, "public notes", "") or "",
+                    "public_notes": getattr(creature, "public_notes", "") or "",
                 }
             )
 
@@ -217,7 +237,7 @@ class Application:
             "round": self.round_counter,
             "time": self.time_counter,
             "current_name": active_name if active_visible else None,
-            "current_hidden": current_hidden, 
+            "current_hidden": current_hidden,
             "combatants": combatants,
             "live": self.player_view_live,
         }
@@ -547,7 +567,7 @@ class Application:
             if alias in fields:
                 self.table.setColumnHidden(to_view_col(fields.index(alias)), True)
 
-        # 3b) Show player visibility column only when monsters exists
+        # 3b) Show player visibility column only when monsters exist
         if "_player_visible" in fields:
             has_monsters = any(
                 getattr(creature, "_type", None) == CreatureType.MONSTER
