@@ -33,6 +33,8 @@ class CreatureTableModel(QAbstractTableModel):
         # Build fields from a sample creature if not provided
         if fields is None and self.manager.creatures:
             excluded = {
+                "_public_notes",
+                "_player_visible",
                 "_spell_slots",
                 "_innate_slots",
                 "_spell_slots_used",
@@ -96,23 +98,6 @@ class CreatureTableModel(QAbstractTableModel):
 
             if role == Qt.TextAlignmentRole:
                 return Qt.AlignCenter
-
-        if attr == "_player_visible":
-            from app.creature import CreatureType
-
-            if creature._type != CreatureType.MONSTER:
-                return QVariant()
-
-            if role == Qt.CheckStateRole:
-                return Qt.Checked if getattr(creature, "player_visible", False) else Qt.Unchecked
-
-            if role == Qt.DisplayRole:
-                return ""
-
-            if role == Qt.TextAlignmentRole:
-                return Qt.AlignCenter
-
-            return QVariant()
 
         # Spellbook icon column
         if attr == SPELL_ICON_COLUMN_NAME:
@@ -280,20 +265,6 @@ class CreatureTableModel(QAbstractTableModel):
         if creature is None:
             return Qt.NoItemFlags
         
-        if attr == "_player_visible":
-            from app.creature import CreatureType
-
-            if creature._type != CreatureType.MONSTER:
-                return Qt.NoItemFlags
-            return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable
-
-        if attr == "_player_visible":
-            from app.creature import CreatureType
-
-            if creature._type != CreatureType.MONSTER:
-                return Qt.NoItemFlags
-            return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable
-
         try:
             value = getattr(creature, attr)
         except Exception:
@@ -334,8 +305,6 @@ class CreatureTableModel(QAbstractTableModel):
             "_reaction": "R",
             "_object_interaction": "OI",
             "_notes": "Notes",
-            "_public_notes": "Public Notes",
-            "_player_visible": "Show",
             "_conditions": "Conditions",
             "_status_time": "Status",
             "_spellbook": "📖",
@@ -347,6 +316,8 @@ class CreatureTableModel(QAbstractTableModel):
             return
 
         excluded = {
+            "_public_notes",
+            "_player_visible",
             "_spell_slots",
             "_innate_slots",
             "_spell_slots_used",
@@ -380,6 +351,8 @@ class CreatureTableModel(QAbstractTableModel):
         # If fields were never initialized (edge-case), rebuild them consistently
         if not self.fields and self.manager.creatures:
             excluded = {
+                "_public_notes",
+                "_player_visible",
                 "_spell_slots",
                 "_innate_slots",
                 "_spell_slots_used",

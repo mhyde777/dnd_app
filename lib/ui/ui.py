@@ -1,12 +1,15 @@
+from typing import Optional
 from PyQt5.QtWidgets import (
     QVBoxLayout, QLabel, QLineEdit,
     QPushButton, QToolBar, QWidget,
     QHBoxLayout, QMainWindow, QListWidget,
     QAction, QMenuBar, QDesktopWidget, QTableView,
-    QSizePolicy, QMessageBox
+    QSizePolicy, QMessageBox, QDialog, QDialogButtonBox,
+    QMenu, QTextEdit
 )
 from PyQt5.QtCore import Qt
 from app.app import Application
+from app.creature import CreatureType
 from app.manager import CreatureManager
 from ui.creature_table_model import CreatureTableModel
 from ui.spellcasting_dropdown import SpellcastingDropdown
@@ -75,6 +78,8 @@ class InitiativeTracker(QMainWindow, Application):
         self.table.setModel(self.table_model)
         self.table.itemDelegate().commitData.connect(self.on_commit_data)
         self.table.clicked.connect(self.handle_cell_clicked)
+        self.table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.table.customContextMenuRequested.connect(self.show_table_context_menu)
         self.installEventFilter(self)
         # Ensure that the table's size is fixed and matches its content
         self.table.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
@@ -298,18 +303,6 @@ class InitiativeTracker(QMainWindow, Application):
 
         name = self.table_model.creature_names[row]
         creature = self.manager.creatures[name]
-        
-        if attr == "_player_visible":
-            from app.creature import CreatureType
-
-            if creature._type != CreatureType.MONSTER:
-                return
-
-        if attr == "_player_visible":
-            from app.creature import CreatureType
-
-            if creature._type != CreatureType.MONSTER:
-                return
 
         value = getattr(creature, attr)
 
@@ -332,6 +325,134 @@ class InitiativeTracker(QMainWindow, Application):
             return
 
         self.toggle_boolean_cell(index)
+    
+    def _get_creature_from_index(self, index):
+        if not index or not index.isValid():
+            return None, None
+        row = index.row()
+        if row < 0 or row >= len(self.table_model.creature_names):
+            return None, None
+        name = self.table_model.creature_names[row]
+        creature = self.manager.creatures.get(name)
+        return name, creature
+
+    def _show_notes_editor(self, title: str, text: str) -> Optional[str]:
+        dialog = QDialog(self)
+        dialog.setWindowTitle(title)
+        layout = QVBoxLayout(dialog)
+
+        editor = QTextEdit(dialog)
+        editor.setPlainText(text or "")
+        editor.setMinimumWidth(360)
+        editor.setMinimumHeight(160)
+        layout.addWidget(editor)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel, dialog)
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+
+        if dialog.exec_() == QDialog.Accepted:
+            return editor.toPlainText()
+        return None
+
+    def _refresh_player_view(self):
+        if hasattr(self, "player_view_live") and not self.player_view_live:
+            try:
+                self.player_view_snapshot = self._build_player_view_payload()
+            except Exception:
+                pass
+
+    def _remove_combatant_by_name(self, name: str):
+        if not name:
+            return
+        self.manager.rm_creatures(name)
+        self.manager.sort_creatures()
+        self.build_turn_order()
+        self.update_table()
+        self.update_active_ui()
+
+        active_name = self.active_name()
+        if active_name:
+            creature = self.manager.creatures.get(active_name)
+            if creature and getattr(creature, "_type", None) == CreatureType.MONSTER:
+                self.active_statblock_image(creature)
+            else:
+                self.statblock.clear()
+        else:
+            self.statblock.clear()
+
+    def _set_active_turn_by_name(self, name: str):
+        if not name:
+            return
+        self.build_turn_order()
+        if name in self.turn_order:
+            self.current_idx = self.turn_order.index(name)
+            self.current_creature_name = name
+            self.update_active_ui()
+
+    def show_table_context_menu(self, pos):
+        index = self.table.indexAt(pos)
+        if not index.isValid():
+            return
+
+        name, creature = self._get_creature_from_index(index)
+        if creature is None:
+            return
+
+        menu = QMenu(self)
+
+        if getattr(creature, "_type", None) == CreatureType.MONSTER:
+            visible = bool(getattr(creature, "player_visible", True))
+            visibility_label = "Hide from Player View" if visible else "Reveal to Player View"
+            visibility_action = menu.addAction(visibility_label)
+        else:
+            visibility_action = None
+
+        edit_public_action = menu.addAction("Edit Public Notes...")
+        edit_private_action = menu.addAction("Edit Private Notes...")
+        menu.addSeparator()
+        clear_conditions_action = menu.addAction("Clear Conditions")
+        set_active_action = menu.addAction("Set as Active Turn")
+        remove_action = menu.addAction("Remove Combatant")
+
+        chosen = menu.exec_(self.table.viewport().mapToGlobal(pos))
+        if chosen is None:
+            return
+
+        if visibility_action and chosen == visibility_action:
+            creature.player_visible = not bool(getattr(creature, "player_visible", True))
+            self.table_model.refresh()
+            self.update_table()
+            self._refresh_player_view()
+            return
+
+        if chosen == edit_public_action:
+            updated = self._show_notes_editor("Edit Public Notes", getattr(creature, "public_notes", "") or "")
+            if updated is not None:
+                creature.public_notes = updated
+                self.table_model.refresh()
+                self.update_table()
+                self._refresh_player_view()
+            return
+
+        if chosen == edit_private_action:
+            updated = self._show_notes_editor("Edit Private Notes", getattr(creature, "notes", "") or "")
+            if updated is not None:
+                creature.notes = updated
+                self.table_model.refresh()
+                self.update_table()
+            return
+
+        if chosen == clear_conditions_action:
+            creature.conditions = []
+            self.table_model.refresh()
+            self.update_table()
+            return
+
+        if chosen == remove_action:
+            self._remove_combatant_by_name(name)
+            return
 
     def toggle_player_view_live(self, checked):
         paused = bool(checked)
