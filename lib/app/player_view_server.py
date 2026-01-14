@@ -225,7 +225,18 @@ class PlayerViewServer:
                     return
 
                 if path == "/player.json":
-                    payload = state_provider()
+                    try:
+                        payload = state_provider()
+                    except Exception as exc:
+                        print(f"[PlayerView] Failed to build JSON payload: {exc}")
+                        payload = {
+                            "round": 1,
+                            "time": 0,
+                            "current_name": None,
+                            "current_hidden": False,
+                            "combatants": [],
+                            "live": False,
+                        }
                     body = json.dumps(payload).encode("utf-8")
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json; charset=utf-8")

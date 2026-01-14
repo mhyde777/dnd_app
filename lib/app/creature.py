@@ -38,7 +38,7 @@ class I_Creature:
     _reaction: bool = field(default=False)
     _object_interaction: bool = field(default=False)
     _notes: str = field(default="")
-    _public_notes: bool = field(default=True)
+    _public_notes: str = field(default="")
     _player_visible: bool = field(default=True)
     _conditions: List[str] = field(default_factory=list)
     _status_time: int = field(default=-1)
@@ -314,7 +314,8 @@ class Player(I_Creature):
     def __init__(self, name, init=0, max_hp=0, curr_hp=0, armor_class=0,
                  movement=0, action=False, bonus_action=False, reaction=False,
                  object_interaction=False, notes='', public_notes='', player_visible=True,
-                 conditions=None, status_time='', spell_slots=None, innate_slots=None, spell_slots_used=None,
+                 conditions=None, status_time='',
+                 spell_slots=None, innate_slots=None, spell_slots_used=None,
                  innate_slots_used=None, death_successes=0, death_failures=0, death_stable=False, active=True):
         super().__init__(
             _type=CreatureType.PLAYER,

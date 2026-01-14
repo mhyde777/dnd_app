@@ -287,6 +287,13 @@ class CreatureTableModel(QAbstractTableModel):
                 return Qt.NoItemFlags
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable
 
+        if attr == "_player_visible":
+            from app.creature import CreatureType
+
+            if creature._type != CreatureType.MONSTER:
+                return Qt.NoItemFlags
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable
+
         try:
             value = getattr(creature, attr)
         except Exception:
@@ -326,8 +333,8 @@ class CreatureTableModel(QAbstractTableModel):
             "_bonus_action": "BA",
             "_reaction": "R",
             "_object_interaction": "OI",
-            "_notes": "DM Notes",
-            "_public_notes": "Notes",
+            "_notes": "Notes",
+            "_public_notes": "Public Notes",
             "_player_visible": "Show",
             "_conditions": "Conditions",
             "_status_time": "Status",

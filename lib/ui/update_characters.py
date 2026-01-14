@@ -39,7 +39,7 @@ class UpdateCharactersWindow(QDialog):
 
         self.table = QTableWidget()
         self.table.setColumnCount(5)
-        self.table.setHorizontalHeaderLabels(["Name", "Max HP", "AC", "Active", "Notes"])
+        self.table.setHorizontalHeaderLabels(["Name", "Max HP", "AC", "Active", "Public Notes"])
         self.layout.addWidget(self.table)
 
         # Buttons row: Add Character (left) + Save/Cancel (right)
@@ -213,7 +213,7 @@ class UpdateCharactersWindow(QDialog):
         active_item.setCheckState(Qt.Checked if bool(getattr(pl, "active", True)) else Qt.Unchecked)
         self.table.setItem(row, 3, active_item)
 
-        #Public Notes
+        # Public Notes
         self.table.setItem(
             row, 4, QTableWidgetItem(str(getattr(pl, "public_notes", "") or ""))
         )
