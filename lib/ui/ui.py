@@ -61,7 +61,13 @@ class InitiativeTracker(QMainWindow, Application):
         self.time_counter_label.setMinimumHeight(24)
         self.label_layout.addWidget(self.time_counter_label)
 
-        # self.label_layout.addStretch()
+        self.label_layout.addStretch()
+
+        self.player_view_toggle = QPushButton("Live Updates: Pause", self)
+        self.player_view_toggle.setCheckable(True)
+        self.player_view_toggle.setChecked(False)
+        self.player_view_toggle.clicked.connect(self.toggle_player_view_live)
+        self.label_layout.addWidget(self.player_view_toggle)
 
         # === TABLE AREA (under labels) ===
         self.table_model = CreatureTableModel(self.manager)
@@ -293,6 +299,12 @@ class InitiativeTracker(QMainWindow, Application):
         name = self.table_model.creature_names[row]
         creature = self.manager.creatures[name]
 
+        if attr == "_player_visible":
+            from app.creature import CreatureType
+
+            if creature._type != CreatureType.MONSTER:
+                return
+
         value = getattr(creature, attr)
 
         if isinstance(value, bool):
@@ -314,6 +326,14 @@ class InitiativeTracker(QMainWindow, Application):
             return
 
         self.toggle_boolean_cell(index)
+
+    def toggle_player_view_live(self, checked):
+        paused = bool(checked)
+        if hasattr(self, "set_player_view_paused"):
+            self.set_player_view_paused(paused)
+        self.player_view_toggle.setText(
+            "Live Updates: Resume" if paused else "Live Updates: Pause"
+        )
 
     def show_spellcasting_dropdown(self, creature, index):
         # Close any existing dropdown
@@ -371,6 +391,15 @@ class InitiativeTracker(QMainWindow, Application):
             return  # swallow Esc so it doesn't propagate
 
         super().keyPressEvent(event)
+
+    def closeEvent(self, event):
+        server = getattr(self, "player_view_server", None)
+        if server is not None:
+            try:
+                server.stop()
+            except Exception:
+                pass
+        super().closeEvent(event)
 
     def eventFilter(self, obj, event):
         if event.type() == event.MouseButtonPress:
