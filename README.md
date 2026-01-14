@@ -102,3 +102,7 @@ When the app starts, it also launches a lightweight Player View web page that ca
 * The initiative table shows a compact **Notes** column for short flags. Use **Edit Public Notes...** / **Edit Private Notes...** in the context menu for longer notes.
 * The Player View only displays **Public Notes** (never Private Notes)
 * The **Live Updates** toggle pauses/resumes the Player View. When paused, the page freezes on the last published snapshot even if the DM continues editing.
+
+**Downed display (Player View only)**
+* By default, downed combatants (current HP of 0) stay visible and recieve a red highlight.
+* To hide down monsters instead, set `PLAYER_VIEW_HIDE_DOWNED=1` (players remain visible even when downed).

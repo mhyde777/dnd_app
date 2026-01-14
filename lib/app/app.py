@@ -205,11 +205,26 @@ class Application:
                 "combatants": [],
                 "live": self.player_view_live,
             }
-
+        hide_downed = os.getenv("PLAYER_VIEW_HIDE_DOWNED", "0").strip().lower() not in (
+            "",
+            "0",
+            "false",
+            "no",
+        )
         active_name = self.active_name()
         active_creature = self.manager.creatures.get(active_name) if active_name else None
         active_visible = bool(getattr(active_creature, "player_visible", False)) if active_creature else False
-        current_hidden = bool(active_creature) and not active_visible
+        active_is_monster = isinstance(active_creature, Monster) if active_creature else False
+        active_curr_hp = getattr(active_creature, "curr_hp", None) if active_creature else None
+        try:
+            active_curr_hp_value = int(active_curr_hp)
+        except (TypeError, ValueError):
+            active_curr_hp_value = None
+        active_downed = (
+            active_curr_hp_value is not None and active_curr_hp_value >= 0 and active_curr_hp_value <= 0
+        )
+        active_hidden_by_downed = hide_downed and active_is_monster and active_downed
+        current_hidden = bool(active_creature) and (not active_visible or active_hidden_by_downed)
 
         if hasattr(self.manager, "ordered_items"):
             ordered = self.manager.ordered_items()
@@ -224,19 +239,29 @@ class Application:
         for _, creature in ordered:
             if not bool(getattr(creature, "player_visible", False)):
                 continue
+            is_monster = isinstance(creature, Monster)
+            curr_hp = getattr(creature, "curr_hp", None)
+            try:
+                curr_hp_value = int(curr_hp)
+            except (TypeError, ValueError):
+                curr_hp_value = None
+            downed = curr_hp_value is not None and curr_hp_value >= 0 and curr_hp_value <= 0 
+            if hide_downed and is_monster and downed:
+                continue
             combatants.append(
                 {
                     "name": getattr(creature, "name", ""),
                     "initiative": getattr(creature, "initiative", ""),
                     "conditions": ", ".join(getattr(creature, "conditions", []) or []),
                     "public_notes": getattr(creature, "public_notes", "") or "",
+                    "downed": downed,
                 }
             )
 
         return {
             "round": self.round_counter,
             "time": self.time_counter,
-            "current_name": active_name if active_visible else None,
+            "current_name": active_name if active_visible and not active_hidden_by_downed else None,
             "current_hidden": current_hidden,
             "combatants": combatants,
             "live": self.player_view_live,
