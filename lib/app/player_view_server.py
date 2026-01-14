@@ -184,17 +184,28 @@ class PlayerViewServer:
         self._server: Optional[ThreadingHTTPServer] = None
         self.host = os.getenv("PLAYER_VIEW_HOST", "0.0.0.0")
         self.port = int(os.getenv("PLAYER_VIEW_PORT", "5001"))
+        self._max_port_attempts = int(os.getenv("PLAYER_VIEW_PORT_ATTEMPTS", "10"))
 
     def start(self) -> None:
         if self._thread and self._thread.is_alive():
             return
 
         handler = self._build_handler()
-        try:
-            self._server = ThreadingHTTPServer((self.host, self.port), handler)
-        except OSError as exc:
-            print(f"[PlayerView] Failed to start server on {self.host}:{self.port} ({exc})")
-            self._server = None
+        for attempt in range(self._max_port_attempts):
+            candidate_port = self.port + attempt
+            try:
+                self._server = ThreadingHTTPServer((self.host, candidate_port), handler)
+                self.port = candidate_port
+                break
+            except OSError as exc:
+                print(f"[PlayerView] Failed to start server on {self.host}:{candidate_port} ({exc})")
+                self._server = None
+
+        if self._server is None:
+            print(
+                f"[PlayerView] Unable to bind to ports {self.port}-"
+                f"{self.port + self._max_port_attempts - 1}"
+            )
             return
 
         self._thread = Thread(target=self._server.serve_forever, daemon=True)
