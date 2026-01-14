@@ -106,3 +106,99 @@ When the app starts, it also launches a lightweight Player View web page that ca
 **Downed display (Player View only)**
 * By default, downed combatants (current HP of 0) stay visible and recieve a red highlight.
 * To hide down monsters instead, set `PLAYER_VIEW_HIDE_DOWNED=1` (players remain visible even when downed).
+
+## Foundry → Bridge → App (Phase 1: read-only sync)
+
+This repo includes a minimal bridge service and a Foundry module for sending combat snapshots to the bridge. The app can then fetch the latest snapshot from the bridge. This phase is **read-only** (no writes back to Foundry).
+
+### Bridge service
+
+**Environment variables:**
+* `BRIDGE_HOST` (default `127.0.0.1`)
+* `BRIDGE_PORT` (default `8787`)
+* `BRIDGE_TOKEN` (**required** for external access to `/state`, `/health`, `/version`)
+* `BRIDGE_INGEST_SECRET` (optional shared secret for Foundry → bridge POSTs)
+* `BRIDGE_SNAPSHOT_PATH` (optional file path to persist the latest snapshot)
+* `BRIDGE_VERSION` (optional version string for `/version`)
+
+**Run locally (pipenv):**
+```bash
+pipenv install
+BRIDGE_TOKEN=changeme BRIDGE_HOST=127.0.0.1 BRIDGE_PORT=8787 pipenv run python -m bridge_service.app
+```
+
+**Run locally (venv/pip):**
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+BRIDGE_TOKEN=changeme BRIDGE_HOST=127.0.0.1 BRIDGE_PORT=8787 python -m bridge_service.app
+```
+
+**Quick curl test:**
+```bash
+export BRIDGE_TOKEN=changeme
+curl -H "Authorization: Bearer ${BRIDGE_TOKEN}" http://127.0.0.1:8787/health
+curl -H "Authorization: Bearer ${BRIDGE_TOKEN}" http://127.0.0.1:8787/state
+```
+
+**Systemd unit template:**
+See `deploy/bridge.service` for a sample unit. Create `/etc/dnd_app/bridge.env` for environment values.
+
+### Foundry module
+
+Module folder: `foundryvtt-bridge/`
+
+**Install:**
+1. Copy `foundryvtt-bridge/` into your Foundry `Data/modules/` folder.
+2. Enable **Foundry Bridge Sync** in your world.
+3. In **Module Settings**, confirm the Bridge URL (default `http://127.0.0.1:8787`) and optional shared secret.
+
+The module posts a full combat snapshot to `http://127.0.0.1:8787/foundry/snapshot` on combat/turn/HP/effect changes.
+
+### Python app client
+
+Set these environment variables (for the app process):
+* `BRIDGE_URL` (default `http://127.0.0.1:8787`)
+* `BRIDGE_TOKEN` (required to fetch `/state`)
+
+On startup the app logs bridge sync status and prints the snapshot count when it loads.
+
+### Snapshot JSON schema
+
+```json
+{
+  "source": "foundry",
+  "world": "<world name>",
+  "timestamp": "<iso8601>",
+  "combat": {
+    "active": true,
+    "id": "<combatId or null>",
+    "round": 1,
+    "turn": 0,
+    "activeCombatant": {
+      "tokenId": "<id>",
+      "actorId": "<id>",
+      "name": "<string>",
+      "initiative": 12
+    }
+  },
+  "combatants": [
+    {
+      "tokenId": "<id>",
+      "actorId": "<id>",
+      "name": "<string>",
+      "initiative": 12,
+      "hp": { "value": 10, "max": 15 },
+      "effects": [{ "id": "<id>", "label": "<name>" }]
+    }
+  ]
+}
+```
+
+### Manual test checklist
+
+1. Start the bridge service locally with `BRIDGE_TOKEN` set.
+2. Use the curl test above to confirm `/health` and `/state` respond.
+3. Install/enable the Foundry module and start combat; verify bridge logs show snapshot receipt.
+4. Start the Python app with `BRIDGE_URL` and `BRIDGE_TOKEN` set; confirm it logs the snapshot.

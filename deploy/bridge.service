@@ -1,0 +1,14 @@
+[Unit]
+Description=Foundry Bridge Service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/dnd_app
+EnvironmentFile=-/etc/dnd_app/bridge.env
+ExecStart=/opt/dnd_app/.venv/bin/python -m bridge_service.app
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
