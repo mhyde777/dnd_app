@@ -221,6 +221,8 @@ class BuildEncounterWindow(QDialog):
         ac_input.setMaximum(30)
         spellcaster_checkbox = QCheckBox("Spellcaster")
         death_saves_checkbox = QCheckBox("Death Saves")
+        visible_checkbox = QCheckBox("Show")
+        visible_checkbox.setchecked(True)
 
         top_row.addWidget(QLabel("Name:"))
         top_row.addWidget(name_input)
@@ -232,6 +234,7 @@ class BuildEncounterWindow(QDialog):
         top_row.addWidget(ac_input)
         top_row.addWidget(spellcaster_checkbox)
         top_row.addWidget(death_saves_checkbox)
+        top_row.addWidget(visible_checkbox)
 
         # Spellcasting panel (hidden by default)
         spell_panel = QGroupBox("Spellcasting")
@@ -278,6 +281,7 @@ class BuildEncounterWindow(QDialog):
             "ac": ac_input,
             "spellcaster": spellcaster_checkbox,
             "death_saves": death_saves_checkbox,
+            "visible": visible_checkbox,
             "spell_panel": spell_panel,
             "slots": slot_inputs,
             "innate_table": innate_table
@@ -297,6 +301,7 @@ class BuildEncounterWindow(QDialog):
                 curr_hp=row["hp"].value(),
                 armor_class=row["ac"].value(),
                 death_saves_prompt=row["death_saves"].isChecked(),
+                player_visible=row["visible"].isChecked(),
             )
 
             if row["spellcaster"].isChecked():

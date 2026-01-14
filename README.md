@@ -97,5 +97,8 @@ When the app starts, it also launches a lightweight Player View web page that ca
 3. Resize as needed; the page is fully self-contained and iframe-friendly.
 
 **Visibility + Live Updates behavior:**
-* Use the **Show** checkbox on monster rows to control whether a combatant appears in the Player View.
+* Right-click a combatant row in the initiative table to open the context menu (best on the name cell).
+* Monsters cen be **Hidden/Revealed** from the Player View via the "Hide from Player View" / "Reveal to Player view" actions
+* The initiative table shows a compact **Notes** column for short flags. Use **Edit Public Notes...** / **Edit Private Notes...** in the context menu for longer notes.
+* The Player View only displays **Public Notes** (never Private Notes)
 * The **Live Updates** toggle pauses/resumes the Player View. When paused, the page freezes on the last published snapshot even if the DM continues editing.

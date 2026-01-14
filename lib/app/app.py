@@ -567,14 +567,6 @@ class Application:
             if alias in fields:
                 self.table.setColumnHidden(to_view_col(fields.index(alias)), True)
 
-        # 3b) Show player visibility column only when monsters exist
-        if "_player_visible" in fields:
-            has_monsters = any(
-                getattr(creature, "_type", None) == CreatureType.MONSTER
-                for creature in self.manager.creatures.values()
-            )
-            self.table.setColumnHidden(to_view_col(fields.index("_player_visible")), not has_monsters)
-
         # 4) Detect spellcasting columns robustly (aliases + header substring "spell")
         spell_aliases = {
             "_spellbook", "spellbook", "Spellbook",

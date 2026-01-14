@@ -145,7 +145,7 @@ class I_Creature:
             )
         elif creature_type == CreatureType.MONSTER:
             if player_visible is None:
-                player_visible = False
+                player_visible = True
             return Monster(
                 name=data["_name"],
                 init=data["_init"],
@@ -282,7 +282,7 @@ class I_Creature:
 class Monster(I_Creature):
     def __init__(self, name, init=0, max_hp=0, curr_hp=0, armor_class=0,
                  movement=0, action=False, bonus_action=False, reaction=False,
-                 notes='', public_notes='', player_visible=False, conditions=None, status_time='',
+                 notes='', public_notes='', player_visible=True, conditions=None, status_time='',
                  spell_slots=None, innate_slots=None, spell_slots_used=None,
                  innate_slots_used=None, death_saves_prompt=False, active=True):
         super().__init__(
