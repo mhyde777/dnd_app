@@ -80,3 +80,22 @@ STORAGE_API_BASE=http://127.0.0.1:800
 ### Running without the Storage service
 
 Leave `USE_STORAGE_API_ONLY` unset (or set it to `0`) to kep using the built-in local JSOn files. If you enable `USE_STORAGE_API_ONLY` without providing `STORAGE_API_BASE`, the app will start but show a warning explaining how the to fix the configuration so you are not blocked while the Storage service is offline.
+
+## Player View (Foundry-friendly)
+When the app starts, it also launches a lightweight Player View web page that can be embedded in Foundry via Inline Webviewer. The page is designed to be iframe-friendly and shows only player-safe combat data.
+
+**Access the Player View:**
+* Default URL: `http://127.0.0.1:5001/player`
+* JSON feed: `http://127.0.0.1:5001/player.json`
+* Optional environment overrides:
+  * `PLAYER_VIEW_HOST` (default `0.0.0.0`)
+  * `PLAYER_VIEW_PORT` (default `5001`)
+
+**Foundry Inline Webviewer embed:**
+1. Install/enable the Inline Webviewer module in Foundry.
+2. Add a Webviewer element and set the URL to your Player View route (example: `http://127.0.0.1:5001/player`).
+3. Resize as needed; the page is fully self-contained and iframe-friendly.
+
+**Visibility + Live Updates behavior:**
+* Use the **Show** checkbox on monster rows to control whether a combatant appears in the Player View.
+* The **Live Updates** toggle pauses/resumes the Player View. When paused, the page freezes on the last published snapshot even if the DM continues editing.
