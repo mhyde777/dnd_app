@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import(
 from PyQt5.QtGui import (
         QPixmap, QFont, QPixmapCache
 )
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from app.creature import (
     I_Creature, Player, Monster, CreatureType
 )
@@ -18,6 +18,7 @@ from app.manager import CreatureManager
 from app.storage_api import StorageAPI
 from app.config import get_storage_api_base, use_storage_api_only, get_config_path
 from app.player_view_server import PlayerViewServer
+from app.bridge_client import BridgeClient
 from ui.windows import (
     AddCombatantWindow, RemoveCombatantWindow, BuildEncounterWindow
 )
@@ -62,6 +63,10 @@ class Application:
         self.player_view_server = PlayerViewServer(self.get_player_view_payload)
         self.player_view_server.start()
 
+        self.bridge_client = BridgeClient.from_env()
+        self.bridge_snapshot: Optional[Dict[str, Any]] = None
+        self.bridge_timer: Optional[QTimer] = None
+
         self.player_view_live = True
         self.player_view_snapshot: Optional[Dict[str, Any]] = None
         self.player_view_server = PlayerViewServer(self.get_player_view_payload)
@@ -81,6 +86,31 @@ class Application:
             else:
                 # self._log(f"[INFO] Using Storage API at {base}.")
                 self.storage_api = StorageAPI(base)
+
+    def start_bridge_polling(self) -> None:
+        if not self.bridge_client.enabled:
+            print("[Bridge] BRIDGE_TOKEN is not set; bridge sync is disabled.")
+            return
+        if self.bridge_timer is None:
+            self.bridge_timer = QTimer(self)
+            self.bridge_timer.timeout.connect(self.refresh_bridge_state)
+            self.bridge_timer.start(5000)
+        self.refresh_bridge_state()
+
+    def refresh_bridge_state(self) -> None:
+        try:
+            snapshot = self.bridge_client.fetch_state()
+        except Exception as exc:
+            print(f"[Bridge] Failed to fetch state: {exc}")
+            return
+        if snapshot is None:
+            return
+        self.bridge_snapshot = snapshot
+        combatants = snapshot.get("combatants", []) if isinstance(snapshot, dict) else []
+        world = snapshot.get("world") if isinstance(snapshot, dict) else None
+        print(
+            f"[Bridge] Snapshot loaded world={world!r} combatants={len(combatants)}"
+        )
 
     # -----------------------
     # Core ordering utilities
