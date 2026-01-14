@@ -22,6 +22,8 @@ def _render_player_view_html() -> str:
         --accent: #7ad7ff;
         --border: #2f2f2f;
         --highlight: #1f3b4d;
+        --downed: rgba(255, 74, 74, 0.25);
+        --downed-border: rgba(255, 120, 120, 0.6);
       }
       body {
         margin: 0;
@@ -77,6 +79,13 @@ def _render_player_view_html() -> str:
       }
       tr.highlight {
         background: var(--highlight);
+      }
+      tr.downed {
+        background: var(--downed);
+      }
+      tr.downed td:first-child {
+        border-left: 4px solid var(--downed-border);
+        padding-left: 8px;
       }
       .empty {
         color: var(--muted);
@@ -141,6 +150,9 @@ def _render_player_view_html() -> str:
           const row = document.createElement("tr");
           if (data.current_name && c.name === data.current_name && !data.current_hidden) {
             row.classList.add("highlight");
+          }
+          if (c.downed) {
+            row.classList.add("downed");
           }
           const nameCell = document.createElement("td");
           nameCell.textContent = c.name || "";
