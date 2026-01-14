@@ -12,6 +12,7 @@ dotenv = "*"
 dnd-app-lib = {file = "lib/", editable = true}
 python-dotenv = "*"
 pyinstaller = "*"
+flask = "*"
 
 [dev-packages]
 pyinstaller = "*"
