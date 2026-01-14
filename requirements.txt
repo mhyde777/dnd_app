@@ -5,3 +5,4 @@ pyqtdarktheme==2.1.0
 requests==2.32.3
 python-dotenv==1.1.0
 dotenv==0.9.9
+flask==3.0.3

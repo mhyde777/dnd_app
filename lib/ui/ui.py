@@ -38,6 +38,7 @@ class InitiativeTracker(QMainWindow, Application):
             self.pop_lists()
         except Exception as e:
             print(f"[Startup] Failed to load last state: {e}")
+        self.start_bridge_polling()
 
     def initUI(self):
         self.central_widget = QWidget()
