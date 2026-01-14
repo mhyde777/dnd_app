@@ -279,6 +279,13 @@ class CreatureTableModel(QAbstractTableModel):
 
         if creature is None:
             return Qt.NoItemFlags
+        
+        if attr == "_player_visible":
+            from app.creature import CreatureType
+
+            if creature._type != CreatureType.MONSTER:
+                return Qt.NoItemFlags
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable
 
         if attr == "_player_visible":
             from app.creature import CreatureType

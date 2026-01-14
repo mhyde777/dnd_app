@@ -56,6 +56,11 @@ class Application:
             '_reaction': 'set_creature_reaction'
             # '_object_interaction': 'set_creature_object_interaction'
         }
+        
+        self.player_view_live = True
+        self.player_view_snapshot: Optional[Dict[str, Any]] = None
+        self.player_view_server = PlayerViewServer(self.get_player_view_payload)
+        self.player_view_server.start()
 
         self.player_view_live = True
         self.player_view_snapshot: Optional[Dict[str, Any]] = None
@@ -149,7 +154,6 @@ class Application:
             self.current_creature_name = self.turn_order[self.current_idx]
 
         self.update_active_ui()
-
 
     def active_name(self) -> Optional[str]:
         if not getattr(self, "turn_order", None):
