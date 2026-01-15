@@ -18,7 +18,7 @@ from app.manager import CreatureManager
 from app.storage_api import StorageAPI
 from app.config import get_storage_api_base, use_storage_api_only, get_config_path
 from app.player_view_server import PlayerViewServer
-from app.bridge_client import BridgeClient
+from app.bridge_client import BridgeClient, BridgePoller, get_bridge_poll_seconds
 from ui.windows import (
     AddCombatantWindow, RemoveCombatantWindow, BuildEncounterWindow
 )
@@ -65,7 +65,7 @@ class Application:
 
         self.bridge_client = BridgeClient.from_env()
         self.bridge_snapshot: Optional[Dict[str, Any]] = None
-        self.bridge_timer: Optional[QTimer] = None
+        self.bridge_poller: Optional[BridgePoller] = None
 
         self.player_view_live = True
         self.player_view_snapshot: Optional[Dict[str, Any]] = None
@@ -91,26 +91,24 @@ class Application:
         if not self.bridge_client.enabled:
             print("[Bridge] BRIDGE_TOKEN is not set; bridge sync is disabled.")
             return
-        if self.bridge_timer is None:
-            self.bridge_timer = QTimer(self)
-            self.bridge_timer.timeout.connect(self.refresh_bridge_state)
-            self.bridge_timer.start(5000)
-        self.refresh_bridge_state()
+        if self.bridge_poller is None:
+            poll_seconds = get_bridge_poll_seconds()
+            self.bridge_poller = BridgePoller(
+                client=self.bridge_client,
+                poll_seconds=poll_seconds,
+                on_snapshot=self._queue_bridge_snapshot,
+            )
+            self.bridge_poller.start()
 
-    def refresh_bridge_state(self) -> None:
-        try:
-            snapshot = self.bridge_client.fetch_state()
-        except Exception as exc:
-            print(f"[Bridge] Failed to fetch state: {exc}")
+    def _queue_bridge_snapshot(self, snapshot: Dict[str, Any]) -> None:
+        if not hasattr(self, "handle_bridge_snapshot"):
             return
-        if snapshot is None:
-            return
-        self.bridge_snapshot = snapshot
-        combatants = snapshot.get("combatants", []) if isinstance(snapshot, dict) else []
-        world = snapshot.get("world") if isinstance(snapshot, dict) else None
-        print(
-            f"[Bridge] Snapshot loaded world={world!r} combatants={len(combatants)}"
-        )
+
+        def _apply() -> None:
+            self.bridge_snapshot = snapshot
+            self.handle_bridge_snapshot(snapshot)
+
+        QTimer.singleShot(0, _apply)
 
     # -----------------------
     # Core ordering utilities

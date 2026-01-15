@@ -527,13 +527,10 @@ class InitiativeTracker(QMainWindow, Application):
                 server.stop()
             except Exception:
                 pass
-        super().closeEvent(event)
-
-    def closeEvent(self, event):
-        server = getattr(self, "player_view_server", None)
-        if server is not None:
+        poller = getattr(self, "bridge_poller", None)
+        if poller is not None:
             try:
-                server.stop()
+                poller.stop()
             except Exception:
                 pass
         super().closeEvent(event)
@@ -550,3 +547,99 @@ class InitiativeTracker(QMainWindow, Application):
                     self.table.setCurrentIndex(self.table.model().index(-1, -1))
 
         return super().eventFilter(obj, event)
+
+    def _bridge_find_field_by_header(self, matcher):
+        if not hasattr(self, "table_model") or not self.table_model:
+            return None
+        for col in range(self.table_model.columnCount()):
+            header_text = self.table_model.headerData(col, Qt.Horizontal, Qt.DisplayRole)
+            if not isinstance(header_text, str):
+                continue
+            if matcher(header_text.strip().lower()):
+                return self.table_model.fields[col]
+        return None
+
+    def handle_bridge_snapshot(self, snapshot):
+        if not isinstance(snapshot, dict):
+            return
+
+        combat = snapshot.get("combat") or {}
+        active_name = None
+        if isinstance(combat, dict):
+            active = combat.get("activeCombatant") or {}
+            if isinstance(active, dict):
+                active_name = active.get("name")
+
+        if active_name:
+            # Update label + highlight without altering initiative order.
+            if hasattr(self, "active_init_label") and self.active_init_label:
+                self.active_init_label.setText(f"Active: {active_name}")
+            if hasattr(self, "table_model") and self.table_model:
+                self.table_model.set_active_creature(active_name)
+
+        combatants = snapshot.get("combatants") or []
+        if not isinstance(combatants, list):
+            return
+
+        curr_field = self._bridge_find_field_by_header(
+            lambda text: "hp" in text and ("curr" in text or "current" in text)
+        )
+        max_field = self._bridge_find_field_by_header(
+            lambda text: "hp" in text and "max" in text
+        )
+
+        if not curr_field and not max_field:
+            return
+
+        for combatant in combatants:
+            if not isinstance(combatant, dict):
+                continue
+            name = combatant.get("name")
+            if not name:
+                continue
+            creature = self.manager.creatures.get(name)
+            if creature is None:
+                # TODO: Optional auto-add when BRIDGE_AUTO_APPLY=1
+                continue
+
+            hp = combatant.get("hp") or {}
+            if not isinstance(hp, dict):
+                hp = {}
+            curr_hp = hp.get("value")
+            max_hp = hp.get("max")
+
+            if curr_field is not None and curr_hp is not None:
+                try:
+                    setattr(creature, curr_field, int(curr_hp))
+                except Exception:
+                    pass
+            if max_field is not None and max_hp is not None:
+                try:
+                    setattr(creature, max_field, int(max_hp))
+                except Exception:
+                    pass
+
+            try:
+                row = self.table_model.creature_names.index(name)
+            except ValueError:
+                continue
+
+            cols = []
+            try:
+                if curr_field is not None:
+                    cols.append(self.table_model.fields.index(curr_field))
+                if max_field is not None:
+                    cols.append(self.table_model.fields.index(max_field))
+            except ValueError:
+                cols = []
+
+            if cols:
+                top_left = self.table_model.index(row, min(cols))
+                bottom_right = self.table_model.index(row, max(cols))
+                self.table_model.dataChanged.emit(
+                    top_left,
+                    bottom_right,
+                    [Qt.DisplayRole, Qt.BackgroundRole],
+                )
+
+        # TODO: condition/effect mapping (Foundry effects -> ConditionsDropdown)
