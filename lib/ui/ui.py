@@ -54,12 +54,69 @@ class InitiativeTracker(QMainWindow, Application):
             "[BridgeUI] Received bridge snapshot "
             f"keys={sorted(snapshot.keys())} hash={digest}"
         )
+        self._merge_bridge_snapshot(snapshot)
+        print("[BridgeUI] Applied snapshot -> refreshing UI")
         if hasattr(self, "handle_bridge_snapshot"):
             self.handle_bridge_snapshot(snapshot)
         if hasattr(self, "update_table"):
             self.update_table()
         if hasattr(self, "update_active_init"):
             self.update_active_init()
+
+    def _merge_bridge_snapshot(self, snapshot: dict) -> None:
+        combatants = snapshot.get("combatants", [])
+        if not isinstance(combatants, list):
+            return
+
+        if not getattr(self, "_bridge_logged_combatant_keys", False):
+            first = combatants[0] if combatants else None
+            if isinstance(first, dict):
+                print(f"[BridgeMerge] First combatant keys: {sorted(first.keys())}")
+            self._bridge_logged_combatant_keys = True
+
+        for combatant in combatants:
+            if not isinstance(combatant, dict):
+                continue
+            name = combatant.get("name") or combatant.get("actorName")
+            if not name:
+                continue
+            creature = self.manager.creatures.get(name)
+            if creature is None:
+                continue
+
+            hp = combatant.get("hp") or {}
+            if not isinstance(hp, dict):
+                hp = {}
+            curr_hp = hp.get("value")
+            max_hp = hp.get("max")
+
+            old_curr = creature.curr_hp
+            old_max = creature.max_hp
+            changed = False
+            try:
+                if curr_hp is not None:
+                    curr_hp = int(curr_hp)
+                    if creature.curr_hp != curr_hp:
+                        creature.curr_hp = curr_hp
+                        changed = True
+            except Exception:
+                pass
+
+            try:
+                if max_hp is not None:
+                    max_hp = int(max_hp)
+                    if creature.max_hp != max_hp:
+                        creature.max_hp = max_hp
+                        changed = True
+            except Exception:
+                pass
+
+            if changed:
+                print(
+                    "[BridgeMerge] "
+                    f"{name}: HP {old_curr}->{creature.curr_hp} "
+                    f"(max {old_max}->{creature.max_hp})"
+                )
 
     def initUI(self):
         self.central_widget = QWidget()
