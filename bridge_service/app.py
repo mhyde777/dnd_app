@@ -143,6 +143,11 @@ def create_app() -> Flask:
             return None
         header = request.headers.get("X-Bridge-Secret", "")
         if header != secret:
+            reason = "missing" if not header else "mismatched"
+            print(
+                "[Bridge] ingest secret unauthorized "
+                f"path={request.path} reason={reason}"
+            )
             return jsonify({"error": "unauthorized"}), 401
         return None
 
