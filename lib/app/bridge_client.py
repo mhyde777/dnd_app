@@ -142,10 +142,10 @@ class BridgeClient:
             print(f"[Bridge] GET /state JSON decode failed: {exc} body={body_preview}")
             return None
 
-    def send_set_hp(self, token_id: str, hp: int, actor_id: Optional[str] = None) -> bool:
+    def send_set_hp(self, token_id: str, hp: int, actor_id: Optional[str] = None) -> Optional[str]:
         if not self.enabled:
             print("[BridgeCmd] send_set_hp ok=False reason=missing_token")
-            return False
+            return None
 
         url = f"{self.base_url}/commands"
         payload: Dict[str, Any] = {
@@ -159,6 +159,7 @@ class BridgeClient:
 
         ok = False
         status = None
+        command_id = None
         try:
             response = requests.post(
                 url,
@@ -168,12 +169,19 @@ class BridgeClient:
             )
             status = response.status_code
             ok = response.ok
+            if ok:
+                try:
+                    data = response.json()
+                    if isinstance(data, dict):
+                        command_id = data.get("id") or data.get("commandId") or data.get("command_id")
+                except ValueError:
+                    command_id = None
         except requests.RequestException as exc:
             status = str(exc)
             ok = False
 
         print(
             "[BridgeCmd] send_set_hp "
-            f"tokenId={token_id} hp={hp} ok={ok} status={status}"
+            f"tokenId={token_id} hp={hp} ok={ok} status={status} command_id={command_id}"
         )
-        return ok
+        return command_id if ok else None

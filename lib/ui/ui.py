@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (
     QSizePolicy, QMessageBox, QDialog, QDialogButtonBox,
     QMenu, QTextEdit
 )
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 from app.app import Application
 from app.creature import CreatureType
 from app.manager import CreatureManager
@@ -27,6 +27,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.update_size_constraints()
         self.setWindowTitle("DnD Combat Tracker")
         self.manager = CreatureManager()
+        self._hp_push_timers = {}
         self.initUI()
         self.bridge_snapshot_received.connect(self._apply_bridge_snapshot)
 
@@ -482,10 +483,80 @@ class InitiativeTracker(QMainWindow, Application):
         try:
             hp_value = int(getattr(creature, "curr_hp"))
         except Exception:
-            print(f"[BridgeCmdUI] invalid hp for {name}; cannot push")
+            print(f"[BridgeCmdUI] push_hp ok=False reason=invalid_hp name={name}")
             return
         actor_id = token_info.get("actorId") if token_info else None
-        self.bridge_client.send_set_hp(token_id, hp_value, actor_id)
+        command_id = self.bridge_client.send_set_hp(token_id, hp_value, actor_id)
+        token_short = token_id[:8]
+        actor_short = actor_id[:8] if actor_id else None
+        if command_id:
+            actor_segment = f" actorId={actor_short}" if actor_short else ""
+            print(
+                "[BridgeCmdUI] push_hp ok=True "
+                f"name={name} tokenId={token_short}{actor_segment} "
+                f"hp={hp_value} cmd={command_id}"
+            )
+            return
+        reason = "bridge_disabled" if not self.bridge_client.enabled else "enqueue_failed"
+        actor_segment = f" actorId={actor_short}" if actor_short else ""
+        print(
+            "[BridgeCmdUI] push_hp ok=False "
+            f"reason={reason} name={name} tokenId={token_short}{actor_segment} "
+            f"hp={hp_value}"
+        )
+
+    def _extract_editor_value(self, editor):
+        if hasattr(editor, "text"):
+            return editor.text()
+        if hasattr(editor, "value"):
+            return editor.value()
+        return None
+
+    def _schedule_hp_push(self, name: str) -> None:
+        if not name:
+            return
+        timer = self._hp_push_timers.get(name)
+        if timer:
+            timer.stop()
+            timer.deleteLater()
+        timer = QTimer(self)
+        timer.setSingleShot(True)
+
+        def _fire():
+            creature = self.manager.creatures.get(name)
+            if creature is None:
+                print(f"[BridgeCmdUI] push_hp ok=False reason=missing_creature name={name}")
+                return
+            self._push_hp_to_foundry(name, creature)
+
+        timer.timeout.connect(_fire)
+        self._hp_push_timers[name] = timer
+        timer.start(300)
+
+    def on_commit_data(self, editor):
+        index = self.table.currentIndex()
+        name, creature = self._get_creature_from_index(index)
+        if creature is None:
+            return
+        attr = self.table_model.fields[index.column()]
+        if attr not in ("_curr_hp", "_max_hp"):
+            return
+        new_value = self._extract_editor_value(editor)
+        if new_value is None:
+            print(f"[BridgeCmdUI] push_hp ok=False reason=missing_editor_value name={name}")
+            return
+        try:
+            new_value = int(new_value)
+        except (TypeError, ValueError):
+            print(f"[BridgeCmdUI] push_hp ok=False reason=invalid_editor_value name={name}")
+            return
+        try:
+            old_value = int(getattr(creature, attr))
+        except Exception:
+            old_value = getattr(creature, attr, None)
+        if old_value == new_value:
+            return
+        self._schedule_hp_push(name)
 
     def show_table_context_menu(self, pos):
         index = self.table.indexAt(pos)
