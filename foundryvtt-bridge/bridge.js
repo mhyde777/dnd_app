@@ -51,6 +51,13 @@ function buildCombatSnapshot() {
     combat && (started || round > 0 || combat.turn !== null)
   );
 
+  const sceneId =
+    game.scenes && game.scenes.current && game.scenes.current.id
+      ? game.scenes.current.id
+      : typeof canvas !== "undefined" && canvas && canvas.scene && canvas.scene.id
+      ? canvas.scene.id
+      : null;
+
   // Active combatant
   let activeCombatant = null;
   if (combat && combat.combatant) {
@@ -83,8 +90,13 @@ function buildCombatSnapshot() {
     const token = c.token || null;
 
     return {
-      tokenId: token && token.id ? token.id : c.tokenId || null,
-      actorId: actor && actor.id ? actor.id : null,
+      tokenId:
+        c.tokenId ||
+        (token && token.id ? token.id : null) ||
+        (token && token.document && token.document.id ? token.document.id : null),
+      actorId: c.actorId || (actor && actor.id ? actor.id : null),
+      combatantId: c.id || null,
+      sceneId: sceneId,
       name: c.name || (actor && actor.name) || "",
       initiative: c.initiative != null ? c.initiative : null,
       hp: {
@@ -114,6 +126,7 @@ function buildCombatSnapshot() {
 // Post scheduling
 // --------------------
 let snapshotTimer = null;
+let hasLoggedSnapshotIds = false;
 
 function scheduleSnapshot(reason) {
   if (snapshotTimer) {
@@ -138,6 +151,15 @@ async function postSnapshot(reason) {
   if (secret) headers["X-Bridge-Secret"] = secret;
 
   try {
+    if (!hasLoggedSnapshotIds) {
+      console.debug(
+        `[${MODULE_ID}] Snapshot combatant IDs`,
+        snapshot.combatants && snapshot.combatants[0]
+          ? snapshot.combatants[0]
+          : null
+      );
+      hasLoggedSnapshotIds = true;
+    }
     console.log('[${MODULE_ID}] POST -> ${endpoint}');
     const response = await fetch(endpoint, {
       method: "POST",
