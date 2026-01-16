@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import json
 import os
 import threading
+import time
+import traceback
 from dataclasses import dataclass
+from hashlib import sha256
 from typing import Any, Callable, Dict, Optional
 
 import requests
@@ -39,38 +43,64 @@ class BridgePoller:
         self.on_snapshot = on_snapshot
         self._stop_event = threading.Event()
         self._thread: Optional[threading.Thread] = None
-        self._last_timestamp: Optional[str] = None
+        self._last_hash: Optional[str] = None
 
     def start(self) -> None:
         if self._thread is not None:
             return
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
+        print("[BridgePoller] start() called; poller thread launched.")
 
     def stop(self) -> None:
         self._stop_event.set()
 
-    def _is_duplicate(self, snapshot: Dict[str, Any]) -> bool:
-        timestamp = snapshot.get("timestamp") if isinstance(snapshot, dict) else None
-        if not timestamp:
-            return False
-        if timestamp == self._last_timestamp:
+    def is_alive(self) -> bool:
+        return bool(self._thread and self._thread.is_alive())
+
+    def _snapshot_hash(self, snapshot: Dict[str, Any]) -> tuple[str, int]:
+        payload = json.dumps(snapshot, sort_keys=True, separators=(",", ":"))
+        payload_bytes = payload.encode("utf-8")
+        digest = sha256(payload_bytes).hexdigest()
+        return digest, len(payload_bytes)
+
+    def _is_duplicate(self, digest: str) -> bool:
+        if digest == self._last_hash:
             return True
-        self._last_timestamp = timestamp
+        self._last_hash = digest
         return False
 
     def _run(self) -> None:
+        print("[BridgePoller] _run() entered.")
         while not self._stop_event.is_set():
             try:
+                started_at = time.perf_counter()
                 snapshot = self.client.fetch_state()
+                elapsed_ms = (time.perf_counter() - started_at) * 1000
+                if snapshot:
+                    digest, payload_len = self._snapshot_hash(snapshot)
+                    is_duplicate = self._is_duplicate(digest)
+                    print(
+                        "[BridgePoller] polled /state ok "
+                        f"latency_ms={elapsed_ms:.1f} "
+                        f"hash={digest[:8]} "
+                        f"duplicate={is_duplicate} "
+                        f"bytes={payload_len}"
+                    )
+                    if not is_duplicate:
+                        try:
+                            self.on_snapshot(snapshot)
+                        except Exception as exc:
+                            print(f"[Bridge] Failed to handle snapshot: {exc}")
+                else:
+                    print(
+                        "[BridgePoller] polled /state failed "
+                        f"latency_ms={elapsed_ms:.1f} "
+                        "hash=-------- duplicate=False bytes=0"
+                    )
             except Exception as exc:
-                print(f"[Bridge] Failed to fetch state: {exc}")
-                snapshot = None
-            if snapshot and not self._is_duplicate(snapshot):
-                try:
-                    self.on_snapshot(snapshot)
-                except Exception as exc:
-                    print(f"[Bridge] Failed to handle snapshot: {exc}")
+                print(f"[BridgePoller] Polling loop crashed: {exc}")
+                print(traceback.format_exc())
             self._stop_event.wait(self.poll_seconds)
 
 
@@ -96,8 +126,18 @@ class BridgeClient:
             print("[Bridge] BRIDGE_TOKEN is not set; skipping sync.")
             return None
         url = f"{self.base_url}/state"
-        response = requests.get(url, headers=_build_headers(self.token), timeout=self.timeout_s)
-        if response.status_code != 200:
-            print(f"[Bridge] GET /state failed: {response.status_code} {response.text}")
+        try:
+            response = requests.get(url, headers=_build_headers(self.token), timeout=self.timeout_s)
+        except requests.RequestException as exc:
+            print(f"[Bridge] GET /state request failed: {exc}")
             return None
-        return response.json()
+        if response.status_code != 200:
+            body_preview = (response.text or "")[:300]
+            print(f"[Bridge] GET /state failed: {response.status_code} {body_preview}")
+            return None
+        try:
+            return response.json()
+        except ValueError as exc:
+            body_preview = (response.text or "")[:300]
+            print(f"[Bridge] GET /state JSON decode failed: {exc} body={body_preview}")
+            return None
