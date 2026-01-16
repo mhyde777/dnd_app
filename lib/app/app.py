@@ -93,12 +93,22 @@ class Application:
             return
         if self.bridge_poller is None:
             poll_seconds = get_bridge_poll_seconds()
+            if hasattr(self, "bridge_snapshot_received"):
+                on_snapshot = lambda snap: self.bridge_snapshot_received.emit(snap)
+            else:
+                on_snapshot = self._queue_bridge_snapshot
             self.bridge_poller = BridgePoller(
                 client=self.bridge_client,
                 poll_seconds=poll_seconds,
-                on_snapshot=self._queue_bridge_snapshot,
+                on_snapshot=on_snapshot,
             )
             self.bridge_poller.start()
+            QTimer.singleShot(
+                1000,
+                lambda: print(
+                    f"[BridgePoller] alive={self.bridge_poller.is_alive() if self.bridge_poller else False}"
+                ),
+            )
 
     def _queue_bridge_snapshot(self, snapshot: Dict[str, Any]) -> None:
         if not hasattr(self, "handle_bridge_snapshot"):

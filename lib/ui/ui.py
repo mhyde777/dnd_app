@@ -1,3 +1,5 @@
+import json
+from hashlib import sha256
 from typing import Optional
 from PyQt5.QtWidgets import (
     QVBoxLayout, QLabel, QLineEdit,
@@ -7,7 +9,7 @@ from PyQt5.QtWidgets import (
     QSizePolicy, QMessageBox, QDialog, QDialogButtonBox,
     QMenu, QTextEdit
 )
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
 from app.app import Application
 from app.creature import CreatureType
 from app.manager import CreatureManager
@@ -17,6 +19,8 @@ from app.config import use_storage_api_only
 from ui.conditions_dropdown import ConditionsDropdown, DEFAULT_CONDITIONS
 
 class InitiativeTracker(QMainWindow, Application):
+    bridge_snapshot_received = pyqtSignal(dict)
+
     def __init__(self):
         super().__init__()
         self.center()
@@ -24,6 +28,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.setWindowTitle("DnD Combat Tracker")
         self.manager = CreatureManager()
         self.initUI()
+        self.bridge_snapshot_received.connect(self._apply_bridge_snapshot)
 
         warning = getattr(self, "storage_api_warning", None)
         if warning:
@@ -39,6 +44,22 @@ class InitiativeTracker(QMainWindow, Application):
         except Exception as e:
             print(f"[Startup] Failed to load last state: {e}")
         self.start_bridge_polling()
+
+    def _apply_bridge_snapshot(self, snapshot: dict) -> None:
+        if not isinstance(snapshot, dict):
+            return
+        payload = json.dumps(snapshot, sort_keys=True, separators=(",", ":"))
+        digest = sha256(payload.encode("utf-8")).hexdigest()[:8]
+        print(
+            "[BridgeUI] Received bridge snapshot "
+            f"keys={sorted(snapshot.keys())} hash={digest}"
+        )
+        if hasattr(self, "handle_bridge_snapshot"):
+            self.handle_bridge_snapshot(snapshot)
+        if hasattr(self, "update_table"):
+            self.update_table()
+        if hasattr(self, "update_active_init"):
+            self.update_active_init()
 
     def initUI(self):
         self.central_widget = QWidget()
