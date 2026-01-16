@@ -28,6 +28,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.setWindowTitle("DnD Combat Tracker")
         self.manager = CreatureManager()
         self._hp_push_timers = {}
+        self._applying_bridge_snapshot = False
         self.initUI()
         self.bridge_snapshot_received.connect(self._apply_bridge_snapshot)
 
@@ -52,20 +53,24 @@ class InitiativeTracker(QMainWindow, Application):
         if snapshot.get("source") == "app":
             print("[BridgeUI] ignoring snapshot from app")
             return
-        payload = json.dumps(snapshot, sort_keys=True, separators=(",", ":"))
-        digest = sha256(payload.encode("utf-8")).hexdigest()[:8]
-        print(
-            "[BridgeUI] Received bridge snapshot "
-            f"keys={sorted(snapshot.keys())} hash={digest}"
-        )
-        self._merge_bridge_snapshot(snapshot)
-        print("[BridgeUI] Applied snapshot -> refreshing UI")
-        if hasattr(self, "handle_bridge_snapshot"):
-            self.handle_bridge_snapshot(snapshot)
-        if hasattr(self, "update_table"):
-            self.update_table()
-        if hasattr(self, "update_active_init"):
-            self.update_active_init()
+        self._applying_bridge_snapshot = True
+        try:
+            payload = json.dumps(snapshot, sort_keys=True, separators=(",", ":"))
+            digest = sha256(payload.encode("utf-8")).hexdigest()[:8]
+            print(
+                "[BridgeUI] Received bridge snapshot "
+                f"keys={sorted(snapshot.keys())} hash={digest}"
+            )
+            self._merge_bridge_snapshot(snapshot)
+            print("[BridgeUI] Applied snapshot -> refreshing UI")
+            if hasattr(self, "handle_bridge_snapshot"):
+                self.handle_bridge_snapshot(snapshot)
+            if hasattr(self, "update_table"):
+                self.update_table()
+            if hasattr(self, "update_active_init"):
+                self.update_active_init()
+        finally:
+            self._applying_bridge_snapshot = False
 
     def _merge_bridge_snapshot(self, snapshot: dict) -> None:
         combatants = snapshot.get("combatants", [])
@@ -157,6 +162,7 @@ class InitiativeTracker(QMainWindow, Application):
 
         # === TABLE AREA (under labels) ===
         self.table_model = CreatureTableModel(self.manager)
+        self.table_model.on_user_hp_edited = self._on_user_hp_edited
         self.table = QTableView(self)
         self.table.setModel(self.table_model)
         self.table.itemDelegate().commitData.connect(self.on_commit_data)
@@ -505,6 +511,14 @@ class InitiativeTracker(QMainWindow, Application):
             f"hp={hp_value}"
         )
 
+    def _on_user_hp_edited(self, name, creature, old_hp, new_hp):
+        if self._applying_bridge_snapshot:
+            return
+        token_info = self.bridge_ids.get(name)
+        token_id = token_info.get("tokenId") if token_info else None
+        print(f"[HP-AUTO] name={name} old={old_hp} new={new_hp} tokenId={token_id}")
+        self._push_hp_to_foundry(name, creature)
+
     def _extract_editor_value(self, editor):
         if hasattr(editor, "text"):
             return editor.text()
@@ -534,29 +548,7 @@ class InitiativeTracker(QMainWindow, Application):
         timer.start(300)
 
     def on_commit_data(self, editor):
-        index = self.table.currentIndex()
-        name, creature = self._get_creature_from_index(index)
-        if creature is None:
-            return
-        attr = self.table_model.fields[index.column()]
-        if attr not in ("_curr_hp", "_max_hp"):
-            return
-        new_value = self._extract_editor_value(editor)
-        if new_value is None:
-            print(f"[BridgeCmdUI] push_hp ok=False reason=missing_editor_value name={name}")
-            return
-        try:
-            new_value = int(new_value)
-        except (TypeError, ValueError):
-            print(f"[BridgeCmdUI] push_hp ok=False reason=invalid_editor_value name={name}")
-            return
-        try:
-            old_value = int(getattr(creature, attr))
-        except Exception:
-            old_value = getattr(creature, attr, None)
-        if old_value == new_value:
-            return
-        self._schedule_hp_push(name)
+        return
 
     def show_table_context_menu(self, pos):
         index = self.table.indexAt(pos)

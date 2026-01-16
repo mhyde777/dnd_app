@@ -29,6 +29,7 @@ class CreatureTableModel(QAbstractTableModel):
         self.active_creature_name = None
         self.selected_index = None
         self.view = parent
+        self.on_user_hp_edited = None
 
         # Build fields from a sample creature if not provided
         if fields is None and self.manager.creatures:
@@ -211,6 +212,7 @@ class CreatureTableModel(QAbstractTableModel):
 
         try:
             current = getattr(creature, attr)
+            old_value = current
 
             if isinstance(current, bool):
                 setattr(creature, attr, value == Qt.Checked)
@@ -226,6 +228,11 @@ class CreatureTableModel(QAbstractTableModel):
 
             if attr == "_init" and self.view:
                 QTimer.singleShot(0, self.view.handle_initiative_update)
+
+            if attr == "_curr_hp":
+                new_value = getattr(creature, attr)
+                if old_value != new_value and callable(self.on_user_hp_edited):
+                    self.on_user_hp_edited(name, creature, old_value, new_value)
 
             return True
         except (ValueError, TypeError, AttributeError):
