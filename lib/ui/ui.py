@@ -569,6 +569,14 @@ class InitiativeTracker(QMainWindow, Application):
 
         return super().eventFilter(obj, event)
 
+    def _normalize_name(self, name: str) -> str:
+        if not isinstance(name, str):
+            return ""
+
+        # take first token only
+        base = name.split()[0].split("-")[0].strip().lower()
+        return base
+
     def _bridge_find_field_by_header(self, matcher):
         if not hasattr(self, "table_model") or not self.table_model:
             return None
@@ -581,6 +589,13 @@ class InitiativeTracker(QMainWindow, Application):
         return None
 
     def handle_bridge_snapshot(self, snapshot):
+        print(f"[BridgeMerge] handling snapshot combatants={len(snapshot.get('combatants', []))}")
+        source = snapshot.get("source")
+
+        if source == "app":
+            print("[BridgeMerge] skipping snapshot from app")
+            return
+
         if not isinstance(snapshot, dict):
             return
 
@@ -615,13 +630,30 @@ class InitiativeTracker(QMainWindow, Application):
         for combatant in combatants:
             if not isinstance(combatant, dict):
                 continue
-            name = combatant.get("name")
-            if not name:
+            raw_name = combatant.get("name")
+            if not raw_name:
                 continue
-            creature = self.manager.creatures.get(name)
+
+            snap_key = self._normalize_name(raw_name)
+
+            creature = next(
+                (
+                    c for n, c in self.manager.creatures.items()
+                    if self._normalize_name(n).startswith(snap_key)
+                    or snap_key.startswith(self._normalize_name(n))
+                ),
+                None,
+            )
+
+            print(
+                f"[BridgeDebug] snapshot combatant name={raw_name} "
+                f"matched={creature is not None}"
+            )
+
             if creature is None:
-                # TODO: Optional auto-add when BRIDGE_AUTO_APPLY=1
                 continue
+
+            name = creature.name  # use local name from here on
 
             hp = combatant.get("hp") or {}
             if not isinstance(hp, dict):
@@ -631,15 +663,26 @@ class InitiativeTracker(QMainWindow, Application):
 
             if curr_field is not None and curr_hp is not None:
                 try:
-                    setattr(creature, curr_field, int(curr_hp))
-                except Exception:
-                    pass
-            if max_field is not None and max_hp is not None:
-                try:
-                    setattr(creature, max_field, int(max_hp))
+                    new_hp = int(curr_hp)
+                    old_hp = getattr(creature, curr_field)
+
+                    if new_hp != old_hp:
+                        print(f"[BridgeMerge] {name}: {curr_field} {old_hp} -> {new_hp}")
+                        setattr(creature, curr_field, new_hp)
                 except Exception:
                     pass
 
+            if max_field is not None and max_hp is not None:
+                try:
+                    new_max = int(max_hp)
+                    old_max = getattr(creature, max_field)
+
+                    if new_max != old_max:
+                        print(f"[BridgeMerge] {name}: {max_field} {old_max} -> {new_max}")
+                        setattr(creature, max_field, new_max)
+                except Exception:
+                    pass
+            
             try:
                 row = self.table_model.creature_names.index(name)
             except ValueError:
