@@ -127,6 +127,8 @@ function buildCombatSnapshot() {
 // --------------------
 let snapshotTimer = null;
 let hasLoggedSnapshotIds = false;
+let commandPollTimer = null;
+const COMMAND_POLL_MS = 750;
 
 function scheduleSnapshot(reason) {
   if (snapshotTimer) {
@@ -186,6 +188,113 @@ async function postSnapshot(reason) {
 }
 
 // --------------------
+// Command polling
+// --------------------
+async function ackCommand(commandId, status, errorMessage) {
+  const bridgeUrl = getBridgeUrl();
+  const endpoint = bridgeUrl + "/commands/" + commandId + "/ack";
+  const secret = getBridgeSecret();
+  const headers = { "Content-Type": "application/json" };
+  if (secret) headers["X-Bridge-Secret"] = secret;
+
+  try {
+    await fetch(endpoint, {
+      method: "POST",
+      headers: headers,
+      body: JSON.stringify({
+        status: status,
+        error: errorMessage || undefined,
+      }),
+    });
+  } catch (err) {
+    console.error("BridgeCmd ack error", err);
+  }
+
+  console.log(`BridgeCmd ack id=${commandId} status=${status}`);
+}
+
+async function applySetHp(command) {
+  const tokenId = command.tokenId;
+  const hpValue = Number(command.hp);
+  if (!tokenId) {
+    throw new Error("missing tokenId");
+  }
+  if (!Number.isFinite(hpValue)) {
+    throw new Error("invalid hp");
+  }
+
+  const tokenDoc =
+    (canvas && canvas.scene && canvas.scene.tokens
+      ? canvas.scene.tokens.get(tokenId)
+      : null) ||
+    (canvas && canvas.tokens ? canvas.tokens.get(tokenId) : null);
+
+  const actor = tokenDoc ? tokenDoc.actor : null;
+  if (!actor) {
+    throw new Error("actor not found");
+  }
+  if (
+    !actor.system ||
+    !actor.system.attributes ||
+    !actor.system.attributes.hp
+  ) {
+    throw new Error("actor missing system.attributes.hp");
+  }
+
+  console.log(
+    `BridgeCmd apply set_hp id=${command.id} tokenId=${tokenId} hp=${hpValue}`
+  );
+  await actor.update({ "system.attributes.hp.value": hpValue });
+}
+
+async function pollCommandsOnce() {
+  const bridgeUrl = getBridgeUrl();
+  const endpoint = bridgeUrl + "/commands";
+  const secret = getBridgeSecret();
+  const headers = {};
+  if (secret) headers["X-Bridge-Secret"] = secret;
+
+  try {
+    const response = await fetch(endpoint, { method: "GET", headers: headers });
+    if (!response.ok) {
+      return;
+    }
+    const payload = await response.json();
+    const commands = payload && payload.commands ? payload.commands : [];
+    for (const command of commands) {
+      if (!command || command.type !== "set_hp") {
+        continue;
+      }
+      try {
+        await applySetHp(command);
+        await ackCommand(command.id, "ok");
+      } catch (err) {
+        await ackCommand(
+          command.id,
+          "error",
+          err && err.message ? err.message : String(err)
+        );
+      }
+    }
+  } catch (err) {
+    console.error("BridgeCmd poll error", err);
+  }
+}
+
+function startCommandPolling() {
+  if (commandPollTimer) {
+    return;
+  }
+
+  const pollLoop = async () => {
+    await pollCommandsOnce();
+    commandPollTimer = setTimeout(pollLoop, COMMAND_POLL_MS);
+  };
+
+  pollLoop();
+}
+
+// --------------------
 // Settings registration
 // --------------------
 Hooks.once("init", function () {
@@ -213,6 +322,7 @@ Hooks.once("init", function () {
 // --------------------
 Hooks.once("ready", function () {
   scheduleSnapshot("ready");
+  startCommandPolling();
 });
 
 Hooks.on("createCombat", function () {
