@@ -1304,6 +1304,25 @@ class Application:
                         if not succeeded:
                             self._break_concentration(creature)
 
+            post_hp = creature.curr_hp
+            if (
+                pre_hp != post_hp
+                and not getattr(self, "_applying_bridge_snapshot", False)
+                and callable(getattr(self, "_push_hp_to_foundry", None))
+            ):
+                token_info = getattr(self, "bridge_ids", {}) or {}
+                token_entry = token_info.get(creature_name)
+                token_id = token_entry.get("tokenId") if token_entry else None
+                if token_id:
+                    action = "heal" if positive else "damage"
+                    print(
+                        "[HP-AUTO] "
+                        f"source=button action={action} "
+                        f"name={creature_name} old={pre_hp} "
+                        f"new={post_hp} tokenId={token_id}"
+                    )
+                    self._push_hp_to_foundry(creature_name, creature)
+
         self.value_input.clear()
         self.update_table()
 
