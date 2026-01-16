@@ -191,37 +191,37 @@ async function postSnapshot(reason) {
 // Command polling
 // --------------------
 async function ackCommand(commandId, status) {
-    const secret = getBridgeSecret();
-    if (!secret) return;
+  const secret = getBridgeSecret();
+  if (!secret) return;
 
-    const bridgeUrl = getBridgeUrl();
-    const endpoint = `${bridgeUrl}/commands/${commandId}/ack`;
+  const bridgeUrl = getBridgeUrl();
+  const endpoint = `${bridgeUrl}/commands/${commandId}/ack`;
 
-    try {
-        await fetch(endpoint, {
-            method: "POST":,
-            headers: {
-                "X-Bridge-Secret": secret,
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ status }),
-            cache: "no-store",
-        )};
-    } catch (err) {
+  try {
+    await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "X-Bridge-Secret": secret,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ status }),
+      cache: "no-store",
+    });
+  } catch (err) {
     console.warn("[" + MODULE_ID + "] ack failed id=" + commandId, err);
-    }
+  }
 }
 
 async function applySetHpCommand(cmd) {
-    // Prefer actorId if provided; else fall back to token->actor
-    let actor = cmd.actorId ? game.actors.get(cmd.actorId) : null;
-    if (!actor && cmd.tokenId) {
-        const tok = convas.tokens?.get(cmd.tokenId);
-        actor = tok?.actor || null;
-    }
-    if (!actor) throw new Error("actor not found");
+  // Prefer actorId if provided; else fall back to token->actor
+  let actor = cmd.actorId ? game.actors.get(cmd.actorId) : null;
+  if (!actor && cmd.tokenId) {
+    const tok = canvas.tokens?.get(cmd.tokenId); // FIX: canvas (not convas)
+    actor = tok?.actor || null;
+  }
+  if (!actor) throw new Error("actor not found");
 
-    await actor.update({ "system.attributes.hp.value": Number(cmd.hp) });
+  await actor.update({ "system.attributes.hp.value": Number(cmd.hp) });
 }
 
 async function pollCommandsOnce() {

@@ -163,3 +163,4 @@ cython_debug/
 # Outdated
 data_bkp/
 images/
+*.sh
