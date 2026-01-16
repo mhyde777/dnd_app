@@ -66,6 +66,7 @@ class Application:
         self.bridge_client = BridgeClient.from_env()
         self.bridge_snapshot: Optional[Dict[str, Any]] = None
         self.bridge_poller: Optional[BridgePoller] = None
+        self.bridge_ids: Dict[str, Dict[str, Optional[str]]] = {}
 
         self.player_view_live = True
         self.player_view_snapshot: Optional[Dict[str, Any]] = None

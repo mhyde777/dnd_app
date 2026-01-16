@@ -48,6 +48,9 @@ class InitiativeTracker(QMainWindow, Application):
     def _apply_bridge_snapshot(self, snapshot: dict) -> None:
         if not isinstance(snapshot, dict):
             return
+        if snapshot.get("source") == "app":
+            print("[BridgeUI] ignoring snapshot from app")
+            return
         payload = json.dumps(snapshot, sort_keys=True, separators=(",", ":"))
         digest = sha256(payload.encode("utf-8")).hexdigest()[:8]
         print(
@@ -470,6 +473,20 @@ class InitiativeTracker(QMainWindow, Application):
             self.current_creature_name = name
             self.update_active_ui()
 
+    def _push_hp_to_foundry(self, name, creature):
+        token_info = self.bridge_ids.get(name)
+        token_id = token_info.get("tokenId") if token_info else None
+        if not token_id:
+            print(f"[BridgeCmdUI] no tokenId for {name}; cannot push")
+            return
+        try:
+            hp_value = int(getattr(creature, "curr_hp"))
+        except Exception:
+            print(f"[BridgeCmdUI] invalid hp for {name}; cannot push")
+            return
+        actor_id = token_info.get("actorId") if token_info else None
+        self.bridge_client.send_set_hp(token_id, hp_value, actor_id)
+
     def show_table_context_menu(self, pos):
         index = self.table.indexAt(pos)
         if not index.isValid():
@@ -493,6 +510,7 @@ class InitiativeTracker(QMainWindow, Application):
         menu.addSeparator()
         clear_conditions_action = menu.addAction("Clear Conditions")
         set_active_action = menu.addAction("Set as Active Turn")
+        push_hp_action = menu.addAction("Push HP to Foundry")
         remove_action = menu.addAction("Remove Combatant")
 
         chosen = menu.exec_(self.table.viewport().mapToGlobal(pos))
@@ -527,6 +545,10 @@ class InitiativeTracker(QMainWindow, Application):
             creature.conditions = []
             self.table_model.refresh()
             self.update_table()
+            return
+
+        if chosen == push_hp_action:
+            self._push_hp_to_foundry(name, creature)
             return
 
         if chosen == remove_action:
@@ -711,6 +733,10 @@ class InitiativeTracker(QMainWindow, Application):
                 continue
 
             name = creature.name  # use local name from here on
+            token_id = combatant.get("tokenId")
+            actor_id = combatant.get("actorId")
+            if token_id:
+                self.bridge_ids[name] = {"tokenId": token_id, "actorId": actor_id}
 
             hp = combatant.get("hp") or {}
             if not isinstance(hp, dict):
