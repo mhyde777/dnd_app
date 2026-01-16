@@ -190,11 +190,43 @@ async function postSnapshot(reason) {
 // --------------------
 // Command polling
 // --------------------
+async function ackCommand(commandId, status) {
+    const secret = getBridgeSecret();
+    if (!secret) return;
+
+    const bridgeUrl = getBridgeUrl();
+    const endpoint = `${bridgeUrl}/commands/${commandId}/ack`;
+
+    try {
+        await fetch(endpoint, {
+            method: "POST":,
+            headers: {
+                "X-Bridge-Secret": secret,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ status }),
+            cache: "no-store",
+        )};
+    } catch (err) {
+    console.warn("[" + MODULE_ID + "] ack failed id=" + commandId, err);
+    }
+}
+
+async function applySetHpCommand(cmd) {
+    // Prefer actorId if provided; else fall back to token->actor
+    let actor = cmd.actorId ? game.actors.get(cmd.actorId) : null;
+    if (!actor && cmd.tokenId) {
+        const tok = convas.tokens?.get(cmd.tokenId);
+        actor = tok?.actor || null;
+    }
+    if (!actor) throw new Error("actor not found");
+
+    await actor.update({ "system.attributes.hp.value": Number(cmd.hp) });
+}
+
 async function pollCommandsOnce() {
   const secret = getBridgeSecret();
-  if (!secret) {
-    return;
-  }
+  if (!secret) return;
 
   const bridgeUrl = getBridgeUrl();
   const endpoint = bridgeUrl + "/commands";
@@ -206,16 +238,35 @@ async function pollCommandsOnce() {
       headers: headers,
       cache: "no-store",
     });
+
     if (!response.ok) {
       console.warn(
         "[" + MODULE_ID + "] command poll failed (" + response.status + ")"
       );
       return;
     }
+
     const payload = await response.json();
     const commands = payload && payload.commands ? payload.commands : [];
+
     if (commands.length) {
       console.log("[" + MODULE_ID + "] command poll received", commands);
+    }
+
+    for (const cmd of commands) {
+      if (!cmd || !cmd.id) continue;
+
+      try {
+        if (cmd.type === "set_hp") {
+          await applySetHpCommand(cmd);
+          await ackCommand(cmd.id, "ok");
+        } else {
+          await ackCommand(cmd.id, "error");
+        }
+      } catch (err) {
+        console.warn("[" + MODULE_ID + "] command apply failed", cmd, err);
+        await ackCommand(cmd.id, "error");
+      }
     }
   } catch (err) {
     console.error("[" + MODULE_ID + "] command poll error", err);
