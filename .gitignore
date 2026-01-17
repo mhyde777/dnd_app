@@ -169,3 +169,4 @@ last_state.json
 package/
 dist/
 build/
+package_win/
