@@ -1,0 +1,137 @@
++ set -euo pipefail
++++ dirname ./package_WIN.sh
+++ cd .
+++ pwd
++ ROOT_DIR=/e/Users/mhyde/OneDrive/Documents/d_and_d/dnd_app
++ APP_NAME=combat_tracker
++ CONFIG_DIR=/c/Users/mhyde/.dnd_tracker_config
++ CONFIG_ENV=/c/Users/mhyde/.dnd_tracker_config/.env
++ command -v pipenv
++ RUN=(pipenv run)
++ [[ -n '' ]]
++ rm -rf /e/Users/mhyde/OneDrive/Documents/d_and_d/dnd_app/build /e/Users/mhyde/OneDrive/Documents/d_and_d/dnd_app/dist /e/Users/mhyde/OneDrive/Documents/d_and_d/dnd_app/package_win
++ pipenv run python -m PyInstaller --version
++ pipenv run python -m PyInstaller --noconfirm --clean /e/Users/mhyde/OneDrive/Documents/d_and_d/dnd_app/pyinstaller.spec
+Loading .env environment variables...
+86 INFO: PyInstaller: 6.18.0, contrib hooks: 2025.11
+86 INFO: Python: 3.10.11
+91 INFO: Platform: Windows-10-10.0.26200-SP0
+91 INFO: Python environment: E:\Users\mhyde\OneDrive\Documents\d_and_d\dnd_app\.venv
+92 INFO: Removing temporary files and cleaning cache in C:\Users\mhyde\AppData\Local\pyinstaller
+319 INFO: Module search paths (PYTHONPATH):
+['E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app',
+ 'C:\\Users\\mhyde\\AppData\\Local\\Programs\\Python\\Python310\\python310.zip',
+ 'C:\\Users\\mhyde\\AppData\\Local\\Programs\\Python\\Python310\\DLLs',
+ 'C:\\Users\\mhyde\\AppData\\Local\\Programs\\Python\\Python310\\lib',
+ 'C:\\Users\\mhyde\\AppData\\Local\\Programs\\Python\\Python310',
+ 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv',
+ 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages',
+ 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app',
+ 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\lib']
+525 INFO: Appending 'datas' from .spec
+529 INFO: checking Analysis
+529 INFO: Building Analysis because Analysis-00.toc is non existent
+529 INFO: Looking for Python shared library...
+529 INFO: Using Python shared library: C:\Users\mhyde\AppData\Local\Programs\Python\Python310\python310.dll
+529 INFO: Running Analysis Analysis-00.toc
+529 INFO: Target bytecode optimization level: 0
+529 INFO: Initializing module dependency graph...
+536 INFO: Initializing module graph hook caches...
+618 INFO: Analyzing modules for base_library.zip ...
+1060 INFO: Processing standard module hook 'hook-heapq.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks'
+1136 INFO: Processing standard module hook 'hook-encodings.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks'
+1620 INFO: Processing standard module hook 'hook-pickle.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks'
+4025 INFO: Caching module dependency graph...
+4046 INFO: Analyzing E:\Users\mhyde\OneDrive\Documents\d_and_d\dnd_app\main.py
+4074 INFO: Processing standard module hook 'hook-PyQt5.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks'
+4516 INFO: Processing standard module hook 'hook-PyQt5.QtWidgets.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks'
+5705 INFO: Processing standard module hook 'hook-PyQt5.QtCore.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks'
+6951 INFO: Processing standard module hook 'hook-PyQt5.QtGui.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks'
+13030 INFO: Processing standard module hook 'hook-urllib3.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+13274 INFO: Processing pre-safe-import-module hook 'hook-backports.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+13292 INFO: SetuptoolsInfo: initializing cached setuptools info...
+17134 INFO: Setuptools: 'backports' appears to be a full setuptools-vendored copy - creating alias to 'setuptools._vendor.backports'!
+17136 INFO: Processing standard module hook 'hook-setuptools.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks'
+17177 INFO: Processing standard module hook 'hook-platform.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks'
+17184 INFO: Processing pre-safe-import-module hook 'hook-distutils.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+17204 INFO: Processing pre-find-module-path hook 'hook-distutils.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks\\pre_find_module_path'
+17525 INFO: Processing standard module hook 'hook-distutils.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks'
+17549 INFO: Processing standard module hook 'hook-distutils.util.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks'
+17633 INFO: Processing standard module hook 'hook-sysconfig.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks'
+17672 INFO: Processing standard module hook 'hook-_osx_support.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks'
+17693 INFO: Processing pre-safe-import-module hook 'hook-packaging.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+17846 INFO: Processing standard module hook 'hook-_ctypes.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks'
+17955 INFO: Processing pre-safe-import-module hook 'hook-jaraco.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+17968 INFO: Setuptools: 'jaraco' appears to be a full setuptools-vendored copy - creating alias to 'setuptools._vendor.jaraco'!
+17972 INFO: Processing standard module hook 'hook-setuptools._vendor.jaraco.text.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks'
+18006 INFO: Processing pre-safe-import-module hook 'hook-importlib_resources.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+18010 INFO: Processing pre-safe-import-module hook 'hook-more_itertools.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+18017 INFO: Setuptools: 'more_itertools' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.more_itertools'!
+18268 INFO: Processing pre-safe-import-module hook 'hook-typing_extensions.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+18279 INFO: Setuptools: 'typing_extensions' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.typing_extensions'!
+18356 INFO: Processing pre-safe-import-module hook 'hook-importlib_metadata.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+18357 INFO: Setuptools: 'importlib_metadata' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.importlib_metadata'!
+18365 INFO: Processing standard module hook 'hook-setuptools._vendor.importlib_metadata.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks'
+18367 INFO: Processing pre-safe-import-module hook 'hook-zipp.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+18379 INFO: Setuptools: 'zipp' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.zipp'!
+18607 INFO: Processing pre-safe-import-module hook 'hook-tomli.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+18617 INFO: Setuptools: 'tomli' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.tomli'!
+19375 INFO: Processing pre-safe-import-module hook 'hook-wheel.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+20537 INFO: Processing standard module hook 'hook-charset_normalizer.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+20800 INFO: Processing standard module hook 'hook-certifi.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+21406 INFO: Processing standard module hook 'hook-PyQt5.QtSvg.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks'
+21750 INFO: Analyzing hidden import 'qdarktheme.widget_gallery'
+21754 INFO: Analyzing hidden import 'qdarktheme.widget_gallery.__main__'
+21824 INFO: Processing module hooks (post-graph stage)...
+21827 WARNING: Hidden import "sip" not found!
+22064 INFO: Processing standard module hook 'hook-multiprocessing.util.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks'
+22138 INFO: Processing standard module hook 'hook-xml.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks'
+22521 INFO: Processing standard module hook 'hook-difflib.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks'
+23599 INFO: Performing binary vs. data reclassification (160 entries)
+25255 INFO: Looking for ctypes DLLs
+25259 WARNING: Ignoring AppKit.framework/AppKit imported from E:\Users\mhyde\OneDrive\Documents\d_and_d\dnd_app\.venv\lib\site-packages\darkdetect\_mac_detect.py - only basenames are supported with ctypes imports!
+25264 INFO: Analyzing run-time hooks ...
+25266 INFO: Including run-time hook 'pyi_rth_pyqt5.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+25310 INFO: Processing pre-find-module-path hook 'hook-_pyi_rth_utils.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks\\pre_find_module_path'
+25325 INFO: Processing standard module hook 'hook-_pyi_rth_utils.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks'
+25380 INFO: Including run-time hook 'pyi_rth_pkgutil.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+25398 INFO: Including run-time hook 'pyi_rth_inspect.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+25412 INFO: Including run-time hook 'pyi_rth_setuptools.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+25430 INFO: Including run-time hook 'pyi_rth_multiprocessing.py' from 'E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+25445 INFO: Creating base_library.zip...
+25481 INFO: Looking for dynamic libraries
+25948 INFO: Extra DLL search directories (AddDllDirectory): ['E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyQt5\\Qt5\\bin']
+25949 INFO: Extra DLL search directories (PATH): ['E:\\Users\\mhyde\\OneDrive\\Documents\\d_and_d\\dnd_app\\.venv\\lib\\site-packages\\PyQt5\\Qt5\\bin']
+26777 INFO: Warnings written to E:\Users\mhyde\OneDrive\Documents\d_and_d\dnd_app\build\pyinstaller\warn-pyinstaller.txt
+26819 INFO: Graph cross-reference written to E:\Users\mhyde\OneDrive\Documents\d_and_d\dnd_app\build\pyinstaller\xref-pyinstaller.html
+26928 INFO: checking PYZ
+26928 INFO: Building PYZ because PYZ-00.toc is non existent
+26928 INFO: Building PYZ (ZlibArchive) E:\Users\mhyde\OneDrive\Documents\d_and_d\dnd_app\build\pyinstaller\PYZ-00.pyz
+27213 INFO: Building PYZ (ZlibArchive) E:\Users\mhyde\OneDrive\Documents\d_and_d\dnd_app\build\pyinstaller\PYZ-00.pyz completed successfully.
+27234 INFO: checking PKG
+27234 INFO: Building PKG because PKG-00.toc is non existent
+27234 INFO: Building PKG (CArchive) combat_tracker.pkg
+35057 INFO: Building PKG (CArchive) combat_tracker.pkg completed successfully.
+35060 INFO: Bootloader E:\Users\mhyde\OneDrive\Documents\d_and_d\dnd_app\.venv\lib\site-packages\PyInstaller\bootloader\Windows-64bit-intel\runw.exe
+35060 INFO: checking EXE
+35060 INFO: Building EXE because EXE-00.toc is non existent
+35060 INFO: Building EXE from EXE-00.toc
+35060 INFO: Copying bootloader EXE to E:\Users\mhyde\OneDrive\Documents\d_and_d\dnd_app\dist\combat_tracker.exe
+35215 INFO: Copying icon to EXE
+36067 INFO: Copying 0 resources to EXE
+36067 INFO: Embedding manifest in EXE
+36106 INFO: Appending PKG archive to EXE
+36198 INFO: Fixing EXE headers
+38107 INFO: Building EXE from EXE-00.toc completed successfully.
+38110 INFO: Build complete! The results are available in: E:\Users\mhyde\OneDrive\Documents\d_and_d\dnd_app\dist
++ mkdir -p /e/Users/mhyde/OneDrive/Documents/d_and_d/dnd_app/package_win
++ [[ -d /e/Users/mhyde/OneDrive/Documents/d_and_d/dnd_app/dist/combat_tracker ]]
++ cp /e/Users/mhyde/OneDrive/Documents/d_and_d/dnd_app/dist/combat_tracker.exe /e/Users/mhyde/OneDrive/Documents/d_and_d/dnd_app/package_win/combat_tracker.exe
++ [[ -f /e/Users/mhyde/OneDrive/Documents/d_and_d/dnd_app/.env ]]
++ mkdir -p /c/Users/mhyde/.dnd_tracker_config
++ cp /e/Users/mhyde/OneDrive/Documents/d_and_d/dnd_app/.env /c/Users/mhyde/.dnd_tracker_config/.env
++ chmod 600 /c/Users/mhyde/.dnd_tracker_config/.env
++ echo 'Installed .env -> /c/Users/mhyde/.dnd_tracker_config/.env'
+Installed .env -> /c/Users/mhyde/.dnd_tracker_config/.env
++ echo 'Windows package staged at: /e/Users/mhyde/OneDrive/Documents/d_and_d/dnd_app/package_win'
+Windows package staged at: /e/Users/mhyde/OneDrive/Documents/d_and_d/dnd_app/package_win

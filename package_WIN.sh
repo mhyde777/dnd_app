@@ -7,20 +7,26 @@ CONFIG_DIR="${HOME}/.dnd_tracker_config"
 CONFIG_ENV="${CONFIG_DIR}/.env"
 
 # Ensure we run inside the pipenv environment
-if [[ -z "${PIPENV_ACTIVE:-}" ]]; then
-    exec pipenv run "$ROOT_DIR/package_WIN.sh" "$@"
+command -v pipenv >/dev/null 2>&1 || {
+    echo "pipenv not found. Install it or run from an environment with pipenv." >&2
+    exit 1
+}
+
+RUN=(pipenv run)
+if [[ -n "${PIPENV_ACTIVE:-}" ]]; then
+	RUN=()
 fi
 
 rm -rf "$ROOT_DIR/build" "$ROOT_DIR/dist" "$ROOT_DIR/package_win"
 
-if ! python -m PyInstaller --version >/dev/null 2>&1; then
+if ! "${RUN[@]}" python -m PyInstaller --version >/dev/null 2>&1; then
     echo "PyInstaller is not installed in this environment." >&2 
     echo "Install it with: pip install pyinstaller" >&2 
     echo "Or, if using pipenv: pipenv install --dev" >&2 
     exit 1
 fi
 
-python -m PyInstaller --noconfirm --clean "$ROOT_DIR/pyinstaller.spec"
+"${RUN[@]}" python -m PyInstaller --noconfirm --clean "$ROOT_DIR/pyinstaller.spec"
 
 mkdir -p "$ROOT_DIR/package_win"
 
