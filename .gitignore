@@ -169,15 +169,3 @@ last_state.json
 package/
 dist/
 build/
-
-# build artifacts
-package/
-package__LOCKED__/
-dist/
-build/
-
-# build artifacts
-package/
-package__LOCKED__/
-dist/
-build/
