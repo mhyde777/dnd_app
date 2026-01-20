@@ -53,6 +53,20 @@ def _load_env(name: str, default: Optional[str] = None) -> str:
 
 def create_app() -> Flask:
     app = Flask(__name__)
+    ALLOWED_ORIGINS = {
+        "https://foundry.masonhyde.com",
+    }
+
+    @app.after_request
+    def add_cors_headers(resp):
+        origin = request.headers.get("Origin")
+        if origin in ALLOWED_ORIGINS:
+            resp.headers["Access-Control-Allow-Origin"] = origin
+            resp.headers["Vary"] = "Origin"
+            resp.headers["Access-Control-Allow-Credentials"] = "true"
+            resp.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type X-Bridge-Secret"
+            resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        return resp
     store = SnapshotStore()
 
     def _require_bearer() -> Optional[Any]:
@@ -103,6 +117,10 @@ def create_app() -> Flask:
         if auth is not None:
             return auth
         return jsonify({"version": _load_env("BRIDGE_VERSION", "dev")})
+
+    @app.route("/foundry/snapshot", methods=["OPTIONS"])
+    def foundry_snapshot_options() -> Any:
+        return ("", 204)
 
     @app.post("/foundry/snapshot")
     def foundry_snapshot() -> Any:
