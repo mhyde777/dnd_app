@@ -206,7 +206,14 @@ function resolveStatusEffectById(effectId) {
 
 function resolveStatusEffectByLabel(label) {
   if (!label) return null;
-  return getStatusEffects().find((effect) => effect?.label === label) ?? null;
+  const normalized = String(label).trim().toLowerCase();
+  return (
+    getStatusEffects().find((effect) => {
+      const candidate = effect?.label ?? effect?.name ?? "";
+      if (!candidate) return false;
+      return String(candidate).trim().toLowerCase() === normalized;
+    }) ?? null
+  );
 }
 
 function truncateErrorMessage(message, maxLength = 160) {
@@ -214,6 +221,33 @@ function truncateErrorMessage(message, maxLength = 160) {
   const text = String(message);
   if (text.length <= maxLength) return text;
   return `${text.slice(0, maxLength - 3)}...`;
+}
+
+function normalizeCommandType(type) {
+  if (type === null || type === undefined) return "";
+  return String(type).trim().toLowerCase();
+}
+
+function normalizeCommandPayload(cmd) {
+  const payload = cmd?.payload;
+  if (payload && typeof payload === "object" && Object.keys(payload).length) {
+    return payload;
+  }
+  const reserved = new Set(["id", "type", "timestamp", "source", "payload"]);
+  const fallback = {};
+  if (cmd && typeof cmd === "object") {
+    for (const [key, value] of Object.entries(cmd)) {
+      if (!reserved.has(key)) {
+        fallback[key] = value;
+      }
+    }
+  }
+  return fallback;
+}
+
+function normalizeEffectLabel(label) {
+  if (!label) return "";
+  return String(label).trim().toLowerCase();
 }
 
 async function applySetHp(payload) {
@@ -295,18 +329,23 @@ async function applyAddCondition(payload) {
     });
     return false;
   }
-  const label = template.label ?? payload.label ?? "";
+  const label = template.label ?? template.name ?? payload.label ?? "";
   if (!label) {
     console.warn(`${LOG_PREFIX} add_condition missing label`, payload);
     return false;
   }
-  const existing = actor.effects?.find((effect) => effect.label === label);
+  const normalizedLabel = normalizeEffectLabel(label);
+  const existing = actor.effects?.find((effect) => {
+    const effectLabel = normalizeEffectLabel(effect.label ?? effect.name ?? "");
+    return effectLabel && effectLabel === normalizedLabel;
+  });
   if (existing) {
     return true;
   }
   const effectData = foundry.utils.deepClone(template);
   delete effectData.id;
   effectData.label = label;
+  effectData.name = label;
   if (effectData.icon === undefined) {
     effectData.icon = template.icon ?? null;
   }
@@ -335,8 +374,14 @@ async function applyRemoveCondition(payload) {
       console.warn(`${LOG_PREFIX} remove_condition unknown label`, payload.label);
       return false;
     }
+    const normalizedLabel = normalizeEffectLabel(payload.label);
     const matches = actor.effects
-      ? actor.effects.filter((effect) => effect.label === payload.label)
+      ? actor.effects.filter((effect) => {
+          const effectLabel = normalizeEffectLabel(
+            effect.label ?? effect.name ?? ""
+          );
+          return effectLabel && effectLabel === normalizedLabel;
+        })
       : [];
     if (matches.length) {
       await actor.deleteEmbeddedDocuments(
@@ -359,35 +404,36 @@ async function handleCommand(cmd) {
       return;
     }
 
-    const payload = cmd.payload ?? {};
+    const payload = normalizeCommandPayload(cmd);
+    const type = normalizeCommandType(cmd.type);
     let applied = false;
 
-    if (cmd.type === "noop") {
+    if (type === "noop") {
       applied = true;
-    } else if (cmd.type === "set_hp") {
+    } else if (type === "set_hp") {
       applied = await applySetHp(payload);
       if (!applied) {
         result.error = "apply_failed";
       }
-    } else if (cmd.type === "set_initiative") {
+    } else if (type === "set_initiative") {
       applied = await applySetInitiative(payload);
       if (!applied) {
         result.error = "apply_failed";
       }
-    } else if (cmd.type === "add_condition") {
+    } else if (type === "add_condition") {
       applied = await applyAddCondition(payload);
       if (!applied) {
         result.error = "apply_failed";
       }
-    } else if (cmd.type === "remove_condition") {
+    } else if (type === "remove_condition") {
       applied = await applyRemoveCondition(payload);
       if (!applied) {
         result.error = "apply_failed";
       }
     } else {
-      const type = String(cmd.type);
-      console.warn(`${LOG_PREFIX} Unknown command type ${type}`);
-      result.error = `unknown_type:${type}`;
+      const rawType = cmd?.type;
+      console.warn(`${LOG_PREFIX} Unknown command type`, rawType);
+      result.error = `unknown_type:${String(rawType)}`;
     }
 
     if (applied) {
@@ -397,13 +443,20 @@ async function handleCommand(cmd) {
     const message = truncateErrorMessage(err?.message ?? err);
     console.error(`${LOG_PREFIX} Command error`, err);
     result.error = message || "error";
-  } finally {
-    // Always ack so the queue can't clog, even for unknown types / failures.
+  }
+
+  if (result.ok) {
     if (cmd?.id) {
       await ackCommand(cmd.id, result);
     } else {
       console.warn(`${LOG_PREFIX} Command missing id`, cmd);
     }
+  } else {
+    console.warn(`${LOG_PREFIX} Command not applied; skipping ack`, {
+      id: cmd?.id ?? null,
+      type: cmd?.type ?? null,
+      error: result.error ?? null,
+    });
   }
 }
 
