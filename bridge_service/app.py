@@ -1,13 +1,15 @@
 import json
 import os
 import threading
+import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from flask import Flask, jsonify, request
 
+from bridge_service.command_queue import CommandQueue
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -18,6 +20,16 @@ def _load_env(name: str, default: Optional[str] = None) -> str:
     if value:
         return value
     return default or ""
+
+
+def _load_float_env(name: str, default: float) -> float:
+    value = _load_env(name)
+    if not value:
+        return default
+    try:
+        return float(value)
+    except ValueError:
+        return default
 
 
 @dataclass
@@ -32,30 +44,6 @@ class SnapshotStore:
     def set(self, snapshot: Dict[str, Any]) -> None:
         with self.lock:
             self.snapshot = snapshot
-
-
-@dataclass
-class CommandQueue:
-    """In-memory command queue."""
-
-    items: List[Dict[str, Any]] = field(default_factory=list)
-    lock: threading.Lock = field(default_factory=threading.Lock)
-
-    def put(self, cmd: Dict[str, Any]) -> None:
-        with self.lock:
-            self.items.append(cmd)
-
-    def get_next(self) -> Optional[Dict[str, Any]]:
-        with self.lock:
-            return self.items[0] if self.items else None
-
-    def ack(self, cmd_id: str) -> bool:
-        with self.lock:
-            for i, cmd in enumerate(self.items):
-                if cmd.get("id") == cmd_id:
-                    self.items.pop(i)
-                    return True
-            return False
 
 
 RESERVED_COMMAND_FIELDS = {"id", "type", "timestamp", "source", "payload"}
@@ -79,7 +67,28 @@ def _normalize_command(raw: Dict[str, Any]) -> Dict[str, Any]:
 def create_app() -> Flask:
     app = Flask(__name__)
     store = SnapshotStore()
-    commands = CommandQueue()
+    commands = CommandQueue(persist_path=_load_env("BRIDGE_COMMANDS_PATH") or None)
+    commands.load()
+    command_ttl_seconds = _load_float_env("COMMAND_TTL_SECONDS", 60)
+    command_sweep_interval_seconds = _load_float_env("COMMAND_SWEEP_INTERVAL_SECONDS", 5)
+
+    def sweep_commands() -> None:
+        while True:
+            time.sleep(command_sweep_interval_seconds)
+            swept = commands.sweep_head_if_expired(command_ttl_seconds)
+            if swept:
+                cmd, age_seconds = swept
+                cmd_id = cmd.get("id")
+                cmd_type = cmd.get("type")
+                print(
+                    "[Bridge] Command swept id={!r} type={!r} age_seconds={:.2f}".format(
+                        cmd_id,
+                        cmd_type,
+                        age_seconds,
+                    )
+                )
+
+    threading.Thread(target=sweep_commands, daemon=True).start()
 
     allowed_origins = {
         "https://foundry.masonhyde.com",
