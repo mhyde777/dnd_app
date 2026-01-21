@@ -446,9 +446,15 @@ class InitiativeTracker(QMainWindow, Application):
             return
 
         if chosen == clear_conditions_action:
+            removed = list(getattr(creature, "conditions", []) or [])
             creature.conditions = []
             self.table_model.refresh()
             self.update_table()
+            if hasattr(self, "_enqueue_bridge_condition_delta"):
+                try:
+                    self._enqueue_bridge_condition_delta(creature, [], removed)
+                except Exception:
+                    pass
             return
 
         if chosen == remove_action:

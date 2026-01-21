@@ -107,9 +107,9 @@ When the app starts, it also launches a lightweight Player View web page that ca
 * By default, downed combatants (current HP of 0) stay visible and recieve a red highlight.
 * To hide down monsters instead, set `PLAYER_VIEW_HIDE_DOWNED=1` (players remain visible even when downed).
 
-## Foundry → Bridge → App (Phase 1: read-only sync)
+## Foundry → Bridge → App (Phase 1: snapshot sync)
 
-This repo includes a minimal bridge service and a Foundry module for sending combat snapshots to the bridge. The app can then fetch the latest snapshot from the bridge. This phase is **read-only** (no writes back to Foundry).
+This repo includes a minimal bridge service and a Foundry module for sending combat snapshots to the bridge. The app fetches the latest snapshot from the bridge and mirrors Foundry initiative, turn state, and conditions. Foundry conditions are the source of truth: the app derives conditions only from the snapshot effects list and does not normalize or rename them.
 
 ### Bridge service
 
@@ -180,6 +180,7 @@ On startup the app logs bridge sync status and prints the snapshot count when it
     "round": 1,
     "turn": 0,
     "activeCombatant": {
+      "combatantId": "<combatantId or null>",
       "tokenId": "<id>",
       "actorId": "<id>",
       "name": "<string>",
@@ -188,12 +189,21 @@ On startup the app logs bridge sync status and prints the snapshot count when it
   },
   "combatants": [
     {
+      "combatantId": "<combatantId or null>",
       "tokenId": "<id>",
       "actorId": "<id>",
       "name": "<string>",
       "initiative": 12,
       "hp": { "value": 10, "max": 15 },
-      "effects": [{ "id": "<id>", "label": "<name>" }]
+      "effects": [
+        {
+          "id": "<activeEffectId>",
+          "label": "<foundry label>",
+          "icon": "<icon url or null>",
+          "disabled": false,
+          "origin": "<origin or null>"
+        }
+      ]
     }
   ]
 }
@@ -201,7 +211,7 @@ On startup the app logs bridge sync status and prints the snapshot count when it
 
 ## App → Foundry (Phase 2: command queue)
 
-The bridge supports an app-to-Foundry command queue via `POST /commands`. When the app edits current HP for a combatant that matches a Foundry combatant, it posts a `set_hp` command to the bridge and Foundry polls the queue.
+The bridge supports an app-to-Foundry command queue via `POST /commands`. When the app edits current HP or conditions for a combatant that matches a Foundry combatant, it posts commands to the bridge and Foundry polls the queue. Additional commands include `set_initiative`, `add_condition`, and `remove_condition`.
 
 **App environment variables:**
 * `BRIDGE_URL` (default `http://127.0.0.1:8787`)
@@ -220,4 +230,12 @@ The bridge supports an app-to-Foundry command queue via `POST /commands`. When t
 1. Start the bridge service locally with `BRIDGE_TOKEN` set.
 2. Use the curl test above to confirm `/health` and `/state` respond.
 3. Install/enable the Foundry module and start combat; verify bridge logs show snapshot receipt.
-4. Start the Python app with `BRIDGE_URL` and `BRIDGE_TOKEN` set; confirm it logs the snapshot.
+4. Verify snapshots include `combatantId` and the full `effects[]` list for combatants.
+5. Add/remove a condition in Foundry and confirm the app mirrors the snapshot effects list.
+6. In the app, toggle a condition from the conditions dropdown and verify it appears in Foundry.
+7. Run the dev helper to exercise `add_condition`, `remove_condition`, and `set_initiative`:
+   ```bash
+   PYTHONPATH=lib BRIDGE_URL=http://127.0.0.1:8787 BRIDGE_TOKEN=changeme \
+     BRIDGE_TEST_CONDITION_LABEL="Prone" python -m app.bridge_dev
+   ```
+8. Verify the condition add/remove and initiative changes in Foundry, and confirm the command queue drains/acks.

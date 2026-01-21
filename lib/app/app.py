@@ -109,10 +109,68 @@ class Application:
         self.bridge_snapshot = snapshot
         combatants = snapshot.get("combatants", []) if isinstance(snapshot, dict) else []
         self.bridge_combatants_by_name = self._index_bridge_combatants(combatants)
+        self._apply_bridge_snapshot(snapshot)
         world = snapshot.get("world") if isinstance(snapshot, dict) else None
         print(
             f"[Bridge] Snapshot loaded world={world!r} combatants={len(combatants)}"
         )
+
+    def _apply_bridge_snapshot(self, snapshot: Dict[str, Any]) -> None:
+        if not getattr(self, "manager", None) or not getattr(self.manager, "creatures", None):
+            return
+        if not isinstance(snapshot, dict):
+            return
+        combatants = snapshot.get("combatants", [])
+        if not isinstance(combatants, list):
+            return
+
+        updated_initiative = False
+        updated_active = False
+        for creature_name, creature in self.manager.creatures.items():
+            combatant = self._resolve_bridge_combatant(creature_name)
+            if not combatant:
+                continue
+            initiative = combatant.get("initiative")
+            if initiative is not None and initiative != getattr(creature, "initiative", None):
+                creature.initiative = initiative
+                updated_initiative = True
+
+            setattr(creature, "foundry_combatant_id", combatant.get("combatantId"))
+            setattr(creature, "foundry_token_id", combatant.get("tokenId"))
+            setattr(creature, "foundry_actor_id", combatant.get("actorId"))
+
+            effects = combatant.get("effects", [])
+            if isinstance(effects, list):
+                setattr(creature, "foundry_effects", effects)
+                labels = [effect.get("label") for effect in effects if effect.get("label")]
+                creature.conditions = labels
+
+        combat = snapshot.get("combat", {}) if isinstance(snapshot, dict) else {}
+        if isinstance(combat, dict):
+            round_value = combat.get("round")
+            if isinstance(round_value, int):
+                self.round_counter = round_value
+            active = combat.get("activeCombatant")
+            active_name = None
+            if isinstance(active, dict):
+                active_id = active.get("combatantId")
+                if active_id:
+                    for creature in self.manager.creatures.values():
+                        if getattr(creature, "foundry_combatant_id", None) == active_id:
+                            active_name = creature.name
+                            break
+                if not active_name:
+                    active_label = active.get("name")
+                    if active_label:
+                        active_name = active_label
+            if active_name and active_name != getattr(self, "current_creature_name", None):
+                self.current_creature_name = active_name
+                updated_active = True
+
+        if updated_initiative or updated_active:
+            self.build_turn_order()
+        else:
+            self.update_active_ui()
 
     # -----------------------
     # Core ordering utilities
@@ -214,6 +272,55 @@ class Application:
         self.bridge_client.enqueue_set_hp(
             token_id=str(token_id), hp=int(hp), actor_id=str(actor_id) if actor_id else None
         )
+
+    def _enqueue_bridge_condition_delta(
+        self,
+        creature: I_Creature,
+        added: List[str],
+        removed: List[str],
+    ) -> None:
+        if not self.bridge_client.enabled:
+            return
+        if not added and not removed:
+            return
+        token_id = (
+            getattr(creature, "foundry_token_id", None)
+            or getattr(creature, "token_id", None)
+        )
+        actor_id = (
+            getattr(creature, "foundry_actor_id", None)
+            or getattr(creature, "actor_id", None)
+        )
+        if not token_id and not actor_id:
+            combatant = self._resolve_bridge_combatant(getattr(creature, "name", ""))
+            if combatant:
+                token_id = combatant.get("tokenId")
+                actor_id = combatant.get("actorId")
+        if not token_id and not actor_id:
+            print(
+                f"[Bridge] Missing tokenId/actorId for condition sync '{getattr(creature, 'name', '')}'"
+            )
+            return
+        effects = getattr(creature, "foundry_effects", []) or []
+        effect_ids_by_label = {
+            effect.get("label"): effect.get("id")
+            for effect in effects
+            if isinstance(effect, dict) and effect.get("label") and effect.get("id")
+        }
+        for label in added:
+            self.bridge_client.send_add_condition(
+                label=label,
+                token_id=str(token_id) if token_id else None,
+                actor_id=str(actor_id) if actor_id else None,
+            )
+        for label in removed:
+            effect_id = effect_ids_by_label.get(label)
+            self.bridge_client.send_remove_condition(
+                effect_id=str(effect_id) if effect_id else None,
+                label=label if not effect_id else None,
+                token_id=str(token_id) if token_id else None,
+                actor_id=str(actor_id) if actor_id else None,
+            )
 
 
     def build_turn_order(self) -> None:
