@@ -120,11 +120,21 @@ async function postSnapshot(reason) {
   }
 }
 
-async function ackCommand(commandId) {
+async function ackCommand(commandId, result) {
   const bridgeUrl = getBridgeUrl();
   const endpoint = `${bridgeUrl}/commands/${commandId}/ack`;
+  const headers = {};
+  let body;
+  if (result) {
+    headers["Content-Type"] = "application/json";
+    body = JSON.stringify(result);
+  }
   try {
-    const response = await fetch(endpoint, { method: "POST" });
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers,
+      body,
+    });
     if (!response.ok) {
       console.warn(`${LOG_PREFIX} Ack failed (${response.status})`, await response.text());
       return false;
@@ -148,6 +158,13 @@ function resolveActor(payload) {
     return game.actors?.get(payload.actorId) ?? null;
   }
   return null;
+}
+
+function truncateErrorMessage(message, maxLength = 160) {
+  if (!message) return "";
+  const text = String(message);
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength - 3)}...`;
 }
 
 async function applySetHp(payload) {
@@ -174,21 +191,38 @@ async function applySetHp(payload) {
 }
 
 async function handleCommand(cmd) {
-  if (!cmd || !cmd.type) {
-    console.warn(`${LOG_PREFIX} Invalid command payload`, cmd);
-    return;
-  }
-  const payload = cmd.payload ?? {};
-  let applied = false;
-  if (cmd.type === "set_hp") {
-    applied = await applySetHp(payload);
-  } else {
-    console.warn(`${LOG_PREFIX} Unknown command type ${cmd.type}`);
-  }
-  if (applied && cmd.id) {
-    await ackCommand(cmd.id);
-  } else if (!cmd.id) {
-    console.warn(`${LOG_PREFIX} Command missing id`, cmd);
+  let result = { ok: false };
+  try {
+    if (!cmd || !cmd.type) {
+      console.warn(`${LOG_PREFIX} Invalid command payload`, cmd);
+      result.error = "invalid_command";
+      return;
+    }
+    const payload = cmd.payload ?? {};
+    let applied = false;
+    if (cmd.type === "set_hp") {
+      applied = await applySetHp(payload);
+      if (!applied) {
+        result.error = "apply_failed";
+      }
+    } else {
+      const type = String(cmd.type);
+      console.warn(`${LOG_PREFIX} Unknown command type ${type}`);
+      result.error = `unknown_type:${type}`;
+    }
+    if (applied) {
+      result.ok = true;
+    }
+  } catch (err) {
+    const message = truncateErrorMessage(err?.message ?? err);
+    console.error(`${LOG_PREFIX} Command error`, err);
+    result.error = message || "error";
+  } finally {
+    if (cmd?.id) {
+      await ackCommand(cmd.id, result);
+    } else {
+      console.warn(`${LOG_PREFIX} Command missing id`, cmd);
+    }
   }
 }
 
