@@ -1,5 +1,7 @@
 const MODULE_ID = "foundryvtt-bridge";
 const DEFAULT_BRIDGE_URL = "http://127.0.0.1:8787";
+const LOG_PREFIX = "[bridge]";
+const COMMAND_POLL_INTERVAL_MS = 1500;
 
 function getBridgeUrl() {
   const raw = game.settings.get(MODULE_ID, "bridgeUrl") || DEFAULT_BRIDGE_URL;
@@ -74,6 +76,8 @@ function buildCombatSnapshot() {
 }
 
 let snapshotTimer = null;
+let commandPollTimer = null;
+let commandPollInFlight = false;
 
 function scheduleSnapshot(reason) {
   if (snapshotTimer) {
@@ -116,6 +120,115 @@ async function postSnapshot(reason) {
   }
 }
 
+async function ackCommand(commandId) {
+  const bridgeUrl = getBridgeUrl();
+  const endpoint = `${bridgeUrl}/commands/${commandId}/ack`;
+  try {
+    const response = await fetch(endpoint, { method: "POST" });
+    if (!response.ok) {
+      console.warn(`${LOG_PREFIX} Ack failed (${response.status})`, await response.text());
+      return false;
+    }
+    console.log(`${LOG_PREFIX} Acked command ${commandId}`);
+    return true;
+  } catch (err) {
+    console.error(`${LOG_PREFIX} Ack error`, err);
+    return false;
+  }
+}
+
+function resolveActor(payload) {
+  if (payload?.tokenId) {
+    const token = canvas?.tokens?.get(payload.tokenId);
+    if (token?.actor) {
+      return token.actor;
+    }
+  }
+  if (payload?.actorId) {
+    return game.actors?.get(payload.actorId) ?? null;
+  }
+  return null;
+}
+
+async function applySetHp(payload) {
+  const keys = payload ? Object.keys(payload) : [];
+  console.log(`${LOG_PREFIX} set_hp payload keys ${JSON.stringify(keys)}`);
+  if (!payload) {
+    return false;
+  }
+  const hpValue = Number(payload.hp);
+  if (!Number.isFinite(hpValue)) {
+    console.warn(`${LOG_PREFIX} set_hp missing hp`);
+    return false;
+  }
+  const actor = resolveActor(payload);
+  if (!actor) {
+    console.warn(`${LOG_PREFIX} set_hp actor not found`, {
+      tokenId: payload.tokenId ?? null,
+      actorId: payload.actorId ?? null,
+    });
+    return false;
+  }
+  await actor.update({ "system.attributes.hp.value": hpValue });
+  return true;
+}
+
+async function handleCommand(cmd) {
+  if (!cmd || !cmd.type) {
+    console.warn(`${LOG_PREFIX} Invalid command payload`, cmd);
+    return;
+  }
+  const payload = cmd.payload ?? {};
+  let applied = false;
+  if (cmd.type === "set_hp") {
+    applied = await applySetHp(payload);
+  } else {
+    console.warn(`${LOG_PREFIX} Unknown command type ${cmd.type}`);
+  }
+  if (applied && cmd.id) {
+    await ackCommand(cmd.id);
+  } else if (!cmd.id) {
+    console.warn(`${LOG_PREFIX} Command missing id`, cmd);
+  }
+}
+
+async function pollCommands() {
+  if (commandPollInFlight) {
+    return;
+  }
+  commandPollInFlight = true;
+  try {
+    const bridgeUrl = getBridgeUrl();
+    const endpoint = `${bridgeUrl}/commands`;
+    const response = await fetch(endpoint, { method: "GET" });
+    if (!response.ok) {
+      console.warn(
+        `${LOG_PREFIX} Commands poll failed (${response.status})`,
+        await response.text()
+      );
+      return;
+    }
+    const data = await response.json();
+    const commands = Array.isArray(data?.commands) ? data.commands : [];
+    console.log(`${LOG_PREFIX} Commands polled count=${commands.length}`);
+    for (const cmd of commands) {
+      await handleCommand(cmd);
+    }
+  } catch (err) {
+    console.error(`${LOG_PREFIX} Commands poll error`, err);
+  } finally {
+    commandPollInFlight = false;
+  }
+}
+
+function startCommandPolling() {
+  if (commandPollTimer) {
+    return;
+  }
+  commandPollTimer = setInterval(pollCommands, COMMAND_POLL_INTERVAL_MS);
+  pollCommands();
+}
+
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "bridgeUrl", {
     name: "Bridge URL",
@@ -138,6 +251,7 @@ Hooks.once("init", () => {
 
 Hooks.once("ready", () => {
   scheduleSnapshot("ready");
+  startCommandPolling();
 });
 
 Hooks.on("createCombat", () => scheduleSnapshot("createCombat"));
