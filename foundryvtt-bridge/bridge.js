@@ -32,6 +32,7 @@ function buildCombatSnapshot() {
 
   const activeCombatant = combat?.combatant
     ? {
+        combatantId: combat.combatant.id ?? null,
         tokenId: combat.combatant.token?.id ?? combat.combatant.tokenId ?? null,
         actorId: combat.combatant.actor?.id ?? null,
         name: combat.combatant.name ?? combat.combatant.actor?.name ?? "",
@@ -45,9 +46,13 @@ function buildCombatSnapshot() {
     const effects = (actor?.effects ?? []).map((effect) => ({
       id: effect.id,
       label: effect.label ?? effect.name ?? "",
+      icon: effect.icon ?? null,
+      disabled: Boolean(effect.disabled),
+      origin: effect.origin ?? null,
     }));
 
     return {
+      combatantId: c.id ?? null,
       tokenId: c.token?.id ?? c.tokenId ?? null,
       actorId: actor?.id ?? null,
       name: c.name ?? actor?.name ?? "",
@@ -166,6 +171,44 @@ function resolveActor(payload) {
   return null;
 }
 
+function resolveCombatant(payload) {
+  const combat = game.combat ?? null;
+  if (!combat) return null;
+  if (payload?.combatantId) {
+    return combat.combatants?.get(payload.combatantId) ?? null;
+  }
+  if (payload?.tokenId) {
+    const tokenId = payload.tokenId;
+    return (
+      combat.combatants?.find(
+        (c) => c.token?.id === tokenId || c.tokenId === tokenId
+      ) ?? null
+    );
+  }
+  if (payload?.actorId) {
+    const actorId = payload.actorId;
+    return combat.combatants?.find((c) => c.actor?.id === actorId) ?? null;
+  }
+  return null;
+}
+
+function getStatusEffects() {
+  if (Array.isArray(CONFIG?.statusEffects)) {
+    return CONFIG.statusEffects;
+  }
+  return [];
+}
+
+function resolveStatusEffectById(effectId) {
+  if (!effectId) return null;
+  return getStatusEffects().find((effect) => effect?.id === effectId) ?? null;
+}
+
+function resolveStatusEffectByLabel(label) {
+  if (!label) return null;
+  return getStatusEffects().find((effect) => effect?.label === label) ?? null;
+}
+
 function truncateErrorMessage(message, maxLength = 160) {
   if (!message) return "";
   const text = String(message);
@@ -196,6 +239,117 @@ async function applySetHp(payload) {
   return true;
 }
 
+async function applySetInitiative(payload) {
+  const initiativeValue = Number(payload.initiative);
+  if (!Number.isFinite(initiativeValue)) {
+    console.warn(`${LOG_PREFIX} set_initiative missing initiative`);
+    return false;
+  }
+  const combatant = resolveCombatant(payload);
+  if (!combatant) {
+    console.warn(`${LOG_PREFIX} set_initiative combatant not found`, {
+      combatantId: payload.combatantId ?? null,
+      tokenId: payload.tokenId ?? null,
+      actorId: payload.actorId ?? null,
+    });
+    return false;
+  }
+  if (typeof combatant.combat?.setInitiative === "function") {
+    await combatant.combat.setInitiative(combatant.id, initiativeValue);
+    return true;
+  }
+  await combatant.update({ initiative: initiativeValue });
+  return true;
+}
+
+function resolveConditionTemplate(payload) {
+  if (payload?.effectId) {
+    const byId = resolveStatusEffectById(payload.effectId);
+    if (byId) {
+      return byId;
+    }
+  }
+  if (payload?.label) {
+    const byLabel = resolveStatusEffectByLabel(payload.label);
+    if (byLabel) {
+      return byLabel;
+    }
+  }
+  return null;
+}
+
+async function applyAddCondition(payload) {
+  const actor = resolveActor(payload);
+  if (!actor) {
+    console.warn(`${LOG_PREFIX} add_condition actor not found`, {
+      tokenId: payload.tokenId ?? null,
+      actorId: payload.actorId ?? null,
+    });
+    return false;
+  }
+  const template = resolveConditionTemplate(payload);
+  if (!template) {
+    console.warn(`${LOG_PREFIX} add_condition unknown condition`, {
+      effectId: payload.effectId ?? null,
+      label: payload.label ?? null,
+    });
+    return false;
+  }
+  const label = template.label ?? payload.label ?? "";
+  if (!label) {
+    console.warn(`${LOG_PREFIX} add_condition missing label`, payload);
+    return false;
+  }
+  const existing = actor.effects?.find((effect) => effect.label === label);
+  if (existing) {
+    return true;
+  }
+  const effectData = foundry.utils.deepClone(template);
+  delete effectData.id;
+  effectData.label = label;
+  if (effectData.icon === undefined) {
+    effectData.icon = template.icon ?? null;
+  }
+  await actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
+  return true;
+}
+
+async function applyRemoveCondition(payload) {
+  const actor = resolveActor(payload);
+  if (!actor) {
+    console.warn(`${LOG_PREFIX} remove_condition actor not found`, {
+      tokenId: payload.tokenId ?? null,
+      actorId: payload.actorId ?? null,
+    });
+    return false;
+  }
+  if (payload?.effectId) {
+    if (actor.effects?.get(payload.effectId)) {
+      await actor.deleteEmbeddedDocuments("ActiveEffect", [payload.effectId]);
+    }
+    return true;
+  }
+  if (payload?.label) {
+    const template = resolveStatusEffectByLabel(payload.label);
+    if (!template) {
+      console.warn(`${LOG_PREFIX} remove_condition unknown label`, payload.label);
+      return false;
+    }
+    const matches = actor.effects
+      ? actor.effects.filter((effect) => effect.label === payload.label)
+      : [];
+    if (matches.length) {
+      await actor.deleteEmbeddedDocuments(
+        "ActiveEffect",
+        matches.map((effect) => effect.id)
+      );
+    }
+    return true;
+  }
+  console.warn(`${LOG_PREFIX} remove_condition missing effectId/label`);
+  return false;
+}
+
 async function handleCommand(cmd) {
   let result = { ok: false };
   try {
@@ -212,6 +366,21 @@ async function handleCommand(cmd) {
       applied = true;
     } else if (cmd.type === "set_hp") {
       applied = await applySetHp(payload);
+      if (!applied) {
+        result.error = "apply_failed";
+      }
+    } else if (cmd.type === "set_initiative") {
+      applied = await applySetInitiative(payload);
+      if (!applied) {
+        result.error = "apply_failed";
+      }
+    } else if (cmd.type === "add_condition") {
+      applied = await applyAddCondition(payload);
+      if (!applied) {
+        result.error = "apply_failed";
+      }
+    } else if (cmd.type === "remove_condition") {
+      applied = await applyRemoveCondition(payload);
       if (!applied) {
         result.error = "apply_failed";
       }
@@ -342,4 +511,3 @@ Hooks.on("deleteActiveEffect", () => scheduleSnapshot("deleteActiveEffect"));
 Hooks.on("updateActiveEffect", () => scheduleSnapshot("updateActiveEffect"));
 
 Hooks.on("controlToken", () => scheduleSnapshot("controlToken"));
-
