@@ -119,6 +119,7 @@ This repo includes a minimal bridge service and a Foundry module for sending com
 * `BRIDGE_TOKEN` (**required** for external access to `/state`, `/health`, `/version`)
 * `BRIDGE_INGEST_SECRET` (optional shared secret for Foundry → bridge POSTs)
 * `BRIDGE_SNAPSHOT_PATH` (optional file path to persist the latest snapshot)
+* `BRIDGE_COMMANDS_PATH` (optional file path to persist queued commands)
 * `BRIDGE_VERSION` (optional version string for `/version`)
 
 **Run locally (pipenv):**
@@ -160,7 +161,7 @@ The module posts a full combat snapshot to `http://127.0.0.1:8787/foundry/snapsh
 
 Set these environment variables (for the app process):
 * `BRIDGE_URL` (default `http://127.0.0.1:8787`)
-* `BRIDGE_TOKEN` (required to fetch `/state`)
+* `BRIDGE_TOKEN` (required to fetch `/state` and enqueue `/commands`)
 
 On startup the app logs bridge sync status and prints the snapshot count when it loads.
 
@@ -195,6 +196,20 @@ On startup the app logs bridge sync status and prints the snapshot count when it
   ]
 }
 ```
+
+## App → Foundry (Phase 2: command queue)
+
+The bridge supports an app-to-Foundry command queue via `POST /commands`. When the app edits current HP for a combatant that matches a Foundry combatant, it posts a `set_hp` command to the bridge and Foundry polls the queue.
+
+**App environment variables:**
+* `BRIDGE_URL` (default `http://127.0.0.1:8787`)
+* `BRIDGE_TOKEN` (required to enqueue `/commands`)
+
+**Bridge environment variables:**
+* `BRIDGE_TOKEN` (required to authorize `/commands`)
+* `BRIDGE_COMMANDS_PATH` (optional; defaults to `/var/lib/dnd-bridge/commands.json`)
+* `BRIDGE_INGEST_SECRET` (required for Foundry polling `/commands` and `/commands/<id>/ack`)
+
 
 ### Manual test checklist
 
