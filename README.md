@@ -121,6 +121,8 @@ This repo includes a minimal bridge service and a Foundry module for sending com
 * `BRIDGE_SNAPSHOT_PATH` (optional file path to persist the latest snapshot)
 * `BRIDGE_COMMANDS_PATH` (optional file path to persist queued commands)
 * `BRIDGE_VERSION` (optional version string for `/version`)
+* `COMMAND_TTL_SECONDS` (optional; default `60`)
+* `COMMAND_SWEEP_INTERVAL_SECONDS` (optional; default `5`)
 
 **Run locally (pipenv):**
 ```bash
@@ -209,6 +211,8 @@ The bridge supports an app-to-Foundry command queue via `POST /commands`. When t
 * `BRIDGE_TOKEN` (required to authorize `/commands`)
 * `BRIDGE_COMMANDS_PATH` (optional; defaults to `/var/lib/dnd-bridge/commands.json`)
 * `BRIDGE_INGEST_SECRET` (required for Foundry polling `/commands` and `/commands/<id>/ack`)
+* `COMMAND_TTL_SECONDS` (optional; default `60`)
+* `COMMAND_SWEEP_INTERVAL_SECONDS` (optional; default `5`)
 
 
 ### Manual test checklist
