@@ -17,25 +17,17 @@ def _get_env(name: str, default: str = "") -> str:
 def _build_headers(token: str) -> Dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
-def _build_set_hp_payload(
-    token_id: str,
-    hp: int,
-    actor_id: Optional[str] = None,
+
+def _build_command_payload(
+    command_type: str,
+    payload: Dict[str, Any],
     command_id: Optional[str] = None,
 ) -> Dict[str, Any]:
-    cmd: Dict[str, Any] = {
-        "source": "app",
-        "type": "set_hp",
-        "payload": {
-            "tokenId": token_id,
-            "hp": int(hp),
-        },
-    }
-    if actor_id:
-        cmd["payload"]["actorId"] = actor_id
+    cmd: Dict[str, Any] = {"source": "app", "type": command_type, "payload": payload}
     if command_id:
         cmd["id"] = command_id
     return cmd
+
 
 @dataclass
 class BridgeClient:
@@ -72,30 +64,116 @@ class BridgeClient:
         actor_id: Optional[str] = None,
         command_id: Optional[str] = None,
     ) -> bool:
+        payload = {"tokenId": token_id, "hp": int(hp)}
+        if actor_id:
+            payload["actorId"] = actor_id
+        return self._post_command(
+            command_type="set_hp",
+            payload=payload,
+            command_id=command_id,
+            log_label="set_hp",
+            redact_fields=("tokenId", "actorId"),
+        )
+
+    def send_set_initiative(
+        self,
+        initiative: int,
+        combatant_id: Optional[str] = None,
+        token_id: Optional[str] = None,
+        actor_id: Optional[str] = None,
+        command_id: Optional[str] = None,
+    ) -> bool:
+        payload: Dict[str, Any] = {"initiative": initiative}
+        if combatant_id:
+            payload["combatantId"] = combatant_id
+        if token_id:
+            payload["tokenId"] = token_id
+        if actor_id:
+            payload["actorId"] = actor_id
+        return self._post_command(
+            command_type="set_initiative",
+            payload=payload,
+            command_id=command_id,
+            log_label="set_initiative",
+            redact_fields=("combatantId", "tokenId", "actorId"),
+        )
+
+    def send_add_condition(
+        self,
+        effect_id: Optional[str] = None,
+        label: Optional[str] = None,
+        token_id: Optional[str] = None,
+        actor_id: Optional[str] = None,
+        command_id: Optional[str] = None,
+    ) -> bool:
+        payload: Dict[str, Any] = {}
+        if effect_id:
+            payload["effectId"] = effect_id
+        if label:
+            payload["label"] = label
+        if token_id:
+            payload["tokenId"] = token_id
+        if actor_id:
+            payload["actorId"] = actor_id
+        return self._post_command(
+            command_type="add_condition",
+            payload=payload,
+            command_id=command_id,
+            log_label="add_condition",
+            redact_fields=("tokenId", "actorId", "effectId"),
+        )
+
+    def send_remove_condition(
+        self,
+        effect_id: Optional[str] = None,
+        label: Optional[str] = None,
+        token_id: Optional[str] = None,
+        actor_id: Optional[str] = None,
+        command_id: Optional[str] = None,
+    ) -> bool:
+        payload: Dict[str, Any] = {}
+        if effect_id:
+            payload["effectId"] = effect_id
+        if label:
+            payload["label"] = label
+        if token_id:
+            payload["tokenId"] = token_id
+        if actor_id:
+            payload["actorId"] = actor_id
+        return self._post_command(
+            command_type="remove_condition",
+            payload=payload,
+            command_id=command_id,
+            log_label="remove_condition",
+            redact_fields=("tokenId", "actorId", "effectId"),
+        )
+
+    def _post_command(
+        self,
+        command_type: str,
+        payload: Dict[str, Any],
+        command_id: Optional[str],
+        log_label: str,
+        redact_fields: tuple[str, ...] = (),
+    ) -> bool:
         if not self.enabled:
             print("[Bridge] BRIDGE_TOKEN is not set; skipping command enqueue.")
             return False
         url = f"{self.base_url}/commands"
-        payload = _build_set_hp_payload(
-            token_id=token_id,
-            hp=hp,
-            actor_id=actor_id,
-            command_id=command_id,
-        )
+        cmd = _build_command_payload(command_type, payload, command_id=command_id)
         headers = _build_headers(self.token)
         headers["Content-Type"] = "application/json"
         try:
             response = requests.post(
-                url, json=payload, headers=headers, timeout=self.timeout_s
+                url, json=cmd, headers=headers, timeout=self.timeout_s
             )
         except requests.RequestException as exc:
             print(f"[Bridge] POST /commands failed: {exc}")
             return False
         if 200 <= response.status_code < 300:
+            redacted = " ".join(f"{field}=<redacted>" for field in redact_fields)
             print(
-                "[Bridge] Enqueued set_hp command"
-                f" tokenId=<redacted> actorId={'<redacted>' if actor_id else 'none'}"
-                f" status={response.status_code}"
+                f"[Bridge] Enqueued {log_label} command {redacted} status={response.status_code}"
             )
             return True
         print(

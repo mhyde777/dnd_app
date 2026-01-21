@@ -99,17 +99,26 @@ class ConditionsDropdown(QFrame):
             self.creature.conditions = active
         else:
             setattr(self.creature, "_conditions", active)
+        return active
 
     def _on_change(self, _state):
         if self._syncing:
             return
-        self._write_to_creature()
+        previous = set(getattr(self.creature, "conditions", []) or [])
+        active = set(self._write_to_creature())
+        added = sorted(active - previous)
+        removed = sorted(previous - active)
 
         # Refresh table if parent has one
         parent = self.parent()
         if parent and hasattr(parent, "table_model"):
             try:
                 parent.table_model.refresh()
+            except Exception:
+                pass
+        if parent and hasattr(parent, "_enqueue_bridge_condition_delta"):
+            try:
+                parent._enqueue_bridge_condition_delta(self.creature, added, removed)
             except Exception:
                 pass
 
@@ -121,7 +130,9 @@ class ConditionsDropdown(QFrame):
         finally:
             self._syncing = False
 
+        previous = set(getattr(self.creature, "conditions", []) or [])
         self._write_to_creature()
+        removed = sorted(previous)
 
         parent = self.parent()
         if parent and hasattr(parent, "table_model"):
@@ -129,4 +140,8 @@ class ConditionsDropdown(QFrame):
                 parent.table_model.refresh()
             except Exception:
                 pass
-
+        if parent and hasattr(parent, "_enqueue_bridge_condition_delta"):
+            try:
+                parent._enqueue_bridge_condition_delta(self.creature, [], removed)
+            except Exception:
+                pass
