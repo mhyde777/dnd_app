@@ -1,9 +1,10 @@
 import json
 import os
 import threading
+import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from flask import Flask, jsonify, request
 
@@ -12,20 +13,9 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _default_snapshot() -> Dict[str, Any]:
-    return {
-        "source": "foundry",
-        "world": "",
-        "timestamp": _utc_now(),
-        "combat": {
-            "active": False,
-            "id": None,
-            "round": 0,
-            "turn": 0,
-            "activeCombatant": None,
-        },
-        "combatants": [],
-    }
+def _load_env(name: str, default: Optional[str] = None) -> str:
+    value = os.getenv(name, "").strip()
+    return value if value else (default or "")
 
 
 @dataclass
@@ -35,115 +25,152 @@ class SnapshotStore:
 
     def get(self) -> Dict[str, Any]:
         with self.lock:
-            if self.snapshot is None:
-                return _default_snapshot()
-            return self.snapshot
+            return self.snapshot or {}
 
     def set(self, snapshot: Dict[str, Any]) -> None:
         with self.lock:
             self.snapshot = snapshot
 
 
-def _load_env(name: str, default: Optional[str] = None) -> str:
-    value = os.getenv(name, "").strip()
-    if value:
-        return value
-    return default or ""
+@dataclass
+class CommandQueue:
+    queue: List[Dict[str, Any]] = None
+    lock: threading.Lock = threading.Lock()
+
+    def __post_init__(self) -> None:
+        if self.queue is None:
+            self.queue = []
+
+    def put(self, cmd: Dict[str, Any]) -> None:
+        with self.lock:
+            self.queue.append(cmd)
+
+    def get_next(self) -> Optional[Dict[str, Any]]:
+        with self.lock:
+            return self.queue[0] if self.queue else None
+
+    def ack(self, cmd_id: str) -> bool:
+        with self.lock:
+            for i, c in enumerate(self.queue):
+                if c["id"] == cmd_id:
+                    self.queue.pop(i)
+                    return True
+            return False
 
 
 def create_app() -> Flask:
     app = Flask(__name__)
+
     ALLOWED_ORIGINS = {
         "https://foundry.masonhyde.com",
+        "http://localhost:30000",
     }
 
+    store = SnapshotStore()
+    commands = CommandQueue()
+
     @app.after_request
-    def add_cors_headers(resp):
+    def cors(resp):
         origin = request.headers.get("Origin")
         if origin in ALLOWED_ORIGINS:
             resp.headers["Access-Control-Allow-Origin"] = origin
             resp.headers["Vary"] = "Origin"
             resp.headers["Access-Control-Allow-Credentials"] = "true"
-            resp.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type X-Bridge-Secret"
+            resp.headers["Access-Control-Allow-Headers"] = (
+                "Authorization, Content-Type, X-Bridge-Secret"
+            )
             resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
         return resp
-    store = SnapshotStore()
 
-    def _require_bearer() -> Optional[Any]:
+    def require_bearer():
         token = _load_env("BRIDGE_TOKEN")
         if not token:
             return jsonify({"error": "BRIDGE_TOKEN not set"}), 503
-        header = request.headers.get("Authorization", "")
-        if header != f"Bearer {token}":
+        if request.headers.get("Authorization") != f"Bearer {token}":
             return jsonify({"error": "unauthorized"}), 401
         return None
 
-    def _require_ingest_secret() -> Optional[Any]:
+    def require_ingest_secret():
         secret = _load_env("BRIDGE_INGEST_SECRET")
         if not secret:
             return None
-        header = request.headers.get("X-Bridge-Secret", "")
-        if header != secret:
+        if request.headers.get("X-Bridge-Secret") != secret:
             return jsonify({"error": "unauthorized"}), 401
         return None
 
-    def _persist_snapshot(snapshot: Dict[str, Any]) -> None:
-        path = _load_env("BRIDGE_SNAPSHOT_PATH")
-        if not path:
-            return
-        try:
-            with open(path, "w", encoding="utf-8") as handle:
-                json.dump(snapshot, handle, indent=2, sort_keys=True)
-        except Exception as exc:
-            print(f"[Bridge] Failed to persist snapshot: {exc}")
-
     @app.get("/health")
-    def health() -> Any:
-        auth = _require_bearer()
-        if auth is not None:
-            return auth
-        return jsonify({"status": "ok"})
-
-    @app.get("/state")
-    def state() -> Any:
-        auth = _require_bearer()
-        if auth is not None:
-            return auth
-        return jsonify(store.get())
+    def health():
+        auth = require_bearer()
+        return auth or jsonify({"status": "ok"})
 
     @app.get("/version")
-    def version() -> Any:
-        auth = _require_bearer()
-        if auth is not None:
-            return auth
-        return jsonify({"version": _load_env("BRIDGE_VERSION", "dev")})
+    def version():
+        auth = require_bearer()
+        return auth or jsonify({"version": _load_env("BRIDGE_VERSION", "dev")})
+
+    @app.get("/state")
+    def state():
+        auth = require_bearer()
+        return auth or jsonify(store.get())
 
     @app.route("/foundry/snapshot", methods=["OPTIONS"])
-    def foundry_snapshot_options() -> Any:
+    def snapshot_options():
         return ("", 204)
 
     @app.post("/foundry/snapshot")
-    def foundry_snapshot() -> Any:
-        auth = _require_ingest_secret()
-        if auth is not None:
+    def snapshot_post():
+        auth = require_ingest_secret()
+        if auth:
             return auth
         payload = request.get_json(silent=True)
         if not payload:
             return jsonify({"error": "missing payload"}), 400
         store.set(payload)
-        _persist_snapshot(payload)
-        world = payload.get("world", "")
-        combatants = payload.get("combatants", [])
-        print(
-            f"[Bridge] Snapshot received world={world!r} combatants={len(combatants)}"
-        )
+        return jsonify({"status": "ok"})
+
+    @app.route("/commands", methods=["OPTIONS"])
+    def commands_options():
+        return ("", 204)
+
+    @app.get("/commands")
+    def commands_get():
+        cmd = commands.get_next()
+        return jsonify({"commands": [cmd] if cmd else []})
+
+    @app.post("/commands")
+    def commands_post():
+        auth = require_bearer()
+        if auth:
+            return auth
+        payload = request.get_json(silent=True) or {}
+        if "type" not in payload:
+            return jsonify({"error": "missing type"}), 400
+        cmd = {
+            "id": payload.get("id", str(uuid.uuid4())),
+            "type": payload["type"],
+            "payload": payload.get("payload", {}),
+            "timestamp": _utc_now(),
+        }
+        commands.put(cmd)
+        return jsonify({"status": "ok", "command": cmd})
+
+    @app.route("/commands/<cmd_id>/ack", methods=["OPTIONS"])
+    def ack_options(cmd_id):
+        return ("", 204)
+
+    @app.post("/commands/<cmd_id>/ack")
+    def ack_post(cmd_id):
+        if not commands.ack(cmd_id):
+            return jsonify({"error": "not_found"}), 404
         return jsonify({"status": "ok"})
 
     return app
 
 
 if __name__ == "__main__":
-    host = _load_env("BRIDGE_HOST", "127.0.0.1")
-    port = int(_load_env("BRIDGE_PORT", "8787"))
     app = create_app()
-    app.run(host=host, port=port, threaded=True)
+    app.run(
+        host=_load_env("BRIDGE_HOST", "0.0.0.0"),
+        port=int(_load_env("BRIDGE_PORT", "8787")),
+        threaded=True,
+    )

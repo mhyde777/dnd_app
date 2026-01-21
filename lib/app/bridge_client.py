@@ -17,25 +17,25 @@ def _get_env(name: str, default: str = "") -> str:
 def _build_headers(token: str) -> Dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
-
 def _build_set_hp_payload(
     token_id: str,
     hp: int,
     actor_id: Optional[str] = None,
     command_id: Optional[str] = None,
 ) -> Dict[str, Any]:
-    payload: Dict[str, Any] = {
+    cmd: Dict[str, Any] = {
         "source": "app",
         "type": "set_hp",
-        "tokenId": token_id,
-        "hp": int(hp),
+        "payload": {
+            "tokenId": token_id,
+            "hp": int(hp),
+        },
     }
     if actor_id:
-        payload["actorId"] = actor_id
+        cmd["payload"]["actorId"] = actor_id
     if command_id:
-        payload["id"] = command_id
-    return payload
-
+        cmd["id"] = command_id
+    return cmd
 
 @dataclass
 class BridgeClient:

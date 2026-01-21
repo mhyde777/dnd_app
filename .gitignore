@@ -170,3 +170,5 @@ package/
 dist/
 build/
 package_win/
+*.sh
+*bak*

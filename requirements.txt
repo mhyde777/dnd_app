@@ -1,6 +1,6 @@
 -e lib/
 pyqt5==5.15.11
-pandas=2.2.3
+pandas==2.2.3
 pyqtdarktheme==2.1.0
 requests==2.32.3
 python-dotenv==1.1.0
