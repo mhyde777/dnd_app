@@ -66,6 +66,7 @@ class Application:
         self.bridge_client = BridgeClient.from_env()
         self.bridge_snapshot: Optional[Dict[str, Any]] = None
         self.bridge_timer: Optional[QTimer] = None
+        self.bridge_combatants_by_name: Dict[str, List[Dict[str, Any]]] = {}
 
         self.player_view_live = True
         self.player_view_snapshot: Optional[Dict[str, Any]] = None
@@ -107,6 +108,7 @@ class Application:
             return
         self.bridge_snapshot = snapshot
         combatants = snapshot.get("combatants", []) if isinstance(snapshot, dict) else []
+        self.bridge_combatants_by_name = self._index_bridge_combatants(combatants)
         world = snapshot.get("world") if isinstance(snapshot, dict) else None
         print(
             f"[Bridge] Snapshot loaded world={world!r} combatants={len(combatants)}"
@@ -150,6 +152,68 @@ class Application:
 
         creatures.sort(key=lambda c: (-_init(c), _nm_key(c)))
         return creatures
+
+    def _normalize_bridge_name(self, name: str) -> str:
+        return re.sub(r"\s+", " ", name or "").strip().casefold()
+
+    def _index_bridge_combatants(
+        self, combatants: List[Dict[str, Any]]
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        indexed: Dict[str, List[Dict[str, Any]]] = {}
+        for combatant in combatants:
+            if not isinstance(combatant, dict):
+                continue
+            name = combatant.get("name")
+            if not name:
+                continue
+            key = self._normalize_bridge_name(str(name))
+            if not key:
+                continue
+            indexed.setdefault(key, []).append(combatant)
+        return indexed
+
+    def _resolve_bridge_combatant(self, creature_name: str) -> Optional[Dict[str, Any]]:
+        if not creature_name:
+            return None
+        key = self._normalize_bridge_name(creature_name)
+        matches = self.bridge_combatants_by_name.get(key, [])
+        if not matches:
+            return None
+        if len(matches) > 1:
+            print(
+                f"[Bridge] Multiple combatants match '{creature_name}',"
+                " skipping command enqueue."
+            )
+            return None
+        return matches[0]
+
+    def _enqueue_bridge_set_hp(self, creature_name: str, hp: int) -> None:
+        if not self.bridge_client.enabled:
+            return
+        creature = None
+        if getattr(self, "manager", None):
+            creature = self.manager.creatures.get(creature_name)
+        token_id = (
+            getattr(creature, "token_id", None)
+            or getattr(creature, "foundry_token_id", None)
+        )
+        actor_id = (
+            getattr(creature, "actor_id", None)
+            or getattr(creature, "foundry_actor_id", None)
+        )
+        if not token_id:
+            combatant = self._resolve_bridge_combatant(creature_name)
+            if not combatant:
+                print(f"[Bridge] No combatant match for '{creature_name}', skipping.")
+                return
+            token_id = combatant.get("tokenId")
+            actor_id = combatant.get("actorId")
+        if not token_id:
+            print(f"[Bridge] Missing tokenId for '{creature_name}', skipping.")
+            return
+        self.bridge_client.enqueue_set_hp(
+            token_id=str(token_id), hp=int(hp), actor_id=str(actor_id) if actor_id else None
+        )
 
 
     def build_turn_order(self) -> None:
@@ -1126,6 +1190,8 @@ class Application:
                     else:
                         value = self.get_value(item, data_type)
                     method(creature_name, value)  # Update the creature's data
+                    if col == 4 and isinstance(value, int):
+                        self._enqueue_bridge_set_hp(creature_name, value)
                 except ValueError:
                     return
         
