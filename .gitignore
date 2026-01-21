@@ -170,5 +170,10 @@ package/
 dist/
 build/
 package_win/
+<<<<<<< HEAD
 *.sh
 *bak*
+=======
+*bak*
+*.sh
+>>>>>>> 1643978 (Working towards getting the bridge working again. Foundry can find the bridge but commands are being posted properly)

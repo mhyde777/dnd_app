@@ -13,11 +13,20 @@ function getBridgeSecret() {
 }
 
 function buildCombatSnapshot() {
-  const combat = game.combat ?? null;
-  const world = game.world?.title ?? game.world?.name ?? "";
-  const active = Boolean(
-    combat && (combat.started ?? combat.active ?? combat.round > 0 || combat.turn !== null)
-  );
+	const combat = game.combat ? game.combat : null;
+	const world =
+		game.world && (game.world.title || game.world.name)
+			? game.world.title || game.world.name
+			: "";
+
+	const active = Boolean(
+		combat &&
+			(
+				(combat.started !== undefined ? combat.started :
+				 combat.active !== undefined ? combat.active :
+				 (combat.round > 0 || combat.turn !== null))
+			)
+	);
 
   const activeCombatant = combat?.combatant
     ? {
