@@ -15,20 +15,20 @@ function getBridgeSecret() {
 }
 
 function buildCombatSnapshot() {
-	const combat = game.combat ? game.combat : null;
-	const world =
-		game.world && (game.world.title || game.world.name)
-			? game.world.title || game.world.name
-			: "";
+  const combat = game.combat ? game.combat : null;
+  const world =
+    game.world && (game.world.title || game.world.name)
+      ? game.world.title || game.world.name
+      : "";
 
-	const active = Boolean(
-		combat &&
-			(
-				(combat.started !== undefined ? combat.started :
-				 combat.active !== undefined ? combat.active :
-				 (combat.round > 0 || combat.turn !== null))
-			)
-	);
+  const active = Boolean(
+    combat &&
+      (combat.started !== undefined
+        ? combat.started
+        : combat.active !== undefined
+          ? combat.active
+          : combat.round > 0 || combat.turn !== null)
+  );
 
   const activeCombatant = combat?.combatant
     ? {
@@ -76,8 +76,14 @@ function buildCombatSnapshot() {
 }
 
 let snapshotTimer = null;
+
+// Command polling state
 let commandPollTimer = null;
 let commandPollInFlight = false;
+let lastCommandPollAtMs = 0;
+
+// Optional: cap how many commands we process per poll tick
+const MAX_COMMANDS_PER_TICK = 25;
 
 function scheduleSnapshot(reason) {
   if (snapshotTimer) {
@@ -198,9 +204,13 @@ async function handleCommand(cmd) {
       result.error = "invalid_command";
       return;
     }
+
     const payload = cmd.payload ?? {};
     let applied = false;
-    if (cmd.type === "set_hp") {
+
+    if (cmd.type === "noop") {
+      applied = true;
+    } else if (cmd.type === "set_hp") {
       applied = await applySetHp(payload);
       if (!applied) {
         result.error = "apply_failed";
@@ -210,6 +220,7 @@ async function handleCommand(cmd) {
       console.warn(`${LOG_PREFIX} Unknown command type ${type}`);
       result.error = `unknown_type:${type}`;
     }
+
     if (applied) {
       result.ok = true;
     }
@@ -218,6 +229,7 @@ async function handleCommand(cmd) {
     console.error(`${LOG_PREFIX} Command error`, err);
     result.error = message || "error";
   } finally {
+    // Always ack so the queue can't clog, even for unknown types / failures.
     if (cmd?.id) {
       await ackCommand(cmd.id, result);
     } else {
@@ -227,14 +239,16 @@ async function handleCommand(cmd) {
 }
 
 async function pollCommands() {
-  if (commandPollInFlight) {
-    return;
-  }
+  if (commandPollInFlight) return;
+
   commandPollInFlight = true;
+  lastCommandPollAtMs = Date.now();
+
   try {
     const bridgeUrl = getBridgeUrl();
     const endpoint = `${bridgeUrl}/commands`;
     const response = await fetch(endpoint, { method: "GET" });
+
     if (!response.ok) {
       console.warn(
         `${LOG_PREFIX} Commands poll failed (${response.status})`,
@@ -242,10 +256,15 @@ async function pollCommands() {
       );
       return;
     }
+
     const data = await response.json();
     const commands = Array.isArray(data?.commands) ? data.commands : [];
+
     console.log(`${LOG_PREFIX} Commands polled count=${commands.length}`);
-    for (const cmd of commands) {
+
+    // Process sequentially, bounded.
+    const toProcess = commands.slice(0, MAX_COMMANDS_PER_TICK);
+    for (const cmd of toProcess) {
       await handleCommand(cmd);
     }
   } catch (err) {
@@ -256,11 +275,27 @@ async function pollCommands() {
 }
 
 function startCommandPolling() {
-  if (commandPollTimer) {
-    return;
-  }
-  commandPollTimer = setInterval(pollCommands, COMMAND_POLL_INTERVAL_MS);
+  if (commandPollTimer) return;
+
+  console.log(`${LOG_PREFIX} Starting command polling every ${COMMAND_POLL_INTERVAL_MS}ms`);
+
+  // Kick once immediately, then on interval.
   pollCommands();
+
+  commandPollTimer = setInterval(() => {
+    // If Foundry is “alive” but timers got paused, this will still re-trigger
+    // as soon as the JS event loop resumes.
+    pollCommands();
+  }, COMMAND_POLL_INTERVAL_MS);
+
+  // Optional: watchdog to restart the interval if something nukes it.
+  setInterval(() => {
+    const age = Date.now() - lastCommandPollAtMs;
+    if (age > Math.max(10000, COMMAND_POLL_INTERVAL_MS * 5)) {
+      console.warn(`${LOG_PREFIX} Poll watchdog: last poll ${age}ms ago; forcing poll`);
+      pollCommands();
+    }
+  }, 5000);
 }
 
 Hooks.once("init", () => {
@@ -307,3 +342,4 @@ Hooks.on("deleteActiveEffect", () => scheduleSnapshot("deleteActiveEffect"));
 Hooks.on("updateActiveEffect", () => scheduleSnapshot("updateActiveEffect"));
 
 Hooks.on("controlToken", () => scheduleSnapshot("controlToken"));
+
