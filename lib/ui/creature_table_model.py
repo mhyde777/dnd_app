@@ -204,7 +204,10 @@ class CreatureTableModel(QAbstractTableModel):
             return False
 
         attr = self.fields[col]
-        print(f"[DBG] setData row={row} col={col} name-{name!r} attr={attr!r} value={value!r} view_set={getattr(self, 'view', None) is not None}")
+        print(
+            f"[DBG] setData row={row} col={col} name={name!r} attr={attr!r} "
+            f"value={value!r} view_set={getattr(self, 'view', None) is not None}"
+        )
 
         # Explicitly block edits to conditions in-table (use the checkbox panel instead)
         if attr == "_conditions":
@@ -225,23 +228,28 @@ class CreatureTableModel(QAbstractTableModel):
             self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.EditRole])
             self.deselect_active_cell()
 
-# --- Bridge push on committed edits (HP / Initiative) ---
-            if self.view and hasattr(self.view, "_enqueue_bridge_set_hp") and hasattr(self.view, "_enqueue_bridge_set_initiative"):
+            # --- Bridge push on committed edits (HP / Initiative) ---
+            # Do NOT require both methods to exist; push whichever applies.
+            if self.view:
                 try:
-                    # These attribute names are from your creature dataclass
-                    if attr in ("_curr_hp", "curr_hp"):
-                        # value might be a string from the editor; we already set int(value) above for ints
+                    # HP: only push if you're actually editing via the cell
+                    if attr in ("_curr_hp", "curr_hp") and hasattr(self.view, "_enqueue_bridge_set_hp"):
                         self.view._enqueue_bridge_set_hp(name, int(getattr(creature, attr)))
-                    elif attr in ("_init", "init"):
+
+                    # Initiative: push on initiative cell edits
+                    elif attr in ("_init", "init") and hasattr(self.view, "_enqueue_bridge_set_initiative"):
                         self.view._enqueue_bridge_set_initiative(name, int(getattr(creature, attr)))
+
                 except Exception as e:
                     print(f"[Bridge][WARN] Failed to push edit attr={attr} name={name}: {e}")
-# -------------------------------------------------------
+            # -------------------------------------------------------
 
+            # Existing behavior
             if attr == "_init" and self.view:
                 QTimer.singleShot(0, self.view.handle_initiative_update)
 
             return True
+
         except (ValueError, TypeError, AttributeError):
             return False
 

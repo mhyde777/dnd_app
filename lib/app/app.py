@@ -309,15 +309,24 @@ class Application:
         )
 
     def _enqueue_bridge_set_initiative(self, creature_name: str, initiative: int) -> None:
-        if not self.bridge_client.enabled:
+        # 0) Quick visibility
+        print(f"[Bridge][DBG] enqueue_set_initiative name={creature_name!r} initiative={initiative!r}")
+
+        if not getattr(self, "bridge_client", None):
+            print("[Bridge][DBG] bridge_client missing; cannot send set_initiative")
             return
+
+        print(f"[Bridge][DBG] bridge_client.enabled={getattr(self.bridge_client, 'enabled', None)} base_url={getattr(self.bridge_client, 'base_url', None)}")
+
+        if not self.bridge_client.enabled:
+            print("[Bridge][DBG] bridge_client disabled; skipping set_initiative")
+            return
+
+        # 1) Try to get ids from creature first
         creature = None
         if getattr(self, "manager", None):
             creature = self.manager.creatures.get(creature_name)
-        combatant_id = (
-            getattr(creature, "foundry_combatant_id", None)
-            or getattr(creature, "combatant_id", None)
-        )
+
         token_id = (
             getattr(creature, "token_id", None)
             or getattr(creature, "foundry_token_id", None)
@@ -326,20 +335,28 @@ class Application:
             getattr(creature, "actor_id", None)
             or getattr(creature, "foundry_actor_id", None)
         )
-        if not token_id and not actor_id:
+        combatant_id = (
+            getattr(creature, "combatant_id", None)
+            or getattr(creature, "foundry_combatant_id", None)
+        )
+
+        # 2) Fallback to bridge snapshot match (preferred for initiative: combatantId)
+        if not combatant_id:
             combatant = self._resolve_bridge_combatant(creature_name)
             if not combatant:
-                print(f"[Bridge] No combatant match for '{creature_name}', skipping.")
+                print(f"[Bridge][DBG] no combatant match for {creature_name!r}; skipping set_initiative")
                 return
             combatant_id = combatant.get("combatantId")
-            token_id = combatant.get("tokenId")
-            actor_id = combatant.get("actorId")
-        if not token_id and not actor_id and not combatant_id:
-            print(f"[Bridge] Missing tokenId/actorId/combatantId for '{creature_name}', skipping.")
+            token_id = token_id or combatant.get("tokenId")
+            actor_id = actor_id or combatant.get("actorId")
+
+        print(f"[Bridge][DBG] resolved ids name={creature_name!r} combatant_id={combatant_id!r} token_id={token_id!r} actor_id={actor_id!r}")
+
+        if not combatant_id and not token_id and not actor_id:
+            print(f"[Bridge][DBG] missing all ids for {creature_name!r}; skipping set_initiative")
             return
-        print(
-            f"[Bridge] enqueue set_initiative name={creature_name!r} initiative={initiative}"
-        )
+
+        # 3) Send command
         self.bridge_client.send_set_initiative(
             initiative=int(initiative),
             combatant_id=str(combatant_id) if combatant_id else None,
@@ -398,12 +415,13 @@ class Application:
         for label in removed:
             effect_id = effect_ids_by_label.get(label)
             self.bridge_client.send_remove_condition(
+                # For token-status removal, label is the reliable key. Always include it.
+                label=label,
+                # Keep effect_id optional for backward compatibility (can be None).
                 effect_id=str(effect_id) if effect_id else None,
-                label=label if not effect_id else None,
                 token_id=str(token_id) if token_id else None,
                 actor_id=str(actor_id) if actor_id else None,
             )
-
 
     def build_turn_order(self) -> None:
         """
