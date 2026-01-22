@@ -74,7 +74,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.label_layout.addWidget(self.player_view_toggle)
 
         # === TABLE AREA (under labels) ===
-        self.table_model = CreatureTableModel(self.manager, parent=self)
+        self.table_model = CreatureTableModel(self.manager, parent=self, bridge_owner=self)
         self.table = QTableView(self)
         self.table.setModel(self.table_model)
         self.table.itemDelegate().commitData.connect(self.on_commit_data)
