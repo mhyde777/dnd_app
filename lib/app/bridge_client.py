@@ -164,11 +164,11 @@ class BridgeClient:
         headers = _build_headers(self.token)
         headers["Content-Type"] = "application/json"
         try:
-            print(f"[Brdige] POST /commands type={command_type} payload={payload}")
+            print(f"[Bridge][DBG] POST {url} json={payload}")
             response = requests.post(
                 url, json=cmd, headers=headers, timeout=self.timeout_s
             )
-            print(f"[Bridge] POST /commands status={response.status_code}")
+            print(f"[Bridge][DBG] POST /commands status={response.status_code} body={response.text[:200]}")
         except requests.RequestException as exc:
             print(f"[Bridge] POST /commands failed: {exc}")
             return False
