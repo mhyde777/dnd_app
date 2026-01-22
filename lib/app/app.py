@@ -314,6 +314,10 @@ class Application:
         creature = None
         if getattr(self, "manager", None):
             creature = self.manager.creatures.get(creature_name)
+        combatant_id = (
+            getattr(creature, "foundry_combatant_id", None)
+            or getattr(creature, "combatant_id", None)
+        )
         token_id = (
             getattr(creature, "token_id", None)
             or getattr(creature, "foundry_token_id", None)
@@ -322,13 +326,12 @@ class Application:
             getattr(creature, "actor_id", None)
             or getattr(creature, "foundry_actor_id", None)
         )
-        combatant_id = None
         if not token_id and not actor_id:
             combatant = self._resolve_bridge_combatant(creature_name)
             if not combatant:
                 print(f"[Bridge] No combatant match for '{creature_name}', skipping.")
                 return
-            combatant_id = combatant.get("id")
+            combatant_id = combatant.get("combatantId")
             token_id = combatant.get("tokenId")
             actor_id = combatant.get("actorId")
         if not token_id and not actor_id and not combatant_id:
@@ -372,6 +375,14 @@ class Application:
                 f"[Bridge] Missing tokenId/actorId for condition sync '{getattr(creature, 'name', '')}'"
             )
             return
+        if added:
+            print(
+                f"[Bridge] enqueue add_condition name={getattr(creature, 'name', '')!r} added={added}"
+            )
+        if removed:
+            print(
+                f"[Bridge] enqueue remove_condition name={getattr(creature, 'name', '')!r} removed={removed}"
+            )
         effects = getattr(creature, "foundry_effects", []) or []
         effect_ids_by_label = {
             effect.get("label"): effect.get("id")
