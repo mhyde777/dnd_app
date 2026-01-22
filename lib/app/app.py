@@ -1297,8 +1297,13 @@ class Application:
                     else:
                         value = self.get_value(item, data_type)
                     method(creature_name, value)  # Update the creature's data
-                    if col == 4 and isinstance(value, int):
-                        self._enqueue_bridge_set_hp(creature_name, value)
+                    if col == 4:
+                        print(f"[DBG] HP edit detected name={creature_name!r} raw={item.text()!r} parsed={value!r} type={type(value)}")
+                        if isinstance(value, int):
+                            print(f"[DBG] calling _enqueue_bridge_set_hp name={creature_name!r} hp={value}")
+                            self._enqueue_bridge_set_hp(creature_name, value)
+                        else:
+                            print("[DBG] not int; skipping bridge hp enqueue")
                 except ValueError:
                     return
         
