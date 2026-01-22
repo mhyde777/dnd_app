@@ -259,9 +259,11 @@ class CreatureTableModel(QAbstractTableModel):
             return False
 
     def deselect_active_cell(self):
-        if self.view:
-            self.view.clearSelection()
-        self.selected_index = None
+        # In this app, `view` is often the main window, not the QTableView.
+        # Guard so initiative edits don't get aborted by AttributeError.
+        v = getattr(self, "view", None)
+        if v is not None and hasattr(v, "clearSelection"):
+            v.clearSelection()
 
     def flags(self, index):
         if not index.isValid():
