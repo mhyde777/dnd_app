@@ -269,8 +269,45 @@ class Application:
         if not token_id:
             print(f"[Bridge] Missing tokenId for '{creature_name}', skipping.")
             return
+        print(f"[Bridge] enqueue set_hp name={creature_name!r} hp={hp}")
         self.bridge_client.enqueue_set_hp(
             token_id=str(token_id), hp=int(hp), actor_id=str(actor_id) if actor_id else None
+        )
+
+    def _enqueue_bridge_set_initiative(self, creature_name: str, initiative: int) -> None:
+        if not self.bridge_client.enabled:
+            return
+        creature = None
+        if getattr(self, "manager", None):
+            creature = self.manager.creatures.get(creature_name)
+        token_id = (
+            getattr(creature, "token_id", None)
+            or getattr(creature, "foundry_token_id", None)
+        )
+        actor_id = (
+            getattr(creature, "actor_id", None)
+            or getattr(creature, "foundry_actor_id", None)
+        )
+        combatant_id = None
+        if not token_id and not actor_id:
+            combatant = self._resolve_bridge_combatant(creature_name)
+            if not combatant:
+                print(f"[Bridge] No combatant match for '{creature_name}', skipping.")
+                return
+            combatant_id = combatant.get("id")
+            token_id = combatant.get("tokenId")
+            actor_id = combatant.get("actorId")
+        if not token_id and not actor_id and not combatant_id:
+            print(f"[Bridge] Missing tokenId/actorId/combatantId for '{creature_name}', skipping.")
+            return
+        print(
+            f"[Bridge] enqueue set_initiative name={creature_name!r} initiative={initiative}"
+        )
+        self.bridge_client.send_set_initiative(
+            initiative=int(initiative),
+            combatant_id=str(combatant_id) if combatant_id else None,
+            token_id=str(token_id) if token_id else None,
+            actor_id=str(actor_id) if actor_id else None,
         )
 
     def _enqueue_bridge_condition_delta(
