@@ -996,35 +996,18 @@ class Application:
 
     def handle_initiative_update(self):
         """
-        Prompt the user after an initiative edit and ensure the active UI/statblock reflect the lastest turn order regardless of the dialog choice.
+        Auto-apply initiative edits and ensure the active UI/statblock reflect the latest turn order.
         """
         if getattr(self, "_initiative_dialog_open", False):
             return
         
         self._initiative_dialog_open = True
         try:
-            dialog = QMessageBox(self)
-            dialog.setWindowTitle("Initiaitve Changed")
-            dialog.setText("Initiaitves were updated. Rebuild the turn order now?")
-            dialog.setIcon(QMessageBox.Question)
-            apply_btn = dialog.addButton("Apply", QMessageBox.AcceptRole)
-            dialog.addButton("Skip", QMessageBox.RejectRole)
-            dialog.exec_()
-
-            applied = dialog.clickedButton() is apply_btn
-
-            if applied:
-                self.manager.sort_creatures()
-                self.build_turn_order()
-                self.update_table()
-                QMessageBox.information(
-                    self,
-                    "Initiatives Updated",
-                    "Initiatives applied and turn order rebuilt",
-                )
-            else:
+            self.manager.sort_creatures()
+            self.build_turn_order()
+            if hasattr(self, "table_model") and self.table_model:
                 self.table_model.refresh()
-                self.update_table()
+            self.update_table()
         finally:
             self._initiative_dialog_open = False
 
