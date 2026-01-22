@@ -23,12 +23,13 @@ _COND_ABBR = {
 }
 
 class CreatureTableModel(QAbstractTableModel):
-    def __init__(self, manager, fields=None, parent=None):
+    def __init__(self, manager, fields=None, parent=None, bridge_owner=None):
         super().__init__(parent)
         self.manager = manager
         self.active_creature_name = None
         self.selected_index = None
         self.view = parent
+        self.bridge_owner = bridge_owner
 
         # Build fields from a sample creature if not provided
         if fields is None and self.manager.creatures:
@@ -237,16 +238,20 @@ class CreatureTableModel(QAbstractTableModel):
                         self.view._enqueue_bridge_set_hp(name, int(getattr(creature, attr)))
 
                     # Initiative: push on initiative cell edits
-                    elif attr in ("_init", "init") and hasattr(self.view, "_enqueue_bridge_set_initiative"):
-                        self.view._enqueue_bridge_set_initiative(name, int(getattr(creature, attr)))
+                    elif attr in ("_init", "init"):
+                        target = self.bridge_owner or self.view
+                        if target and hasattr(target, "_enqueue_bridge_set_initiative"):
+                            target._enqueue_bridge_set_initiative(name, int(getattr(creature, attr)))
 
                 except Exception as e:
                     print(f"[Bridge][WARN] Failed to push edit attr={attr} name={name}: {e}")
             # -------------------------------------------------------
 
             # Existing behavior
-            if attr == "_init" and self.view:
-                QTimer.singleShot(0, self.view.handle_initiative_update)
+            if attr == "_init":
+                target = self.bridge_owner or self.view
+                if target and hasattr(target, "handle_initiative_update"):
+                    QTimer.singleShot(0, target.handle_initiative_update)
 
             return True
 
