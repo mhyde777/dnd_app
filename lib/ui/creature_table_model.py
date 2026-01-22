@@ -204,6 +204,7 @@ class CreatureTableModel(QAbstractTableModel):
             return False
 
         attr = self.fields[col]
+        print(f"[DBG] setData row={row} col={col} name-{name!r} attr={attr!r} value={value!r} view_set={getattr(self, 'view', None) is not None}")
 
         # Explicitly block edits to conditions in-table (use the checkbox panel instead)
         if attr == "_conditions":
