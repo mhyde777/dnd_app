@@ -1543,6 +1543,8 @@ class Application:
                         succeeded = self._prompt_concentration(creature_name, damage_taken)
                         if not succeeded:
                             self._break_concentration(creature)
+            if creature.curr_hp != pre_hp:
+                self._enqueue_bridge_set_hp(creature_name, creature.curr_hp)
 
         self.value_input.clear()
         self.update_table()
