@@ -1,3 +1,4 @@
+// foundryvtt-bridge/bridge.js
 const MODULE_ID = "foundryvtt-bridge";
 const DEFAULT_BRIDGE_URL = "http://127.0.0.1:8787";
 const LOG_PREFIX = "[bridge]";
@@ -250,6 +251,44 @@ function normalizeEffectLabel(label) {
   return String(label).trim().toLowerCase();
 }
 
+function resolveConditionTemplate(payload) {
+  if (payload?.effectId) {
+    const byId = resolveStatusEffectById(payload.effectId);
+    if (byId) {
+      return byId;
+    }
+  }
+  if (payload?.label) {
+    const byLabel = resolveStatusEffectByLabel(payload.label);
+    if (byLabel) {
+      return byLabel;
+    }
+  }
+  return null;
+}
+
+// --- NEW: D&D5e conditions grid support ---------------------------------
+function resolveDnd5eConditionKey(actor, payload) {
+  const conds = actor?.system?.attributes?.conditions;
+  if (!conds || typeof conds !== "object") return null;
+
+  // Allow explicit key override from caller if desired
+  const explicit = payload?.conditionKey ?? payload?.key ?? null;
+  if (explicit && Object.prototype.hasOwnProperty.call(conds, explicit)) {
+    return explicit;
+  }
+
+  const raw = payload?.label ?? payload?.effectId ?? "";
+  const key = String(raw).trim().toLowerCase().replace(/\s+/g, "");
+  if (Object.prototype.hasOwnProperty.call(conds, key)) return key;
+
+  const key2 = String(raw).trim().toLowerCase().replace(/\s+/g, "_");
+  if (Object.prototype.hasOwnProperty.call(conds, key2)) return key2;
+
+  return null;
+}
+// ------------------------------------------------------------------------
+
 async function applySetHp(payload) {
   const keys = payload ? Object.keys(payload) : [];
   console.log(`${LOG_PREFIX} set_hp payload keys ${JSON.stringify(keys)}`);
@@ -296,60 +335,45 @@ async function applySetInitiative(payload) {
   return true;
 }
 
-function resolveConditionTemplate(payload) {
-  if (payload?.effectId) {
-    const byId = resolveStatusEffectById(payload.effectId);
-    if (byId) {
-      return byId;
-    }
-  }
-  if (payload?.label) {
-    const byLabel = resolveStatusEffectByLabel(payload.label);
-    if (byLabel) {
-      return byLabel;
-    }
-  }
-  return null;
-}
-
+// --- UPDATED: conditions now flip D&D5e sheet Conditions + token icon ----
 async function applyAddCondition(payload) {
   const actor = resolveActor(payload);
   if (!actor) {
     console.warn(`${LOG_PREFIX} add_condition actor not found`, {
-      tokenId: payload.tokenId ?? null,
-      actorId: payload.actorId ?? null,
+      tokenId: payload?.tokenId ?? null,
+      actorId: payload?.actorId ?? null,
     });
     return false;
   }
-  const template = resolveConditionTemplate(payload);
-  if (!template) {
-    console.warn(`${LOG_PREFIX} add_condition unknown condition`, {
-      effectId: payload.effectId ?? null,
-      label: payload.label ?? null,
-    });
+
+  // (A) D&D5e sheet Conditions grid
+  const dnd5eKey = resolveDnd5eConditionKey(actor, payload);
+  if (dnd5eKey) {
+    await actor.update({ [`system.attributes.conditions.${dnd5eKey}`]: true });
+  }
+
+  // (B) Token status icon
+  if (payload?.tokenId) {
+    const token = canvas?.tokens?.get(payload.tokenId) ?? null;
+    if (!token) {
+      console.warn(`${LOG_PREFIX} add_condition token not found`, { tokenId: payload.tokenId });
+    } else {
+      const template = resolveConditionTemplate(payload);
+      if (template) {
+        await token.toggleEffect(template, { active: true });
+      } else if (payload?.label) {
+        await token.toggleEffect({ label: payload.label }, { active: true });
+      } else {
+        console.warn(`${LOG_PREFIX} add_condition missing label/effectId`);
+      }
+    }
+  }
+
+  // Consider applied if either path ran
+  if (!dnd5eKey && !payload?.tokenId) {
+    console.warn(`${LOG_PREFIX} add_condition no-op (no dnd5eKey and no tokenId)`);
     return false;
   }
-  const label = template.label ?? template.name ?? payload.label ?? "";
-  if (!label) {
-    console.warn(`${LOG_PREFIX} add_condition missing label`, payload);
-    return false;
-  }
-  const normalizedLabel = normalizeEffectLabel(label);
-  const existing = actor.effects?.find((effect) => {
-    const effectLabel = normalizeEffectLabel(effect.label ?? effect.name ?? "");
-    return effectLabel && effectLabel === normalizedLabel;
-  });
-  if (existing) {
-    return true;
-  }
-  const effectData = foundry.utils.deepClone(template);
-  delete effectData.id;
-  effectData.label = label;
-  effectData.name = label;
-  if (effectData.icon === undefined) {
-    effectData.icon = template.icon ?? null;
-  }
-  await actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
   return true;
 }
 
@@ -357,43 +381,42 @@ async function applyRemoveCondition(payload) {
   const actor = resolveActor(payload);
   if (!actor) {
     console.warn(`${LOG_PREFIX} remove_condition actor not found`, {
-      tokenId: payload.tokenId ?? null,
-      actorId: payload.actorId ?? null,
+      tokenId: payload?.tokenId ?? null,
+      actorId: payload?.actorId ?? null,
     });
     return false;
   }
-  if (payload?.effectId) {
-    if (actor.effects?.get(payload.effectId)) {
-      await actor.deleteEmbeddedDocuments("ActiveEffect", [payload.effectId]);
-    }
-    return true;
+
+  // (A) D&D5e sheet Conditions grid
+  const dnd5eKey = resolveDnd5eConditionKey(actor, payload);
+  if (dnd5eKey) {
+    await actor.update({ [`system.attributes.conditions.${dnd5eKey}`]: false });
   }
-  if (payload?.label) {
-    const template = resolveStatusEffectByLabel(payload.label);
-    if (!template) {
-      console.warn(`${LOG_PREFIX} remove_condition unknown label`, payload.label);
-      return false;
+
+  // (B) Token status icon
+  if (payload?.tokenId) {
+    const token = canvas?.tokens?.get(payload.tokenId) ?? null;
+    if (!token) {
+      console.warn(`${LOG_PREFIX} remove_condition token not found`, { tokenId: payload.tokenId });
+    } else {
+      const template = resolveConditionTemplate(payload);
+      if (template) {
+        await token.toggleEffect(template, { active: false });
+      } else if (payload?.label) {
+        await token.toggleEffect({ label: payload.label }, { active: false });
+      } else {
+        console.warn(`${LOG_PREFIX} remove_condition missing label/effectId`);
+      }
     }
-    const normalizedLabel = normalizeEffectLabel(payload.label);
-    const matches = actor.effects
-      ? actor.effects.filter((effect) => {
-          const effectLabel = normalizeEffectLabel(
-            effect.label ?? effect.name ?? ""
-          );
-          return effectLabel && effectLabel === normalizedLabel;
-        })
-      : [];
-    if (matches.length) {
-      await actor.deleteEmbeddedDocuments(
-        "ActiveEffect",
-        matches.map((effect) => effect.id)
-      );
-    }
-    return true;
   }
-  console.warn(`${LOG_PREFIX} remove_condition missing effectId/label`);
-  return false;
+
+  if (!dnd5eKey && !payload?.tokenId) {
+    console.warn(`${LOG_PREFIX} remove_condition no-op (no dnd5eKey and no tokenId)`);
+    return false;
+  }
+  return true;
 }
+// ------------------------------------------------------------------------
 
 async function handleCommand(cmd) {
   let result = { ok: false };
@@ -505,8 +528,6 @@ function startCommandPolling() {
   pollCommands();
 
   commandPollTimer = setInterval(() => {
-    // If Foundry is “alive” but timers got paused, this will still re-trigger
-    // as soon as the JS event loop resumes.
     pollCommands();
   }, COMMAND_POLL_INTERVAL_MS);
 
@@ -554,7 +575,11 @@ Hooks.on("updateCombat", () => scheduleSnapshot("updateCombat"));
 Hooks.on("updateCombatant", () => scheduleSnapshot("updateCombatant"));
 
 Hooks.on("updateActor", (actor, changes) => {
-  if (changes.system?.attributes?.hp || changes.effects) {
+  if (
+    changes.system?.attributes?.hp ||
+    changes.system?.attributes?.conditions || // <-- NEW
+    changes.effects
+  ) {
     scheduleSnapshot("updateActor");
   }
 });
