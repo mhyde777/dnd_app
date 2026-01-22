@@ -233,17 +233,51 @@ class Application:
     def _resolve_bridge_combatant(self, creature_name: str) -> Optional[Dict[str, Any]]:
         if not creature_name:
             return None
+
         key = self._normalize_bridge_name(creature_name)
+        if not key:
+            return None
+
+        # 1) Exact key match (current behavior)
         matches = self.bridge_combatants_by_name.get(key, [])
-        if not matches:
-            return None
+        if len(matches) == 1:
+            return matches[0]
         if len(matches) > 1:
-            print(
-                f"[Bridge] Multiple combatants match '{creature_name}',"
-                " skipping command enqueue."
-            )
+            print(f"[Bridge] Multiple combatants match '{creature_name}', skipping command enqueue.")
             return None
-        return matches[0]
+
+        # 2) Fallback: prefix/contains match against indexed keys
+        # Example: "chitra" should match "chitraya" or "chitra-ya" after normalization.
+        candidate_lists = []
+        for indexed_key, lst in (self.bridge_combatants_by_name or {}).items():
+            if not indexed_key:
+                continue
+            if indexed_key.startswith(key) or key.startswith(indexed_key) or key in indexed_key:
+                if lst:
+                    candidate_lists.append(lst)
+
+        # Flatten + de-dup by combatantId/tokenId
+        flat: List[Dict[str, Any]] = []
+        seen = set()
+        for lst in candidate_lists:
+            for c in lst:
+                if not isinstance(c, dict):
+                    continue
+                uniq = c.get("combatantId") or c.get("tokenId") or c.get("actorId") or id(c)
+                if uniq in seen:
+                    continue
+                seen.add(uniq)
+                flat.append(c)
+
+        if len(flat) == 1:
+            print(f"[Bridge] Fuzzy matched '{creature_name}' -> '{flat[0].get('name')}'")
+            return flat[0]
+
+        if len(flat) > 1:
+            print(f"[Bridge] Fuzzy match ambiguous for '{creature_name}' ({len(flat)} candidates), skipping.")
+            return None
+
+        return None
 
     def _enqueue_bridge_set_hp(self, creature_name: str, hp: int) -> None:
         if not self.bridge_client.enabled:
