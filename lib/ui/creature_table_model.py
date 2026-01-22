@@ -224,6 +224,19 @@ class CreatureTableModel(QAbstractTableModel):
             self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.EditRole])
             self.deselect_active_cell()
 
+# --- Bridge push on committed edits (HP / Initiative) ---
+            if self.view and hasattr(self.view, "_enqueue_bridge_set_hp") and hasattr(self.view, "_enqueue_bridge_set_initiative"):
+                try:
+                    # These attribute names are from your creature dataclass
+                    if attr in ("_curr_hp", "curr_hp"):
+                        # value might be a string from the editor; we already set int(value) above for ints
+                        self.view._enqueue_bridge_set_hp(name, int(getattr(creature, attr)))
+                    elif attr in ("_init", "init"):
+                        self.view._enqueue_bridge_set_initiative(name, int(getattr(creature, attr)))
+                except Exception as e:
+                    print(f"[Bridge][WARN] Failed to push edit attr={attr} name={name}: {e}")
+# -------------------------------------------------------
+
             if attr == "_init" and self.view:
                 QTimer.singleShot(0, self.view.handle_initiative_update)
 
