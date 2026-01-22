@@ -1007,8 +1007,8 @@ class Application:
             dialog.setWindowTitle("Initiaitve Changed")
             dialog.setText("Initiaitves were updated. Rebuild the turn order now?")
             dialog.setIcon(QMessageBox.Question)
-            apply_btn = dialog.addButton("Apply", QMessageBox.AcceptedRole)
-            dialog.addButton("Skip", QMessageBox.RejectedRole)
+            apply_btn = dialog.addButton("Apply", QMessageBox.AcceptRole)
+            dialog.addButton("Skip", QMessageBox.RejectRole)
             dialog.exec_()
 
             applied = dialog.clickedButton() is apply_btn
@@ -1689,7 +1689,10 @@ class Application:
         dialog.exec_()
 
     def on_commit_data(self, editor):
-        # print("[COMMIT] Value committed from editor")
+        # Defer until after the delegate commits into the model (setData has run).
+        QTimer.singleShot(0, self._after_commit_data)
+
+    def _after_commit_data(self):
         self.manager.sort_creatures()
         # Keep stable order in sync after edits
         self.build_turn_order()
