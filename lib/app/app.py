@@ -67,6 +67,7 @@ class Application:
         self.bridge_snapshot: Optional[Dict[str, Any]] = None
         self.bridge_timer: Optional[QTimer] = None
         self.bridge_combatants_by_name: Dict[str, List[Dict[str, Any]]] = {}
+        self._initiative_reset_pending = False
 
         self.player_view_live = True
         self.player_view_snapshot: Optional[Dict[str, Any]] = None
@@ -115,6 +116,45 @@ class Application:
         print(
             f"[Bridge] Snapshot loaded world={world!r} combatants={len(combatants)}"
         )
+
+    def _has_missing_initiatives(self) -> bool:
+        if not getattr(self, "manager", None) or not getattr(self.manager, "creatures", None):
+            return False
+        for creature in self.manager.creatures.values():
+            value = getattr(creature, "initiative", None)
+            if value in (None, "", -1, 0):
+                return True
+            try:
+                if int(value) <= 0:
+                    return True
+            except Exception:
+                return True
+        return False
+
+    def _mark_initiative_reset_pending(self) -> None:
+        if self._initiative_reset_pending:
+            return
+        if self._has_missing_initiatives():
+            self._initiative_reset_pending = True
+
+    def _maybe_reset_initiative_turn(self) -> bool:
+        if not self._initiative_reset_pending:
+            return False
+        if self.round_counter > 1 or self.time_counter > 0:
+            self._initiative_reset_pending = False
+            return False
+        if self._has_missing_initiatives():
+            return False
+        if not getattr(self, "turn_order", None):
+            return False
+        if not self.turn_order:
+            return False
+        self.round_counter = 1
+        self.time_counter = 0
+        self.current_idx = 0
+        self.current_creature_name = self.turn_order[0]
+        self._initiative_reset_pending = False
+        return True
 
     def _apply_bridge_snapshot(self, snapshot: Dict[str, Any]) -> None:
         if not getattr(self, "manager", None) or not getattr(self.manager, "creatures", None):
@@ -175,18 +215,25 @@ class Application:
                             break
                 if not active_name:
                     active_label = active.get("name")
-                    if active_label:
-                        active_name = active_label
+                if active_label:
+                    active_name = active_label
             if active_name and active_name != getattr(self, "current_creature_name", None):
                 self.current_creature_name = active_name
                 updated_active = True
 
+        self._mark_initiative_reset_pending()
+
         if added_combatants:
             self.build_turn_order()
+            reset_active = self._maybe_reset_initiative_turn()
             self.update_table()
             self.pop_lists()
+            if reset_active:
+                self.update_active_ui()
         elif updated_initiative or updated_active:
             self.build_turn_order()
+            if self._maybe_reset_initiative_turn():
+                self.update_active_ui()
         else:
             self.update_active_ui()
 
@@ -1269,6 +1316,7 @@ class Application:
         if getattr(self, "_initiative_dialog_open", False):
             return
         
+        self._mark_initiative_reset_pending()
         self._initiative_dialog_open = True
         try:
             self.manager.sort_creatures()
@@ -1279,7 +1327,10 @@ class Application:
         finally:
             self._initiative_dialog_open = False
 
-        self.update_active_init()
+        if self._maybe_reset_initiative_turn():
+            self.update_active_ui()
+        else:
+            self.update_active_init()
         active_name = self.active_name()
         if active_name:
             cr = self.manager.creatures.get(active_name)
