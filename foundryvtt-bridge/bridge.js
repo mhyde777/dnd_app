@@ -335,6 +335,34 @@ async function applySetInitiative(payload) {
   return true;
 }
 
+async function applyNextTurn() {
+  const combat = game.combat ?? null;
+  if (!combat) {
+    console.warn(`${LOG_PREFIX} next_turn no active combat`);
+    return false;
+  }
+  if (typeof combat.nextTurn === "function") {
+    await combat.nextTurn();
+    return true;
+  }
+  console.warn(`${LOG_PREFIX} next_turn unsupported`);
+  return false;
+}
+
+async function applyPrevTurn() {
+  const combat = game.combat ?? null;
+  if (!combat) {
+    console.warn(`${LOG_PREFIX} prev_turn no active combat`);
+    return false;
+  }
+  if (typeof combat.previousTurn === "function") {
+    await combat.previousTurn();
+    return true;
+  }
+  console.warn(`${LOG_PREFIX} prev_turn unsupported`);
+  return false;
+}
+
 // --- UPDATED: conditions now flip D&D5e sheet Conditions + token icon ----
 async function applyAddCondition(payload) {
   const actor = resolveActor(payload);
@@ -440,6 +468,16 @@ async function handleCommand(cmd) {
       }
     } else if (type === "set_initiative") {
       applied = await applySetInitiative(payload);
+      if (!applied) {
+        result.error = "apply_failed";
+      }
+    } else if (type === "next_turn") {
+      applied = await applyNextTurn();
+      if (!applied) {
+        result.error = "apply_failed";
+      }
+    } else if (type === "prev_turn") {
+      applied = await applyPrevTurn();
       if (!applied) {
         result.error = "apply_failed";
       }
