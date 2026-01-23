@@ -140,6 +140,11 @@ class Application:
             setattr(creature, "foundry_combatant_id", combatant.get("combatantId"))
             setattr(creature, "foundry_token_id", combatant.get("tokenId"))
             setattr(creature, "foundry_actor_id", combatant.get("actorId"))
+            resolved_type = self._resolve_foundry_creature_type(combatant)
+            if resolved_type and getattr(creature, "_type", None) == CreatureType.BASE:
+                creature._type = resolved_type
+                if resolved_type == CreatureType.PLAYER:
+                    creature.death_saves_prompt = True
 
             effects = combatant.get("effects", [])
             if isinstance(effects, list):
@@ -289,10 +294,20 @@ class Application:
                     matched_keys.add(tid)
                 if aid and not getattr(existing, "foundry_actor_id", None):
                     setattr(existing, "foundry_actor_id", aid)
+                resolved_type = self._resolve_foundry_creature_type(combatant)
+                if resolved_type and getattr(existing, "_type", None) == CreatureType.BASE:
+                    existing._type = resolved_type
+                    if resolved_type == CreatureType.PLAYER:
+                        existing.death_saves_prompt = True
                 continue
 
             # Create a new creature for this Foundry combatant
             creature = I_Creature(_name=str(name))
+            resolved_type = self._resolve_foundry_creature_type(combatant)
+            if resolved_type:
+                creature._type = resolved_type
+                if resolved_type == CreatureType.PLAYER:
+                    creature.death_saves_prompt = True
 
             if cid:
                 setattr(creature, "foundry_combatant_id", cid)
@@ -427,7 +442,21 @@ class Application:
         return creatures
 
     def _normalize_bridge_name(self, name: str) -> str:
-        return re.sub(r"\s+", " ", name or "").strip().casefold()
+        cleaned = re.sub(r"\s*#\s*(\d+)\s*$", r" \1", name or "")
+        return re.sub(r"\s+", " ", cleaned).strip().casefold()
+
+    def _resolve_foundry_creature_type(self, combatant: Dict[str, Any]) -> Optional[CreatureType]:
+        if not isinstance(combatant, dict):
+            return None
+        actor_type = combatant.get("actorType")
+        has_player_owner = combatant.get("actorHasPlayerOwner")
+        if has_player_owner is True:
+            return CreatureType.PLAYER
+        if isinstance(actor_type, str) and actor_type.lower() == "character":
+            return CreatureType.PLAYER
+        if actor_type:
+            return CreatureType.MONSTER
+        return None
 
     def _index_bridge_combatants(
         self, combatants: List[Dict[str, Any]]
@@ -1310,7 +1339,7 @@ class Application:
             creature = self.manager.creatures.get(creature_name)
             
             if creature and creature._type == CreatureType.MONSTER:
-                base_name = re.sub(r'\s*\d+$', '', creature_name)
+                base_name = re.sub(r'\s*(?:#\s*)?\d+\s*$', '', creature_name)
                 unique_monster_names.add(base_name)
 
         for name in unique_monster_names:
@@ -1330,7 +1359,7 @@ class Application:
             self.monster_list.show()
 
     def get_base_name(self, creature):
-        non_num_name = re.sub(r'\d+$', '', creature.name)
+        non_num_name = re.sub(r'\s*(?:#\s*)?\d+\s*$', '', creature.name)
         base_name = non_num_name.strip()
         return base_name
 
