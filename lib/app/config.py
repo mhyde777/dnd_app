@@ -29,3 +29,24 @@ def use_storage_api_only() -> bool:
     If set, use the Storage API and skip any local persistence fallbacks.
     """
     return os.getenv("USE_STORAGE_API_ONLY", "0").strip() not in ("", "0", "false", "False")
+
+
+def player_view_enabled() -> bool:
+    """
+    If set, start the Player View HTTP server.
+    """
+    return os.getenv("PLAYER_VIEW_ENABLED", "0").strip() not in ("", "0", "false", "False")
+
+
+def local_bridge_enabled() -> bool:
+    """
+    If set, start a local bridge server inside the app process.
+    """
+    return os.getenv("LOCAL_BRIDGE_ENABLED", "1").strip() not in ("", "0", "false", "False")
+
+
+def bridge_stream_enabled() -> bool:
+    """
+    If set, use the bridge SSE stream instead of polling /state.
+    """
+    return os.getenv("BRIDGE_STREAM_ENABLED", "1").strip() not in ("", "0", "false", "False")
