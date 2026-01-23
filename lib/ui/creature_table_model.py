@@ -45,6 +45,9 @@ class CreatureTableModel(QAbstractTableModel):
                 "_death_stable",
                 "_death_saves_prompt",
                 "_active",
+                "_foundry_combatant_id",
+                "_foundry_token_id",
+                "_foundry_actor_id",
             }
             sample = next(iter(self.manager.creatures.values()))
             self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
@@ -356,6 +359,9 @@ class CreatureTableModel(QAbstractTableModel):
             "_death_stable",
             "_death_saves_prompt",
             "_active",
+            "_foundry_combatant_id",
+            "_foundry_token_id",
+            "_foundry_actor_id",
         }
         sample = next(iter(self.manager.creatures.values()))
         self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
@@ -388,6 +394,9 @@ class CreatureTableModel(QAbstractTableModel):
                 "_innate_slots_used",
                 "_death_saves_prompt",
                 "_active",
+                "_foundry_combatant_id",
+                "_foundry_token_id",
+                "_foundry_actor_id",
             }
             sample = next(iter(self.manager.creatures.values()))
             self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
