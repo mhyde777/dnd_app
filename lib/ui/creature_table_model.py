@@ -57,7 +57,7 @@ class CreatureTableModel(QAbstractTableModel):
         else:
             self.fields = fields or []
 
-        self.creature_names = list(self.manager.creatures.keys())
+        self.creature_names = self.manager.ordered_names()
 
     def rowCount(self, parent=QModelIndex()):
         return len(self.creature_names)
@@ -387,16 +387,7 @@ class CreatureTableModel(QAbstractTableModel):
         self.layoutChanged.emit()
 
     def refresh(self):
-        # Always sort by initiative desc
-        if hasattr(self.manager, "ordered_items"):
-            sorted_items = self.manager.ordered_items()
-        else:
-            sorted_items = sorted(
-                self.manager.creatures.items(),
-                key=lambda item: item[1].initiative,
-                reverse=True,
-            )
-        self.creature_names = [name for name, _ in sorted_items]
+        self.creature_names = self.manager.ordered_names()
 
         # If fields were never initialized (edge-case), rebuild them consistently
         if not self.fields and self.manager.creatures:
