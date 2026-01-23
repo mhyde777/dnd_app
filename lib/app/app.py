@@ -215,7 +215,6 @@ class Application:
                 matched_combatant_keys.add(token_id)
             if actor_id:
                 existing_by_actor_id[actor_id] = creature
-                matched_combatant_keys.add(actor_id)
 
         for creature in self.manager.creatures.values():
             if (
@@ -241,7 +240,6 @@ class Application:
                 matched_combatant_keys.add(resolved_token_id)
             if resolved_actor_id:
                 setattr(creature, "foundry_actor_id", resolved_actor_id)
-                matched_combatant_keys.add(resolved_actor_id)
 
         added = False
         for combatant in combatants:
@@ -257,7 +255,6 @@ class Application:
             if (
                 (combatant_id and combatant_id in matched_combatant_keys)
                 or (token_id and token_id in matched_combatant_keys)
-                or (actor_id and actor_id in matched_combatant_keys)
             ):
                 continue
 

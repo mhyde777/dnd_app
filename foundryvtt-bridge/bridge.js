@@ -630,3 +630,32 @@ Hooks.on("deleteActiveEffect", () => scheduleSnapshot("deleteActiveEffect"));
 Hooks.on("updateActiveEffect", () => scheduleSnapshot("updateActiveEffect"));
 
 Hooks.on("controlToken", () => scheduleSnapshot("controlToken"));
+
+Hooks.on("renderActorSheet", (app, html) => {
+  const actor = app?.actor;
+  if (!actor) return;
+
+  if (html.find(`[data-bridge-exclude="true"]`).length) return;
+
+  const isExcluded = Boolean(actor.getFlag(MODULE_ID, "excludeFromSync"));
+  const checkbox = $(`
+    <div class="form-group" data-bridge-exclude="true">
+      <label>Exclude from bridge sync</label>
+      <input type="checkbox" name="excludeFromSync" ${isExcluded ? "checked" : ""} />
+      <p class="notes">Hide this actor's tokens from auto-added initiative sync.</p>
+    </div>
+  `);
+
+  const target = html.find(".sheet-body, .tab[data-tab], .sheet-header").first();
+  if (target.length) {
+    target.prepend(checkbox);
+  } else {
+    html.find("form").first().prepend(checkbox);
+  }
+
+  checkbox.find("input").on("change", async (event) => {
+    const checked = Boolean(event.currentTarget.checked);
+    await actor.setFlag(MODULE_ID, "excludeFromSync", checked);
+    scheduleSnapshot("actorExcludeToggle");
+  });
+});
