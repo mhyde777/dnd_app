@@ -163,7 +163,7 @@ class Application:
         if isinstance(combat, dict):
             round_value = combat.get("round")
             if isinstance(round_value, int):
-                self.round_counter = round_value
+                self.round_counter = max(1, round_value)
             active = combat.get("activeCombatant")
             active_name = None
             if isinstance(active, dict):
@@ -1035,7 +1035,7 @@ class Application:
 
         if manager is self.manager:
             self.current_turn = state.get("current_turn", 0)
-            self.round_counter = state.get("round_counter", 1)
+            self.round_counter = max(1, state.get("round_counter", 1))
             self.time_counter = state.get("time_counter", 0)
 
         if pending_inits and prompt_for_initiatives:
