@@ -124,6 +124,7 @@ class Application:
         if not isinstance(combatants, list):
             return
 
+        added_combatants = self._ensure_foundry_combatants_present(combatants)
         updated_initiative = False
         updated_active = False
         for creature_name, creature in self.manager.creatures.items():
@@ -167,10 +168,169 @@ class Application:
                 self.current_creature_name = active_name
                 updated_active = True
 
-        if updated_initiative or updated_active:
+        if added_combatants:
+            self.build_turn_order()
+            self.update_table()
+            self.pop_lists()
+        elif updated_initiative or updated_active:
             self.build_turn_order()
         else:
             self.update_active_ui()
+
+    def _ensure_foundry_combatants_present(
+        self, combatants: List[Dict[str, Any]]
+    ) -> bool:
+        if not getattr(self, "manager", None) or not getattr(self.manager, "creatures", None):
+            return False
+
+        def _normalize_id(value: Any) -> Optional[str]:
+            if value is None:
+                return None
+            if isinstance(value, str) and not value.strip():
+                return None
+            return str(value)
+
+        existing_by_combatant_id: Dict[str, I_Creature] = {}
+        existing_by_token_id: Dict[str, I_Creature] = {}
+        existing_by_actor_id: Dict[str, I_Creature] = {}
+        matched_combatant_keys: set[str] = set()
+        for creature in self.manager.creatures.values():
+            combatant_id = _normalize_id(
+                getattr(creature, "foundry_combatant_id", None)
+                or getattr(creature, "combatant_id", None)
+            )
+            token_id = _normalize_id(
+                getattr(creature, "foundry_token_id", None)
+                or getattr(creature, "token_id", None)
+            )
+            actor_id = _normalize_id(
+                getattr(creature, "foundry_actor_id", None)
+                or getattr(creature, "actor_id", None)
+            )
+            if combatant_id:
+                existing_by_combatant_id[combatant_id] = creature
+                matched_combatant_keys.add(combatant_id)
+            if token_id:
+                existing_by_token_id[token_id] = creature
+                matched_combatant_keys.add(token_id)
+            if actor_id:
+                existing_by_actor_id[actor_id] = creature
+                matched_combatant_keys.add(actor_id)
+
+        for creature in self.manager.creatures.values():
+            if (
+                getattr(creature, "foundry_combatant_id", None)
+                or getattr(creature, "foundry_token_id", None)
+                or getattr(creature, "foundry_actor_id", None)
+                or getattr(creature, "combatant_id", None)
+                or getattr(creature, "token_id", None)
+                or getattr(creature, "actor_id", None)
+            ):
+                continue
+            resolved = self._resolve_bridge_combatant(getattr(creature, "name", ""))
+            if not resolved:
+                continue
+            resolved_combatant_id = _normalize_id(resolved.get("combatantId"))
+            resolved_token_id = _normalize_id(resolved.get("tokenId"))
+            resolved_actor_id = _normalize_id(resolved.get("actorId"))
+            if resolved_combatant_id:
+                setattr(creature, "foundry_combatant_id", resolved_combatant_id)
+                matched_combatant_keys.add(resolved_combatant_id)
+            if resolved_token_id:
+                setattr(creature, "foundry_token_id", resolved_token_id)
+                matched_combatant_keys.add(resolved_token_id)
+            if resolved_actor_id:
+                setattr(creature, "foundry_actor_id", resolved_actor_id)
+                matched_combatant_keys.add(resolved_actor_id)
+
+        added = False
+        for combatant in combatants:
+            if not isinstance(combatant, dict):
+                continue
+            if combatant.get("excludeFromSync"):
+                continue
+            name = combatant.get("name") or ""
+            combatant_id = _normalize_id(combatant.get("combatantId"))
+            token_id = _normalize_id(combatant.get("tokenId"))
+            actor_id = _normalize_id(combatant.get("actorId"))
+
+            if (
+                (combatant_id and combatant_id in matched_combatant_keys)
+                or (token_id and token_id in matched_combatant_keys)
+                or (actor_id and actor_id in matched_combatant_keys)
+            ):
+                continue
+
+            existing = None
+            if combatant_id and combatant_id in existing_by_combatant_id:
+                existing = existing_by_combatant_id[combatant_id]
+            elif token_id and token_id in existing_by_token_id:
+                existing = existing_by_token_id[token_id]
+            elif actor_id and actor_id in existing_by_actor_id:
+                existing = existing_by_actor_id[actor_id]
+
+            if existing:
+                if combatant_id and not getattr(existing, "foundry_combatant_id", None):
+                    setattr(existing, "foundry_combatant_id", combatant_id)
+                if token_id and not getattr(existing, "foundry_token_id", None):
+                    setattr(existing, "foundry_token_id", token_id)
+                if actor_id and not getattr(existing, "foundry_actor_id", None):
+                    setattr(existing, "foundry_actor_id", actor_id)
+                continue
+
+            if not name:
+                continue
+
+            creature = I_Creature(_name=str(name))
+            if combatant_id:
+                setattr(creature, "foundry_combatant_id", combatant_id)
+            if token_id:
+                setattr(creature, "foundry_token_id", token_id)
+            if actor_id:
+                setattr(creature, "foundry_actor_id", actor_id)
+
+            initiative = combatant.get("initiative")
+            if initiative is not None:
+                creature.initiative = initiative
+
+            hp = combatant.get("hp", {})
+            if isinstance(hp, dict):
+                curr_hp = hp.get("value")
+                max_hp = hp.get("max")
+                if curr_hp is not None:
+                    try:
+                        creature.curr_hp = int(curr_hp)
+                    except (TypeError, ValueError):
+                        pass
+                if max_hp is not None:
+                    try:
+                        creature.max_hp = int(max_hp)
+                    except (TypeError, ValueError):
+                        pass
+
+            effects = combatant.get("effects", [])
+            if isinstance(effects, list):
+                setattr(creature, "foundry_effects", effects)
+                labels = [effect.get("label") for effect in effects if effect.get("label")]
+                creature.conditions = labels
+
+            base_name = creature.name
+            counter = 1
+            while creature.name in self.manager.creatures:
+                creature.name = f"{base_name}_{counter}"
+                counter += 1
+
+            self.manager.add_creature(creature)
+            added = True
+
+            if combatant_id:
+                existing_by_combatant_id[combatant_id] = creature
+            if token_id:
+                existing_by_token_id[token_id] = creature
+            if actor_id:
+                existing_by_actor_id[actor_id] = creature
+
+        return added
 
     # -----------------------
     # Core ordering utilities

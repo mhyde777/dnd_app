@@ -51,6 +51,8 @@ function buildCombatSnapshot() {
       disabled: Boolean(effect.disabled),
       origin: effect.origin ?? null,
     }));
+    const tokenFlag = c.token?.document?.flags?.[MODULE_ID]?.excludeFromSync;
+    const actorFlag = actor?.flags?.[MODULE_ID]?.excludeFromSync;
 
     return {
       combatantId: c.id ?? null,
@@ -63,6 +65,7 @@ function buildCombatSnapshot() {
         max: hp.max ?? null,
       },
       effects,
+      excludeFromSync: Boolean(tokenFlag || actorFlag),
     };
   });
 
