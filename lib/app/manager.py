@@ -40,27 +40,30 @@ class CreatureManager:
     def ordered_items(self) -> List[Tuple[str, I_Creature]]:
         """
         Canonical order:
-        - WITH initiative (initiative != None and != -1) first, initiative DESC
-        - WITHOUT initiative (None or -1) after, name (natural/human) ASC
+        - WITH initiative (positive integer) first, initiative DESC
+        - WITHOUT initiative (None, empty, 0, or -1) after, name (natural/human) ASC
         """
-        def _has_init(c: I_Creature) -> bool:
+        def _normalized_initiative(c: I_Creature) -> Optional[int]:
             init = getattr(c, "initiative", None)
-            return init is not None and init != -1
-
-        def _init_value(c: I_Creature) -> int:
+            if init in (None, "", -1):
+                return None
             try:
-                return int(getattr(c, "initiative", 0))
-            except Exception:
-                return 0
+                init_value = int(init)
+            except (TypeError, ValueError):
+                return None
+            if init_value <= 0:
+                return None
+            return init_value
 
-        return sorted(
-            self.creatures.items(),
-            key=lambda kv: (
-                0 if _has_init(kv[1]) else 1,                       # bucket
-                -_init_value(kv[1]) if _has_init(kv[1]) else 0,     # init DESC
-                self._natural_key(kv[0]),                           # name ASC
-            ),
-        )
+        def _sort_key(kv: Tuple[str, I_Creature]) -> Tuple[int, int, List[Any]]:
+            init_value = _normalized_initiative(kv[1])
+            return (
+                0 if init_value is not None else 1,  # bucket
+                -(init_value or 0),                  # init DESC
+                self._natural_key(kv[0]),            # name ASC
+            )
+
+        return sorted(self.creatures.items(), key=_sort_key)
 
     def ordered_names(self) -> List[str]:
         """Convenience: just the names in canonical turn order."""
