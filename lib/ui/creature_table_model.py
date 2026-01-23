@@ -103,6 +103,8 @@ class CreatureTableModel(QAbstractTableModel):
             if role == Qt.TextAlignmentRole:
                 return Qt.AlignCenter
 
+            return QVariant()
+
         # Spellbook icon column
         if attr == SPELL_ICON_COLUMN_NAME:
             from app.creature import CreatureType
@@ -132,21 +134,36 @@ class CreatureTableModel(QAbstractTableModel):
         except Exception:
             return QVariant()
 
+        # ----- Display -----
         if role == Qt.DisplayRole:
+            # Hide checkboxes' raw text
             if isinstance(value, bool):
                 return ""
+
+            # Treat sentinel -1 as "unset" for these fields (UI blank)
+            if attr in ("_init", "_status_time", "_armor_class") and value == -1:
+                return ""
+
+            # Keep your prior "0 means blank" behavior
             if value == 0:
                 return ""
+
+            # None should display blank
+            if value is None:
+                return ""
+
             return str(value)
 
+        # ----- Alignment -----
         if role == Qt.TextAlignmentRole:
             return Qt.AlignCenter
 
+        # ----- Background/Foreground coloring -----
         if role == Qt.BackgroundRole:
             # Boolean columns: green/red
             if isinstance(value, bool):
                 return QColor("#006400") if value else QColor("darkred")
-           
+
             # Death save visuals (Players only)
             try:
                 succ = int(getattr(creature, "_death_successes", 0) or 0)
@@ -166,14 +183,6 @@ class CreatureTableModel(QAbstractTableModel):
             if stable:
                 return QColor("#3a74c8") if is_active else QColor("#2b5aa6")
 
-            if role == Qt.ForegroundRole:
-                try:
-                    fail = int(getattr(creature, "_death_failures", 0) or 0)
-                except Exception:
-                    fail = 0
-                if fail >= 3:
-                    return QColor("#e6e6e6")  # light text on gray
-
             # HP-based coloring + active row
             curr_hp = getattr(creature, "_curr_hp", -1)
             max_hp = getattr(creature, "_max_hp", -1)
@@ -189,6 +198,14 @@ class CreatureTableModel(QAbstractTableModel):
 
                 if name == self.active_creature_name:
                     return QColor("#006400")
+
+        if role == Qt.ForegroundRole:
+            try:
+                fail = int(getattr(creature, "_death_failures", 0) or 0)
+            except Exception:
+                fail = 0
+            if fail >= 3:
+                return QColor("#e6e6e6")  # light text on gray
 
         return QVariant()
 
