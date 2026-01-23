@@ -103,8 +103,6 @@ class CreatureTableModel(QAbstractTableModel):
             if role == Qt.TextAlignmentRole:
                 return Qt.AlignCenter
 
-            return QVariant()
-
         # Spellbook icon column
         if attr == SPELL_ICON_COLUMN_NAME:
             from app.creature import CreatureType
