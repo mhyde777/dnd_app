@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import (
     QScrollArea, QGroupBox, QPushButton, QHBoxLayout
 )
 
-# === 2024 PHB Conditions + Concentrating ===
+# === Foundry Conditions + Concentrating ===
 DEFAULT_CONDITIONS: List[str] = [
     "Blinded",
     "Charmed",
