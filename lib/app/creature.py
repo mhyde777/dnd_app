@@ -51,6 +51,9 @@ class I_Creature:
     _death_stable: bool = field(default=False)
     _death_saves_prompt: bool = field(default=False)
     _active: bool = field(default=True)
+    _foundry_combatant_id: Optional[str] = field(default=None)
+    _foundry_token_id: Optional[str] = field(default=None)
+    _foundry_actor_id: Optional[str] = field(default=None)
 
     def __gt__(self, other: I_Creature) -> bool:
         if not isinstance(other, I_Creature):
@@ -93,7 +96,10 @@ class I_Creature:
             "_death_failures": self._death_failures,
             "_death_stable": self._death_stable,
             "_death_saves_prompt": self._death_saves_prompt,
-            "_active": self._active
+            "_active": self._active,
+            "_foundry_combatant_id": self._foundry_combatant_id,
+            "_foundry_token_id": self._foundry_token_id,
+            "_foundry_actor_id": self._foundry_actor_id,
         }
 
     @staticmethod
@@ -111,6 +117,9 @@ class I_Creature:
         death_stable = data.get("_death_stable", False)
         death_saves_prompt = data.get("_death_saves_prompt", False)
         active = data.get("_active", True)
+        foundry_combatant_id = data.get("_foundry_combatant_id")
+        foundry_token_id = data.get("_foundry_token_id")
+        foundry_actor_id = data.get("_foundry_actor_id")
         # print("[LOAD CREATURE]", data["_name"])
         # print("  _innate_slots_used:", data.get("_innate_slots_used"))
         # print("  _spell_slots_used:", data.get("_spell_slots_used"))
@@ -141,7 +150,10 @@ class I_Creature:
                 death_successes=death_successes,
                 death_failures=death_failures,
                 death_stable=death_stable,
-                active=active
+                active=active,
+                foundry_combatant_id=foundry_combatant_id,
+                foundry_token_id=foundry_token_id,
+                foundry_actor_id=foundry_actor_id,
             )
         elif creature_type == CreatureType.MONSTER:
             if player_visible is None:
@@ -166,7 +178,10 @@ class I_Creature:
                 spell_slots_used=spell_slots_used,
                 innate_slots_used=innate_slots_used,
                 death_saves_prompt=bool(death_saves_prompt) if death_saves_prompt is not None else False,
-                active=active
+                active=active,
+                foundry_combatant_id=foundry_combatant_id,
+                foundry_token_id=foundry_token_id,
+                foundry_actor_id=foundry_actor_id,
             )
         else:
             return I_Creature(**data)
@@ -284,7 +299,8 @@ class Monster(I_Creature):
                  movement=0, action=False, bonus_action=False, reaction=False,
                  notes='', public_notes='', player_visible=True, conditions=None, status_time='',
                  spell_slots=None, innate_slots=None, spell_slots_used=None,
-                 innate_slots_used=None, death_saves_prompt=False, active=True):
+                 innate_slots_used=None, death_saves_prompt=False, active=True,
+                 foundry_combatant_id=None, foundry_token_id=None, foundry_actor_id=None):
         super().__init__(
             _type=CreatureType.MONSTER,
             _name=name,
@@ -306,7 +322,10 @@ class Monster(I_Creature):
             _spell_slots_used=spell_slots_used or {},
             _innate_slots_used=innate_slots_used or {},
             _death_saves_prompt=bool(death_saves_prompt),
-            _active=active
+            _active=active,
+            _foundry_combatant_id=foundry_combatant_id,
+            _foundry_token_id=foundry_token_id,
+            _foundry_actor_id=foundry_actor_id,
         )
 
 
@@ -316,7 +335,8 @@ class Player(I_Creature):
                  object_interaction=False, notes='', public_notes='', player_visible=True,
                  conditions=None, status_time='',
                  spell_slots=None, innate_slots=None, spell_slots_used=None,
-                 innate_slots_used=None, death_successes=0, death_failures=0, death_stable=False, active=True):
+                 innate_slots_used=None, death_successes=0, death_failures=0, death_stable=False, active=True,
+                 foundry_combatant_id=None, foundry_token_id=None, foundry_actor_id=None):
         super().__init__(
             _type=CreatureType.PLAYER,
             _name=name,
@@ -342,5 +362,8 @@ class Player(I_Creature):
             _death_failures=death_failures,
             _death_stable=death_stable,
             _death_saves_prompt=True,
-            _active=active
+            _active=active,
+            _foundry_combatant_id=foundry_combatant_id,
+            _foundry_token_id=foundry_token_id,
+            _foundry_actor_id=foundry_actor_id,
         )
