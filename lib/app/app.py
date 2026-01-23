@@ -146,6 +146,10 @@ class Application:
                 labels = [effect.get("label") for effect in effects if effect.get("label")]
                 creature.conditions = labels
 
+            ac_value = self._extract_combatant_ac(combatant)
+            if ac_value is not None:
+                creature.ac = ac_value
+
         combat = snapshot.get("combat", {}) if isinstance(snapshot, dict) else {}
         if isinstance(combat, dict):
             round_value = combat.get("round")
@@ -316,33 +320,9 @@ class Application:
                         pass
 
             # AC (Foundry schema can vary; support common shapes)
-            ac_val = None
-            try:
-                # common: {"ac": {"value": 15}} or {"ac": 15}
-                ac_field = combatant.get("ac")
-                if isinstance(ac_field, dict):
-                    ac_val = ac_field.get("value")
-                elif ac_field is not None:
-                    ac_val = ac_field
-
-                # fallback shapes
-                if ac_val is None:
-                    ac_val = combatant.get("armorClass")
-
-                if ac_val is None:
-                    attrs = combatant.get("attributes", {})
-                    if isinstance(attrs, dict):
-                        ac_obj = attrs.get("ac", {})
-                        if isinstance(ac_obj, dict):
-                            ac_val = ac_obj.get("value")
-            except Exception:
-                ac_val = None
-
-            if ac_val is not None:
-                try:
-                    creature.ac = int(ac_val)
-                except (TypeError, ValueError):
-                    pass
+            ac_value = self._extract_combatant_ac(combatant)
+            if ac_value is not None:
+                creature.ac = ac_value
 
             effects = combatant.get("effects", [])
             if isinstance(effects, list):
@@ -369,6 +349,36 @@ class Application:
                 matched_keys.add(tid)
 
         return added
+
+    def _extract_combatant_ac(self, combatant: Dict[str, Any]) -> Optional[int]:
+        ac_val = None
+        try:
+            # common: {"ac": {"value": 15}} or {"ac": 15}
+            ac_field = combatant.get("ac")
+            if isinstance(ac_field, dict):
+                ac_val = ac_field.get("value")
+            elif ac_field is not None:
+                ac_val = ac_field
+
+            # fallback shapes
+            if ac_val is None:
+                ac_val = combatant.get("armorClass")
+
+            if ac_val is None:
+                attrs = combatant.get("attributes", {})
+                if isinstance(attrs, dict):
+                    ac_obj = attrs.get("ac", {})
+                    if isinstance(ac_obj, dict):
+                        ac_val = ac_obj.get("value")
+        except Exception:
+            ac_val = None
+
+        if ac_val is None:
+            return None
+        try:
+            return int(ac_val)
+        except (TypeError, ValueError):
+            return None
 
     # -----------------------
     # Core ordering utilities

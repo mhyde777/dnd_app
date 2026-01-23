@@ -44,6 +44,13 @@ function buildCombatSnapshot() {
   const combatants = (combat?.combatants ?? []).map((c) => {
     const actor = c.actor;
     const hp = actor?.system?.attributes?.hp ?? {};
+    const acData = actor?.system?.attributes?.ac;
+    let acValue = null;
+    if (acData && typeof acData === "object") {
+      acValue = acData.value ?? null;
+    } else if (typeof acData === "number") {
+      acValue = acData;
+    }
     const effects = (actor?.effects ?? []).map((effect) => ({
       id: effect.id,
       label: effect.label ?? effect.name ?? "",
@@ -64,6 +71,7 @@ function buildCombatSnapshot() {
         value: hp.value ?? null,
         max: hp.max ?? null,
       },
+      ac: acValue,
       effects,
       excludeFromSync: Boolean(tokenFlag || actorFlag),
     };
