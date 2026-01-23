@@ -115,6 +115,7 @@ function scheduleSnapshot(reason) {
 async function postSnapshot(reason) {
   const snapshot = buildCombatSnapshot();
   const bridgeUrl = getBridgeUrl();
+  console.log(`[${MODULE_ID}] bridgeUrl=${bridgeUrl}`);
   const endpoint = `${bridgeUrl}/foundry/snapshot`;
   const secret = getBridgeSecret();
   const headers = {
