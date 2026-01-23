@@ -101,7 +101,7 @@ class Application:
 
     def refresh_bridge_state(self) -> None:
         try:
-            print(f"[Bridge][DBG] polling base_url={getattr(self.bridge_client, 'base_url', None)!r}")
+            # print(f"[Bridge][DBG] polling base_url={getattr(self.bridge_client, 'base_url', None)!r}")
             snapshot = self.bridge_client.fetch_state()
         except Exception as exc:
             print(f"[Bridge] Failed to fetch state: {exc}")
@@ -610,11 +610,11 @@ class Application:
 
     def _enqueue_bridge_set_initiative(self, creature_name: str, initiative: int) -> None:
         if not getattr(self, "bridge_client", None):
-            print("[Bridge][DBG] bridge_client missing; cannot send set_initiative")
+            # print("[Bridge][DBG] bridge_client missing; cannot send set_initiative")
             return
 
         if not self.bridge_client.enabled:
-            print("[Bridge][DBG] bridge_client disabled; skipping set_initiative")
+            # print("[Bridge][DBG] bridge_client disabled; skipping set_initiative")
             return
 
         creature = None
@@ -654,7 +654,7 @@ class Application:
                 combatant = self._resolve_bridge_combatant(creature_name)
 
             if not combatant:
-                print(f"[Bridge][DBG] no combatant match for {creature_name!r}; skipping set_initiative")
+                # print(f"[Bridge][DBG] no combatant match for {creature_name!r}; skipping set_initiative")
                 return
 
             combatant_id = combatant.get("combatantId") or combatant_id
@@ -662,7 +662,7 @@ class Application:
             actor_id = combatant.get("actorId") or actor_id
 
         if not combatant_id and not token_id and not actor_id:
-            print(f"[Bridge][DBG] missing all ids for {creature_name!r}; skipping set_initiative")
+            # print(f"[Bridge][DBG] missing all ids for {creature_name!r}; skipping set_initiative")
             return
 
         print(
