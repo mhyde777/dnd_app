@@ -65,6 +65,8 @@ function buildCombatSnapshot() {
       combatantId: c.id ?? null,
       tokenId: c.token?.id ?? c.tokenId ?? null,
       actorId: actor?.id ?? null,
+      actorType: actor?.type ?? null,
+      actorHasPlayerOwner: Boolean(actor?.hasPlayerOwner),
       name: c.name ?? actor?.name ?? "",
       initiative: c.initiative ?? null,
       hp: {
