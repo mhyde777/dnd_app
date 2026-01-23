@@ -161,6 +161,7 @@ class Application:
             return
         if not isinstance(snapshot, dict):
             return
+
         combatants = snapshot.get("combatants", [])
         if not isinstance(combatants, list):
             return
@@ -168,10 +169,12 @@ class Application:
         added_combatants = self._ensure_foundry_combatants_present(combatants)
         updated_initiative = False
         updated_active = False
+
         for creature_name, creature in self.manager.creatures.items():
             combatant = self._resolve_bridge_combatant(creature_name)
             if not combatant:
                 continue
+
             initiative = combatant.get("initiative")
             if initiative is not None and initiative != getattr(creature, "initiative", None):
                 creature.initiative = initiative
@@ -180,6 +183,7 @@ class Application:
             setattr(creature, "foundry_combatant_id", combatant.get("combatantId"))
             setattr(creature, "foundry_token_id", combatant.get("tokenId"))
             setattr(creature, "foundry_actor_id", combatant.get("actorId"))
+
             resolved_type = self._resolve_foundry_creature_type(combatant)
             if resolved_type and getattr(creature, "_type", None) == CreatureType.BASE:
                 creature._type = resolved_type
@@ -199,13 +203,15 @@ class Application:
                 except Exception:
                     setattr(creature, "_armor_class", ac_value)
 
-        combat = snapshot.get("combat", {}) if isinstance(snapshot, dict) else {}
+        combat = snapshot.get("combat", {})
         if isinstance(combat, dict):
             round_value = combat.get("round")
             if isinstance(round_value, int):
                 self.round_counter = max(1, round_value)
+
             active = combat.get("activeCombatant")
             active_name = None
+
             if isinstance(active, dict):
                 active_id = active.get("combatantId")
                 if active_id:
@@ -213,10 +219,13 @@ class Application:
                         if getattr(creature, "foundry_combatant_id", None) == active_id:
                             active_name = creature.name
                             break
+
+                active_label = None
                 if not active_name:
                     active_label = active.get("name")
                 if active_label:
                     active_name = active_label
+
             if active_name and active_name != getattr(self, "current_creature_name", None):
                 self.current_creature_name = active_name
                 updated_active = True
