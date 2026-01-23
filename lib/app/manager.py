@@ -39,15 +39,26 @@ class CreatureManager:
 
     def ordered_items(self) -> List[Tuple[str, I_Creature]]:
         """
-        Return a *canonical* ordered list of (name, creature) pairs:
-        - initiative DESC
-        - name (natural/human) ASC for ties
+        Canonical order:
+        - WITH initiative (initiative != None and != -1) first, initiative DESC
+        - WITHOUT initiative (None or -1) after, name (natural/human) ASC
         """
+        def _has_init(c: I_Creature) -> bool:
+            init = getattr(c, "initiative", None)
+            return init is not None and init != -1
+
+        def _init_value(c: I_Creature) -> int:
+            try:
+                return int(getattr(c, "initiative", 0))
+            except Exception:
+                return 0
+
         return sorted(
             self.creatures.items(),
             key=lambda kv: (
-                -(getattr(kv[1], "initiative", 0) or 0),
-                self._natural_key(kv[0]),
+                0 if _has_init(kv[1]) else 1,                       # bucket
+                -_init_value(kv[1]) if _has_init(kv[1]) else 0,     # init DESC
+                self._natural_key(kv[0]),                           # name ASC
             ),
         )
 
