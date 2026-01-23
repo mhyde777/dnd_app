@@ -1707,13 +1707,14 @@ class Application:
                 pixmap = QPixmap()
                 pixmap.loadFromData(data)
 
-                # Keep local cache in sync (overwrite)
-                try:
-                    os.makedirs(os.path.dirname(image_path), exist_ok=True)
-                    with open(image_path, "wb") as f:
-                        f.write(data)
-                except Exception:
-                    pass
+                # Optional local cache for remote images (disabled by default)
+                if os.getenv("CACHE_REMOTE_IMAGES", "0") == "1":
+                    try:
+                        os.makedirs(os.path.dirname(image_path), exist_ok=True)
+                        with open(image_path, "wb") as f:
+                            f.write(data)
+                    except Exception:
+                        pass
 
             # 2) Fallback to local file if server didn't return anything
             if (pixmap is None or pixmap.isNull()) and os.path.exists(image_path):
