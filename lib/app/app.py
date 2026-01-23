@@ -190,105 +190,115 @@ class Application:
                 return None
             return str(value)
 
+        # Build indexes for creatures already in the app (dedupe keys).
+        # IMPORTANT: do NOT dedupe by actorId. Multiple tokens/combatants can share the same actorId.
         existing_by_combatant_id: Dict[str, I_Creature] = {}
         existing_by_token_id: Dict[str, I_Creature] = {}
-        existing_by_actor_id: Dict[str, I_Creature] = {}
-        matched_combatant_keys: set[str] = set()
+        matched_keys: set[str] = set()
+
         for creature in self.manager.creatures.values():
-            combatant_id = _normalize_id(
+            cid = _normalize_id(
                 getattr(creature, "foundry_combatant_id", None)
                 or getattr(creature, "combatant_id", None)
             )
-            token_id = _normalize_id(
+            tid = _normalize_id(
                 getattr(creature, "foundry_token_id", None)
                 or getattr(creature, "token_id", None)
             )
-            actor_id = _normalize_id(
-                getattr(creature, "foundry_actor_id", None)
-                or getattr(creature, "actor_id", None)
-            )
-            if combatant_id:
-                existing_by_combatant_id[combatant_id] = creature
-                matched_combatant_keys.add(combatant_id)
-            if token_id:
-                existing_by_token_id[token_id] = creature
-                matched_combatant_keys.add(token_id)
-            if actor_id:
-                existing_by_actor_id[actor_id] = creature
 
+            if cid:
+                existing_by_combatant_id[cid] = creature
+                matched_keys.add(cid)
+            if tid:
+                existing_by_token_id[tid] = creature
+                matched_keys.add(tid)
+
+        # For creatures that have no IDs yet, try to resolve and attach IDs (no new creatures created here).
         for creature in self.manager.creatures.values():
-            if (
+            has_any_id = bool(
                 getattr(creature, "foundry_combatant_id", None)
                 or getattr(creature, "foundry_token_id", None)
-                or getattr(creature, "foundry_actor_id", None)
                 or getattr(creature, "combatant_id", None)
                 or getattr(creature, "token_id", None)
-                or getattr(creature, "actor_id", None)
-            ):
+            )
+            if has_any_id:
                 continue
+
             resolved = self._resolve_bridge_combatant(getattr(creature, "name", ""))
             if not resolved:
                 continue
-            resolved_combatant_id = _normalize_id(resolved.get("combatantId"))
-            resolved_token_id = _normalize_id(resolved.get("tokenId"))
-            resolved_actor_id = _normalize_id(resolved.get("actorId"))
-            if resolved_combatant_id:
-                setattr(creature, "foundry_combatant_id", resolved_combatant_id)
-                matched_combatant_keys.add(resolved_combatant_id)
-            if resolved_token_id:
-                setattr(creature, "foundry_token_id", resolved_token_id)
-                matched_combatant_keys.add(resolved_token_id)
-            if resolved_actor_id:
-                setattr(creature, "foundry_actor_id", resolved_actor_id)
 
+            rcid = _normalize_id(resolved.get("combatantId"))
+            rtid = _normalize_id(resolved.get("tokenId"))
+            raid = _normalize_id(resolved.get("actorId"))
+
+            if rcid:
+                setattr(creature, "foundry_combatant_id", rcid)
+                existing_by_combatant_id[rcid] = creature
+                matched_keys.add(rcid)
+            if rtid:
+                setattr(creature, "foundry_token_id", rtid)
+                existing_by_token_id[rtid] = creature
+                matched_keys.add(rtid)
+            if raid:
+                setattr(creature, "foundry_actor_id", raid)  # keep as metadata only
+
+        # Add missing Foundry combatants into the app (membership add-only).
         added = False
         for combatant in combatants:
             if not isinstance(combatant, dict):
                 continue
             if combatant.get("excludeFromSync"):
                 continue
-            name = combatant.get("name") or ""
-            combatant_id = _normalize_id(combatant.get("combatantId"))
-            token_id = _normalize_id(combatant.get("tokenId"))
-            actor_id = _normalize_id(combatant.get("actorId"))
 
-            if (
-                (combatant_id and combatant_id in matched_combatant_keys)
-                or (token_id and token_id in matched_combatant_keys)
-            ):
-                continue
-
-            existing = None
-            if combatant_id and combatant_id in existing_by_combatant_id:
-                existing = existing_by_combatant_id[combatant_id]
-            elif token_id and token_id in existing_by_token_id:
-                existing = existing_by_token_id[token_id]
-            elif actor_id and actor_id in existing_by_actor_id:
-                existing = existing_by_actor_id[actor_id]
-
-            if existing:
-                if combatant_id and not getattr(existing, "foundry_combatant_id", None):
-                    setattr(existing, "foundry_combatant_id", combatant_id)
-                if token_id and not getattr(existing, "foundry_token_id", None):
-                    setattr(existing, "foundry_token_id", token_id)
-                if actor_id and not getattr(existing, "foundry_actor_id", None):
-                    setattr(existing, "foundry_actor_id", actor_id)
-                continue
-
+            name = (combatant.get("name") or "").strip()
             if not name:
                 continue
 
+            cid = _normalize_id(combatant.get("combatantId"))
+            tid = _normalize_id(combatant.get("tokenId"))
+            aid = _normalize_id(combatant.get("actorId"))
+
+            # Skip if we've already matched this combatant by combatantId or tokenId.
+            if (cid and cid in matched_keys) or (tid and tid in matched_keys):
+                continue
+
+            # If an existing creature has matching IDs, attach missing metadata and skip creation.
+            existing = None
+            if cid and cid in existing_by_combatant_id:
+                existing = existing_by_combatant_id[cid]
+            elif tid and tid in existing_by_token_id:
+                existing = existing_by_token_id[tid]
+
+            if existing:
+                if cid and not getattr(existing, "foundry_combatant_id", None):
+                    setattr(existing, "foundry_combatant_id", cid)
+                    existing_by_combatant_id[cid] = existing
+                    matched_keys.add(cid)
+                if tid and not getattr(existing, "foundry_token_id", None):
+                    setattr(existing, "foundry_token_id", tid)
+                    existing_by_token_id[tid] = existing
+                    matched_keys.add(tid)
+                if aid and not getattr(existing, "foundry_actor_id", None):
+                    setattr(existing, "foundry_actor_id", aid)
+                continue
+
+            # Create a new creature for this Foundry combatant
             creature = I_Creature(_name=str(name))
-            if combatant_id:
-                setattr(creature, "foundry_combatant_id", combatant_id)
-            if token_id:
-                setattr(creature, "foundry_token_id", token_id)
-            if actor_id:
-                setattr(creature, "foundry_actor_id", actor_id)
+
+            if cid:
+                setattr(creature, "foundry_combatant_id", cid)
+            if tid:
+                setattr(creature, "foundry_token_id", tid)
+            if aid:
+                setattr(creature, "foundry_actor_id", aid)
 
             initiative = combatant.get("initiative")
             if initiative is not None:
-                creature.initiative = initiative
+                try:
+                    creature.initiative = int(initiative)
+                except (TypeError, ValueError):
+                    pass
 
             hp = combatant.get("hp", {})
             if isinstance(hp, dict):
@@ -305,12 +315,42 @@ class Application:
                     except (TypeError, ValueError):
                         pass
 
+            # AC (Foundry schema can vary; support common shapes)
+            ac_val = None
+            try:
+                # common: {"ac": {"value": 15}} or {"ac": 15}
+                ac_field = combatant.get("ac")
+                if isinstance(ac_field, dict):
+                    ac_val = ac_field.get("value")
+                elif ac_field is not None:
+                    ac_val = ac_field
+
+                # fallback shapes
+                if ac_val is None:
+                    ac_val = combatant.get("armorClass")
+
+                if ac_val is None:
+                    attrs = combatant.get("attributes", {})
+                    if isinstance(attrs, dict):
+                        ac_obj = attrs.get("ac", {})
+                        if isinstance(ac_obj, dict):
+                            ac_val = ac_obj.get("value")
+            except Exception:
+                ac_val = None
+
+            if ac_val is not None:
+                try:
+                    creature.ac = int(ac_val)
+                except (TypeError, ValueError):
+                    pass
+
             effects = combatant.get("effects", [])
             if isinstance(effects, list):
                 setattr(creature, "foundry_effects", effects)
-                labels = [effect.get("label") for effect in effects if effect.get("label")]
+                labels = [e.get("label") for e in effects if isinstance(e, dict) and e.get("label")]
                 creature.conditions = labels
 
+            # Ensure unique name in manager
             base_name = creature.name
             counter = 1
             while creature.name in self.manager.creatures:
@@ -320,12 +360,13 @@ class Application:
             self.manager.add_creature(creature)
             added = True
 
-            if combatant_id:
-                existing_by_combatant_id[combatant_id] = creature
-            if token_id:
-                existing_by_token_id[token_id] = creature
-            if actor_id:
-                existing_by_actor_id[actor_id] = creature
+            # Update indexes + matched keys
+            if cid:
+                existing_by_combatant_id[cid] = creature
+                matched_keys.add(cid)
+            if tid:
+                existing_by_token_id[tid] = creature
+                matched_keys.add(tid)
 
         return added
 
@@ -474,7 +515,6 @@ class Application:
             print("[Bridge][DBG] bridge_client disabled; skipping set_initiative")
             return
 
-        # 1) Try to get ids from creature first
         creature = None
         if getattr(self, "manager", None):
             creature = self.manager.creatures.get(creature_name)
@@ -492,26 +532,41 @@ class Application:
             or getattr(creature, "foundry_combatant_id", None)
         )
 
-        # 2) Fallback to bridge snapshot match (preferred for initiative: combatantId)
+        combatant = None
+
+        # Prefer combatantId for initiative updates; resolve from snapshot if missing
         if not combatant_id:
             combatant = self._resolve_bridge_combatant(creature_name)
+
+            # If resolve fails, snapshot may be stale/empty at startup: refresh once and retry
+            if not combatant:
+                try:
+                    snapshot = self.bridge_client.fetch_state()
+                except Exception:
+                    snapshot = None
+                if isinstance(snapshot, dict):
+                    combatants = snapshot.get("combatants", [])
+                    if isinstance(combatants, list):
+                        self.bridge_snapshot = snapshot
+                        self.bridge_combatants_by_name = self._index_bridge_combatants(combatants)
+                combatant = self._resolve_bridge_combatant(creature_name)
+
             if not combatant:
                 print(f"[Bridge][DBG] no combatant match for {creature_name!r}; skipping set_initiative")
                 return
-            combatant_id = combatant.get("combatantId")
-            token_id = token_id or combatant.get("tokenId")
-            actor_id = actor_id or combatant.get("actorId")
+
+            combatant_id = combatant.get("combatantId") or combatant_id
+            token_id = combatant.get("tokenId") or token_id
+            actor_id = combatant.get("actorId") or actor_id
 
         if not combatant_id and not token_id and not actor_id:
             print(f"[Bridge][DBG] missing all ids for {creature_name!r}; skipping set_initiative")
             return
 
-        # 3) Send command
         print(
             "[Bridge] enqueue set_initiative "
             f"name={creature_name!r} initiative={initiative!r} "
-            f"combatant_id={combatant_id!r} token_id={token_id!r} "
-            f"actor_id={actor_id!r} post=attempt"
+            f"combatant_id={combatant_id!r} token_id={token_id!r} actor_id={actor_id!r}"
         )
         self.bridge_client.send_set_initiative(
             initiative=int(initiative),
