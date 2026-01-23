@@ -13,7 +13,7 @@ from app.creature import CreatureType
 from app.manager import CreatureManager
 from ui.creature_table_model import CreatureTableModel
 from ui.spellcasting_dropdown import SpellcastingDropdown
-from app.config import use_storage_api_only
+from app.config import player_view_enabled, use_storage_api_only
 from ui.conditions_dropdown import ConditionsDropdown, DEFAULT_CONDITIONS
 
 class InitiativeTracker(QMainWindow, Application):
@@ -71,7 +71,10 @@ class InitiativeTracker(QMainWindow, Application):
         self.player_view_toggle.setCheckable(True)
         self.player_view_toggle.setChecked(False)
         self.player_view_toggle.clicked.connect(self.toggle_player_view_live)
-        self.label_layout.addWidget(self.player_view_toggle)
+        if player_view_enabled():
+            self.label_layout.addWidget(self.player_view_toggle)
+        else:
+            self.player_view_toggle.hide()
 
         # === TABLE AREA (under labels) ===
         self.table_model = CreatureTableModel(self.manager, parent=self, bridge_owner=self)
@@ -533,13 +536,16 @@ class InitiativeTracker(QMainWindow, Application):
                 server.stop()
             except Exception:
                 pass
-        super().closeEvent(event)
-
-    def closeEvent(self, event):
-        server = getattr(self, "player_view_server", None)
-        if server is not None:
+        local_bridge = getattr(self, "local_bridge", None)
+        if local_bridge is not None:
             try:
-                server.stop()
+                local_bridge.stop()
+            except Exception:
+                pass
+        stream_stop = getattr(self, "bridge_stream_stop", None)
+        if stream_stop is not None:
+            try:
+                stream_stop.set()
             except Exception:
                 pass
         super().closeEvent(event)

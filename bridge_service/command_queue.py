@@ -12,6 +12,8 @@ class CommandQueue:
     items: List[Dict[str, Any]] = field(default_factory=list)
     lock: threading.Lock = field(default_factory=threading.Lock)
     persist_path: Optional[str] = None
+    version: int = 0
+    condition: threading.Condition = field(default_factory=threading.Condition)
 
     def load(self) -> None:
         if not self.persist_path:
@@ -40,10 +42,17 @@ class CommandQueue:
         with self.lock:
             self.items.append(cmd)
             self._persist()
+        with self.condition:
+            self.version += 1
+            self.condition.notify_all()
 
     def get_next(self) -> Optional[Dict[str, Any]]:
         with self.lock:
             return self.items[0] if self.items else None
+
+    def get_all(self) -> List[Dict[str, Any]]:
+        with self.lock:
+            return list(self.items)
 
     def ack(self, cmd_id: str) -> bool:
         with self.lock:
@@ -51,8 +60,15 @@ class CommandQueue:
                 if cmd.get("id") == cmd_id:
                     self.items.pop(i)
                     self._persist()
-                    return True
-            return False
+                    removed = True
+                    break
+            else:
+                removed = False
+        if removed:
+            with self.condition:
+                self.version += 1
+                self.condition.notify_all()
+        return removed
 
     def sweep_head_if_expired(self, max_age_seconds: float) -> Optional[Tuple[Dict[str, Any], float]]:
         now = datetime.now(timezone.utc)
@@ -74,4 +90,15 @@ class CommandQueue:
                 return None
             self.items.pop(0)
             self._persist()
-            return head, age_seconds
+            removed = True
+        if removed:
+            with self.condition:
+                self.version += 1
+                self.condition.notify_all()
+        return head, age_seconds
+
+    def wait_for_change(self, last_version: int, timeout: float) -> int:
+        with self.condition:
+            if self.version <= last_version:
+                self.condition.wait(timeout=timeout)
+            return self.version
