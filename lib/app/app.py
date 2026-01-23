@@ -100,6 +100,7 @@ class Application:
 
     def refresh_bridge_state(self) -> None:
         try:
+            print(f"[Bridge][DBG] polling base_url={getattr(self.bridge_client, 'base_url', None)!r}")
             snapshot = self.bridge_client.fetch_state()
         except Exception as exc:
             print(f"[Bridge] Failed to fetch state: {exc}")
@@ -148,7 +149,10 @@ class Application:
 
             ac_value = self._extract_combatant_ac(combatant)
             if ac_value is not None:
-                creature.ac = ac_value
+                try:
+                    creature.armor_class = int(ac_value)
+                except Exception:
+                    setattr(creature, "_armor_class", ac_value)
 
         combat = snapshot.get("combat", {}) if isinstance(snapshot, dict) else {}
         if isinstance(combat, dict):
@@ -322,7 +326,10 @@ class Application:
             # AC (Foundry schema can vary; support common shapes)
             ac_value = self._extract_combatant_ac(combatant)
             if ac_value is not None:
-                creature.ac = ac_value
+                try:
+                    creature.armor_class = int(ac_value)
+                except Exception:
+                    setattr(creature, "_armor_class", ac_value)
 
             effects = combatant.get("effects", [])
             if isinstance(effects, list):
