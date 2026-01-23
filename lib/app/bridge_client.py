@@ -148,6 +148,22 @@ class BridgeClient:
             redact_fields=("tokenId", "actorId", "effectId"),
         )
 
+    def send_next_turn(self, command_id: Optional[str] = None) -> bool:
+        return self._post_command(
+            command_type="next_turn",
+            payload={},
+            command_id=command_id,
+            log_label="next_turn",
+        )
+
+    def send_prev_turn(self, command_id: Optional[str] = None) -> bool:
+        return self._post_command(
+            command_type="prev_turn",
+            payload={},
+            command_id=command_id,
+            log_label="prev_turn",
+        )
+
     def _post_command(
         self,
         command_type: str,

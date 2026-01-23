@@ -422,6 +422,16 @@ class Application:
                 actor_id=str(actor_id) if actor_id else None,
             )
 
+    def _enqueue_bridge_turn_command(self, direction: str) -> None:
+        if not getattr(self, "bridge_client", None):
+            return
+        if not self.bridge_client.enabled:
+            return
+        if direction == "next":
+            self.bridge_client.send_next_turn()
+        elif direction == "prev":
+            self.bridge_client.send_prev_turn()
+
     def build_turn_order(self) -> None:
         """
         Rebuild the authoritative turn order when creatures/initiatives change.
@@ -1232,6 +1242,7 @@ class Application:
         if getattr(cr, "_type", None) == CreatureType.MONSTER:
             self.active_statblock_image(cr)
 
+        self._enqueue_bridge_turn_command("next")
 
     def prev_turn(self):
         # 1) Ensure we have an order and keep it in sync with the manager
@@ -1303,6 +1314,7 @@ class Application:
         if cr and getattr(cr, "_type", None) == CreatureType.MONSTER:
             self.active_statblock_image(cr)
 
+        self._enqueue_bridge_turn_command("prev")
     # ----------------
     # Path Functions
     # ----------------
