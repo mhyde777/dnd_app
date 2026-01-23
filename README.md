@@ -94,12 +94,13 @@ STORAGE_API_KEY=your_api_key_if_required
 Leave `USE_STORAGE_API_ONLY` unset (or set it to `0`) to kep using the built-in local JSOn files. If you enable `USE_STORAGE_API_ONLY` without providing `STORAGE_API_BASE`, the app will start but show a warning explaining how the to fix the configuration so you are not blocked while the Storage service is offline.
 
 ## Player View (Foundry-friendly)
-When the app starts, it also launches a lightweight Player View web page that can be embedded in Foundry via Inline Webviewer. The page is designed to be iframe-friendly and shows only player-safe combat data.
+When enabled, the app launches a lightweight Player View web page that can be embedded in Foundry via Inline Webviewer. The page is designed to be iframe-friendly and shows only player-safe combat data.
 
 **Access the Player View:**
 * Default URL: `http://127.0.0.1:5001/player`
 * JSON feed: `http://127.0.0.1:5001/player.json`
 * Optional environment overrides:
+  * `PLAYER_VIEW_ENABLED` (default `0`, set to `1` to enable)
   * `PLAYER_VIEW_HOST` (default `0.0.0.0`)
   * `PLAYER_VIEW_PORT` (default `5001`)
 
@@ -135,6 +136,7 @@ This repo includes a minimal bridge service and a Foundry module for sending com
 * `BRIDGE_VERSION` (optional version string for `/version`)
 * `COMMAND_TTL_SECONDS` (optional; default `60`)
 * `COMMAND_SWEEP_INTERVAL_SECONDS` (optional; default `5`)
+* `BRIDGE_STREAM_KEEPALIVE_SECONDS` (optional; default `15`)
 
 **Example `.env` for a remote bridge (app + bridge):**
 ```
@@ -189,6 +191,7 @@ The module posts a full combat snapshot to `http://127.0.0.1:8787/foundry/snapsh
 Set these environment variables (for the app process):
 * `BRIDGE_URL` (default `http://127.0.0.1:8787`)
 * `BRIDGE_TOKEN` (required to fetch `/state` and enqueue `/commands`)
+* `BRIDGE_STREAM_ENABLED` (default `1`, use `/state/stream` SSE instead of polling `/state`)
 
 On startup the app logs bridge sync status and prints the snapshot count when it loads.
 
@@ -237,6 +240,10 @@ On startup the app logs bridge sync status and prints the snapshot count when it
 ## App → Foundry (Phase 2: command queue)
 
 The bridge supports an app-to-Foundry command queue via `POST /commands`. When the app edits current HP or conditions for a combatant that matches a Foundry combatant, it posts commands to the bridge and Foundry polls the queue. Additional commands include `set_initiative`, `add_condition`, and `remove_condition`.
+When enabled in the Foundry module settings, Foundry can keep a persistent EventSource connection to `/commands/stream` for lower latency.
+
+**Foundry module settings:**
+* `Use command stream (EventSource)` toggles a persistent stream instead of polling.
 
 **App environment variables:**
 * `BRIDGE_URL` (default `http://127.0.0.1:8787`)
@@ -248,6 +255,16 @@ The bridge supports an app-to-Foundry command queue via `POST /commands`. When t
 * `BRIDGE_INGEST_SECRET` (required for Foundry polling `/commands` and `/commands/<id>/ack`)
 * `COMMAND_TTL_SECONDS` (optional; default `60`)
 * `COMMAND_SWEEP_INTERVAL_SECONDS` (optional; default `5`)
+
+## Local bridge server (single-machine mode)
+By default, the desktop app can start a local bridge server inside the app process. This keeps snapshots, commands, and storage local by default.
+
+**Environment variables:**
+* `LOCAL_BRIDGE_ENABLED` (default `1`, set to `0` to disable)
+* `LOCAL_BRIDGE_HOST` (default `127.0.0.1`)
+* `LOCAL_BRIDGE_PORT` (default `8787`)
+
+If `BRIDGE_TOKEN` is not set, the app defaults it to `local-dev` and also uses that value for `BRIDGE_INGEST_SECRET`. Configure your Foundry module to use the same shared secret.
 
 
 ### Manual test checklist

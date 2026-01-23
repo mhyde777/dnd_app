@@ -1,5 +1,5 @@
 from typing import Dict, Any, List, Optional
-import json, os, re, sys
+import json, os, re, sys, threading
 from dotenv import load_dotenv
 
 from PyQt5.QtWidgets import(
@@ -16,9 +16,17 @@ from app.creature import (
 from app.save_json import GameState
 from app.manager import CreatureManager
 from app.storage_api import StorageAPI
-from app.config import get_storage_api_base, use_storage_api_only, get_config_path
+from app.config import (
+    bridge_stream_enabled,
+    get_storage_api_base,
+    get_config_path,
+    local_bridge_enabled,
+    player_view_enabled,
+    use_storage_api_only,
+)
 from app.player_view_server import PlayerViewServer
 from app.bridge_client import BridgeClient
+from app.local_bridge_server import LocalBridgeServer
 from ui.windows import (
     AddCombatantWindow, RemoveCombatantWindow, BuildEncounterWindow
 )
@@ -58,21 +66,31 @@ class Application:
             # '_object_interaction': 'set_creature_object_interaction'
         }
         
-        self.player_view_live = True
-        self.player_view_snapshot: Optional[Dict[str, Any]] = None
-        self.player_view_server = PlayerViewServer(self.get_player_view_payload)
-        self.player_view_server.start()
+        self.local_bridge: Optional[LocalBridgeServer] = None
+        if local_bridge_enabled():
+            if not os.getenv("BRIDGE_TOKEN"):
+                os.environ["BRIDGE_TOKEN"] = "local-dev"
+                print("[Bridge] BRIDGE_TOKEN not set; defaulting to 'local-dev'.")
+            if not os.getenv("BRIDGE_INGEST_SECRET"):
+                os.environ["BRIDGE_INGEST_SECRET"] = os.environ["BRIDGE_TOKEN"]
+                print("[Bridge] BRIDGE_INGEST_SECRET not set; using BRIDGE_TOKEN for local bridge.")
+            self.local_bridge = LocalBridgeServer.from_env()
+            self.local_bridge.start()
 
         self.bridge_client = BridgeClient.from_env()
         self.bridge_snapshot: Optional[Dict[str, Any]] = None
         self.bridge_timer: Optional[QTimer] = None
+        self.bridge_stream_thread: Optional[threading.Thread] = None
+        self.bridge_stream_stop: Optional[threading.Event] = None
         self.bridge_combatants_by_name: Dict[str, List[Dict[str, Any]]] = {}
         self._initiative_reset_pending = False
 
         self.player_view_live = True
         self.player_view_snapshot: Optional[Dict[str, Any]] = None
-        self.player_view_server = PlayerViewServer(self.get_player_view_payload)
-        self.player_view_server.start()
+        self.player_view_server: Optional[PlayerViewServer] = None
+        if player_view_enabled():
+            self.player_view_server = PlayerViewServer(self.get_player_view_payload)
+            self.player_view_server.start()
 
         # --- Storage API only mode ---
         self.storage_api: Optional[StorageAPI] = None
@@ -93,11 +111,34 @@ class Application:
         if not self.bridge_client.enabled:
             print("[Bridge] BRIDGE_TOKEN is not set; bridge sync is disabled.")
             return
+        if bridge_stream_enabled():
+            self.start_bridge_stream()
+            return
         if self.bridge_timer is None:
             self.bridge_timer = QTimer(self)
             self.bridge_timer.timeout.connect(self.refresh_bridge_state)
             self.bridge_timer.start(5000)
         self.refresh_bridge_state()
+
+    def start_bridge_stream(self) -> None:
+        if self.bridge_stream_thread and self.bridge_stream_thread.is_alive():
+            return
+        if not self.bridge_client.enabled:
+            print("[Bridge] BRIDGE_TOKEN is not set; bridge stream is disabled.")
+            return
+        if self.bridge_stream_stop is None:
+            self.bridge_stream_stop = threading.Event()
+
+        def on_snapshot(snapshot: Dict[str, Any]) -> None:
+            QTimer.singleShot(0, lambda payload=snapshot: self._set_bridge_snapshot(payload))
+
+        self.bridge_stream_thread = threading.Thread(
+            target=self.bridge_client.stream_state,
+            args=(on_snapshot, self.bridge_stream_stop),
+            daemon=True,
+        )
+        self.bridge_stream_thread.start()
+        print("[Bridge] Using SSE stream for snapshots.")
 
     def refresh_bridge_state(self) -> None:
         try:
@@ -106,16 +147,19 @@ class Application:
         except Exception as exc:
             print(f"[Bridge] Failed to fetch state: {exc}")
             return
-        if snapshot is None:
+        self._set_bridge_snapshot(snapshot)
+
+    def _set_bridge_snapshot(self, snapshot: Optional[Dict[str, Any]]) -> None:
+        if snapshot is None or not isinstance(snapshot, dict):
             return
         self.bridge_snapshot = snapshot
-        combatants = snapshot.get("combatants", []) if isinstance(snapshot, dict) else []
+        combatants = snapshot.get("combatants", [])
+        if not isinstance(combatants, list):
+            combatants = []
         self.bridge_combatants_by_name = self._index_bridge_combatants(combatants)
         self._apply_bridge_snapshot(snapshot)
-        world = snapshot.get("world") if isinstance(snapshot, dict) else None
-        print(
-            f"[Bridge] Snapshot loaded world={world!r} combatants={len(combatants)}"
-        )
+        world = snapshot.get("world")
+        print(f"[Bridge] Snapshot loaded world={world!r} combatants={len(combatants)}")
 
     def _has_missing_initiatives(self) -> bool:
         if not getattr(self, "manager", None) or not getattr(self.manager, "creatures", None):

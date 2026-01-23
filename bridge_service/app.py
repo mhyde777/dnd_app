@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Tuple
 
-from flask import Flask, jsonify, request
+from flask import Flask, Response, jsonify, request, stream_with_context
 
 from bridge_service.command_queue import CommandQueue
 
@@ -36,6 +36,8 @@ def _load_float_env(name: str, default: float) -> float:
 class SnapshotStore:
     snapshot: Optional[Dict[str, Any]] = None
     lock: threading.Lock = field(default_factory=threading.Lock)
+    version: int = 0
+    condition: threading.Condition = field(default_factory=threading.Condition)
 
     def get(self) -> Dict[str, Any]:
         with self.lock:
@@ -44,6 +46,15 @@ class SnapshotStore:
     def set(self, snapshot: Dict[str, Any]) -> None:
         with self.lock:
             self.snapshot = snapshot
+        with self.condition:
+            self.version += 1
+            self.condition.notify_all()
+
+    def wait_for_change(self, last_version: int, timeout: float) -> int:
+        with self.condition:
+            if self.version <= last_version:
+                self.condition.wait(timeout=timeout)
+            return self.version
 
 
 RESERVED_COMMAND_FIELDS = {"id", "type", "timestamp", "source", "payload"}
@@ -120,7 +131,9 @@ def create_app() -> Flask:
         secret = _load_env("BRIDGE_INGEST_SECRET")
         if not secret:
             return None
-        if request.headers.get("X-Bridge-Secret") != secret:
+        header_secret = request.headers.get("X-Bridge-Secret")
+        query_secret = request.args.get("secret", "")
+        if header_secret != secret and query_secret != secret:
             return jsonify({"error": "unauthorized"}), 401
         return None
 
@@ -161,6 +174,28 @@ def create_app() -> Flask:
             return auth
         return jsonify(store.get())
 
+    @app.route("/state/stream", methods=["GET", "OPTIONS"])
+    def state_stream() -> Any:
+        if request.method == "OPTIONS":
+            return ("", 204)
+        auth = require_bearer()
+        if auth:
+            return auth
+
+        def generate() -> Any:
+            last_version = -1
+            keepalive_s = _load_float_env("BRIDGE_STREAM_KEEPALIVE_SECONDS", 15)
+            while True:
+                version = store.wait_for_change(last_version, keepalive_s)
+                if version != last_version:
+                    snapshot = store.get()
+                    payload = json.dumps(snapshot, separators=(",", ":"))
+                    yield f"event: snapshot\ndata: {payload}\n\n"
+                    last_version = version
+                else:
+                    yield ": keepalive\n\n"
+
+        return Response(stream_with_context(generate()), mimetype="text/event-stream")
     @app.route("/foundry/snapshot", methods=["POST", "OPTIONS"])
     def foundry_snapshot() -> Any:
         if request.method == "OPTIONS":
@@ -200,6 +235,28 @@ def create_app() -> Flask:
         commands.put(cmd)
         return jsonify({"status": "ok", "command": cmd})
 
+    @app.route("/commands/stream", methods=["GET", "OPTIONS"])
+    def commands_stream() -> Any:
+        if request.method == "OPTIONS":
+            return ("", 204)
+        auth = require_ingest_secret()
+        if auth:
+            return auth
+
+        def generate() -> Any:
+            last_version = -1
+            keepalive_s = _load_float_env("BRIDGE_STREAM_KEEPALIVE_SECONDS", 15)
+            while True:
+                version = commands.wait_for_change(last_version, keepalive_s)
+                if version != last_version:
+                    items = commands.get_all()
+                    payload = json.dumps({"commands": items}, separators=(",", ":"))
+                    yield f"event: commands\ndata: {payload}\n\n"
+                    last_version = version
+                else:
+                    yield ": keepalive\n\n"
+
+        return Response(stream_with_context(generate()), mimetype="text/event-stream")
     @app.route("/commands/<cmd_id>/ack", methods=["POST", "OPTIONS"])
     def commands_ack(cmd_id: str) -> Any:
         if request.method == "OPTIONS":

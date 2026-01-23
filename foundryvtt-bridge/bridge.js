@@ -3,6 +3,7 @@ const MODULE_ID = "foundryvtt-bridge";
 const DEFAULT_BRIDGE_URL = "http://127.0.0.1:8787";
 const LOG_PREFIX = "[bridge]";
 const COMMAND_POLL_INTERVAL_MS = 1500;
+const DEFAULT_USE_COMMAND_STREAM = true;
 
 function getBridgeUrl() {
   const raw = game.settings.get(MODULE_ID, "bridgeUrl") || DEFAULT_BRIDGE_URL;
@@ -100,6 +101,7 @@ let snapshotTimer = null;
 let commandPollTimer = null;
 let commandPollInFlight = false;
 let lastCommandPollAtMs = 0;
+let commandStream = null;
 
 // Optional: cap how many commands we process per poll tick
 const MAX_COMMANDS_PER_TICK = 25;
@@ -572,6 +574,7 @@ async function pollCommands() {
 }
 
 function startCommandPolling() {
+  if (commandStream) return;
   if (commandPollTimer) return;
 
   console.log(`${LOG_PREFIX} Starting command polling every ${COMMAND_POLL_INTERVAL_MS}ms`);
@@ -593,6 +596,63 @@ function startCommandPolling() {
   }, 5000);
 }
 
+function stopCommandPolling() {
+  if (commandPollTimer) {
+    clearInterval(commandPollTimer);
+    commandPollTimer = null;
+  }
+}
+
+function buildCommandStreamUrl() {
+  const bridgeUrl = getBridgeUrl();
+  const secret = getBridgeSecret();
+  const params = new URLSearchParams();
+  if (secret) {
+    params.set("secret", secret);
+  }
+  const suffix = params.toString();
+  return `${bridgeUrl}/commands/stream${suffix ? `?${suffix}` : ""}`;
+}
+
+function startCommandStream() {
+  if (commandStream) return;
+  if (typeof EventSource === "undefined") {
+    console.warn(`${LOG_PREFIX} EventSource not available; falling back to polling`);
+    startCommandPolling();
+    return;
+  }
+
+  const endpoint = buildCommandStreamUrl();
+  console.log(`${LOG_PREFIX} Starting command stream ${endpoint}`);
+  stopCommandPolling();
+
+  commandStream = new EventSource(endpoint);
+
+  commandStream.addEventListener("commands", async (event) => {
+    if (!event?.data) return;
+    let payload;
+    try {
+      payload = JSON.parse(event.data);
+    } catch (err) {
+      console.warn(`${LOG_PREFIX} Command stream parse error`, err);
+      return;
+    }
+    const commands = Array.isArray(payload?.commands) ? payload.commands : [];
+    if (!commands.length) return;
+    const toProcess = commands.slice(0, MAX_COMMANDS_PER_TICK);
+    for (const cmd of toProcess) {
+      await handleCommand(cmd);
+    }
+  });
+
+  commandStream.addEventListener("error", () => {
+    console.warn(`${LOG_PREFIX} Command stream error; falling back to polling`);
+    commandStream.close();
+    commandStream = null;
+    startCommandPolling();
+  });
+}
+
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "bridgeUrl", {
     name: "Bridge URL",
@@ -611,11 +671,24 @@ Hooks.once("init", () => {
     type: String,
     default: "",
   });
+
+  game.settings.register(MODULE_ID, "useCommandStream", {
+    name: "Use command stream (EventSource)",
+    hint: "Prefer a persistent connection for commands instead of polling.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: DEFAULT_USE_COMMAND_STREAM,
+  });
 });
 
 Hooks.once("ready", () => {
   scheduleSnapshot("ready");
-  startCommandPolling();
+  if (game.settings.get(MODULE_ID, "useCommandStream")) {
+    startCommandStream();
+  } else {
+    startCommandPolling();
+  }
 });
 
 Hooks.on("createCombat", () => scheduleSnapshot("createCombat"));
