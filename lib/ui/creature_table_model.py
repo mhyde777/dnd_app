@@ -223,11 +223,6 @@ class CreatureTableModel(QAbstractTableModel):
             return False
 
         attr = self.fields[col]
-        print(
-            f"[DBG] setData row={row} col={col} name={name!r} attr={attr!r} "
-            f"value={value!r} view_set={getattr(self, 'view', None) is not None}"
-        )
-
         # Explicitly block edits to conditions in-table (use the checkbox panel instead)
         if attr == "_conditions":
             return False
@@ -262,7 +257,8 @@ class CreatureTableModel(QAbstractTableModel):
                             target._enqueue_bridge_set_initiative(name, int(getattr(creature, attr)))
 
                 except Exception as e:
-                    print(f"[Bridge][WARN] Failed to push edit attr={attr} name={name}: {e}")
+                    if self.view and hasattr(self.view, "_log"):
+                        self.view._log(f"[Bridge][WARN] Failed to push edit attr={attr} name={name}: {e}")
             # -------------------------------------------------------
 
             # Existing behavior

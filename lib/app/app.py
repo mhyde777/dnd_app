@@ -1360,8 +1360,6 @@ class Application:
             self.update_table()
 
         self.init_tracking_mode(False)
-        for c in self.manager.creatures.values():
-            print(c.name, c._type, c._spell_slots, c._innate_slots)
 
     def remove_combatant(self):
         self.init_tracking_mode(True)
@@ -1621,12 +1619,8 @@ class Application:
                         value = self.get_value(item, data_type)
                     method(creature_name, value)  # Update the creature's data
                     if col == 4:
-                        print(f"[DBG] HP edit detected name={creature_name!r} raw={item.text()!r} parsed={value!r} type={type(value)}")
                         if isinstance(value, int):
-                            print(f"[DBG] calling _enqueue_bridge_set_hp name={creature_name!r} hp={value}")
                             self._enqueue_bridge_set_hp(creature_name, value)
-                        else:
-                            print("[DBG] not int; skipping bridge hp enqueue")
                 except ValueError:
                     return
         
