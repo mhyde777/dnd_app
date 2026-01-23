@@ -3,6 +3,11 @@
 ## Dependecy management
 This project uses **pipenv** as the primary dependency manager, driven by the `Pipfile`. A minimal `requirements.txt` is also provided for environments that prefer `pip`, and it includes the editable install of the local `lib/` directory (`dnd-app-lib`).
 ## Setup and running the app 
+### Windows (Git Bash) notes
+* The app reads a `.env` from the repo root (next to `main.py`) **and** from `~/.dnd_tracker_config/.env`. The home directory `~` resolves inside Git Bash, so you can keep a shared config in `C:\Users\<you>\.dnd_tracker_config\.env` if desired. The first load happens in `main.py`, and the config folder load happens in `lib/app/config.py`. 
+* Use `source` to activate virtualenvs in Git Bash, and prefer `python -m venv` (works on Windows).
+* When pointing to services on your server, use the same URLs you already use on Linux/macOS (e.g., `https://bridge.masonhyde.com`). Windows does not require any special formatting beyond valid URLs.
+
 ### Option A: pipenv (recommended)
 1. Install pipenv if needed: `pip install --user pipenv`
 2. Install dependencies and create the virtual environment (Python 3.10 recommended):
@@ -77,6 +82,13 @@ USE_STORAGE_API_ONLY=1
 STORAGE_API_BASE=http://127.0.0.1:800
 ```
 
+**Storage API enabled (remote server example):**
+```
+USE_STORAGE_API_ONLY=1
+STORAGE_API_BASE=https://your-storage-api.example.com
+STORAGE_API_KEY=your_api_key_if_required
+```
+
 ### Running without the Storage service
 
 Leave `USE_STORAGE_API_ONLY` unset (or set it to `0`) to kep using the built-in local JSOn files. If you enable `USE_STORAGE_API_ONLY` without providing `STORAGE_API_BASE`, the app will start but show a warning explaining how the to fix the configuration so you are not blocked while the Storage service is offline.
@@ -123,6 +135,19 @@ This repo includes a minimal bridge service and a Foundry module for sending com
 * `BRIDGE_VERSION` (optional version string for `/version`)
 * `COMMAND_TTL_SECONDS` (optional; default `60`)
 * `COMMAND_SWEEP_INTERVAL_SECONDS` (optional; default `5`)
+
+**Example `.env` for a remote bridge (app + bridge):**
+```
+# App-side config
+BRIDGE_URL=https://bridge.masonhyde.com
+BRIDGE_TOKEN=your_bridge_token
+
+# Bridge-side config (set on the bridge server)
+BRIDGE_HOST=0.0.0.0
+BRIDGE_PORT=8787
+BRIDGE_TOKEN=your_bridge_token
+BRIDGE_INGEST_SECRET=your_shared_secret
+```
 
 **Run locally (pipenv):**
 ```bash
