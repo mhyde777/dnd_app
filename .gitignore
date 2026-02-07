@@ -170,7 +170,8 @@ package/
 dist/
 build/
 package_win/
-<<<<<<< HEAD
 *.sh
 *bak*
 images/*
+.venv/
+.venv-bridge/
