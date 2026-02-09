@@ -103,6 +103,10 @@ let commandPollInFlight = false;
 let lastCommandPollAtMs = 0;
 let commandStream = null;
 
+// Track processed command IDs to prevent duplicate execution (e.g. after ACK failure)
+const processedCommandIds = new Set();
+const MAX_PROCESSED_IDS = 200;
+
 // Optional: cap how many commands we process per poll tick
 const MAX_COMMANDS_PER_TICK = 25;
 
@@ -468,6 +472,16 @@ async function handleCommand(cmd) {
     if (!cmd || !cmd.type) {
       console.warn(`${LOG_PREFIX} Invalid command payload`, cmd);
       result.error = "invalid_command";
+      // Still ACK invalid commands so they don't block the queue
+      if (cmd?.id) await ackCommand(cmd.id, result);
+      return;
+    }
+
+    // Skip commands we've already processed (prevents duplicate execution
+    // when ACK previously failed or network was flaky)
+    if (cmd.id && processedCommandIds.has(cmd.id)) {
+      console.log(`${LOG_PREFIX} Skipping already-processed command ${cmd.id}`);
+      await ackCommand(cmd.id, { ok: true, skipped: "duplicate" });
       return;
     }
 
@@ -522,18 +536,23 @@ async function handleCommand(cmd) {
     result.error = message || "error";
   }
 
-  if (result.ok) {
-    if (cmd?.id) {
-      await ackCommand(cmd.id, result);
-    } else {
-      console.warn(`${LOG_PREFIX} Command missing id`, cmd);
+  // Track this command as processed to prevent re-execution
+  if (cmd?.id) {
+    processedCommandIds.add(cmd.id);
+    // Cap the set size to avoid unbounded memory growth
+    if (processedCommandIds.size > MAX_PROCESSED_IDS) {
+      const oldest = processedCommandIds.values().next().value;
+      processedCommandIds.delete(oldest);
     }
+  }
+
+  // Always ACK commands to remove them from the queue, regardless of success/failure.
+  // Previously, failed commands were never ACKed, causing them to be re-polled and
+  // re-executed indefinitely (e.g. next_turn advancing multiple times).
+  if (cmd?.id) {
+    await ackCommand(cmd.id, result);
   } else {
-    console.warn(`${LOG_PREFIX} Command not applied; skipping ack`, {
-      id: cmd?.id ?? null,
-      type: cmd?.type ?? null,
-      error: result.error ?? null,
-    });
+    console.warn(`${LOG_PREFIX} Command missing id`, cmd);
   }
 }
 
@@ -683,6 +702,14 @@ Hooks.once("init", () => {
 });
 
 Hooks.once("ready", () => {
+  // Only the GM client should send snapshots and process commands.
+  // Player clients don't have permission to modify other actors or advance
+  // combat, and their attempts to do so cause errors visible to players.
+  if (!game.user?.isGM) {
+    console.log(`${LOG_PREFIX} Non-GM user; bridge sync disabled for this client.`);
+    return;
+  }
+
   scheduleSnapshot("ready");
   if (game.settings.get(MODULE_ID, "useCommandStream")) {
     startCommandStream();
@@ -691,29 +718,31 @@ Hooks.once("ready", () => {
   }
 });
 
-Hooks.on("createCombat", () => scheduleSnapshot("createCombat"));
-Hooks.on("deleteCombat", () => scheduleSnapshot("deleteCombat"));
-Hooks.on("combatStart", () => scheduleSnapshot("combatStart"));
-Hooks.on("combatRound", () => scheduleSnapshot("combatRound"));
-Hooks.on("combatTurn", () => scheduleSnapshot("combatTurn"));
-Hooks.on("updateCombat", () => scheduleSnapshot("updateCombat"));
-Hooks.on("updateCombatant", () => scheduleSnapshot("updateCombatant"));
+// All snapshot hooks are guarded to only run on the GM client.
+Hooks.on("createCombat", () => { if (game.user?.isGM) scheduleSnapshot("createCombat"); });
+Hooks.on("deleteCombat", () => { if (game.user?.isGM) scheduleSnapshot("deleteCombat"); });
+Hooks.on("combatStart", () => { if (game.user?.isGM) scheduleSnapshot("combatStart"); });
+Hooks.on("combatRound", () => { if (game.user?.isGM) scheduleSnapshot("combatRound"); });
+Hooks.on("combatTurn", () => { if (game.user?.isGM) scheduleSnapshot("combatTurn"); });
+Hooks.on("updateCombat", () => { if (game.user?.isGM) scheduleSnapshot("updateCombat"); });
+Hooks.on("updateCombatant", () => { if (game.user?.isGM) scheduleSnapshot("updateCombatant"); });
 
 Hooks.on("updateActor", (actor, changes) => {
+  if (!game.user?.isGM) return;
   if (
     changes.system?.attributes?.hp ||
-    changes.system?.attributes?.conditions || // <-- NEW
+    changes.system?.attributes?.conditions ||
     changes.effects
   ) {
     scheduleSnapshot("updateActor");
   }
 });
 
-Hooks.on("createActiveEffect", () => scheduleSnapshot("createActiveEffect"));
-Hooks.on("deleteActiveEffect", () => scheduleSnapshot("deleteActiveEffect"));
-Hooks.on("updateActiveEffect", () => scheduleSnapshot("updateActiveEffect"));
+Hooks.on("createActiveEffect", () => { if (game.user?.isGM) scheduleSnapshot("createActiveEffect"); });
+Hooks.on("deleteActiveEffect", () => { if (game.user?.isGM) scheduleSnapshot("deleteActiveEffect"); });
+Hooks.on("updateActiveEffect", () => { if (game.user?.isGM) scheduleSnapshot("updateActiveEffect"); });
 
-Hooks.on("controlToken", () => scheduleSnapshot("controlToken"));
+Hooks.on("controlToken", () => { if (game.user?.isGM) scheduleSnapshot("controlToken"); });
 
 Hooks.on("renderActorSheet", (app, html) => {
   const actor = app?.actor;
