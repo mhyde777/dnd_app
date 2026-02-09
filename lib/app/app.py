@@ -240,6 +240,26 @@ class Application:
                 labels = [effect.get("label") for effect in effects if effect.get("label")]
                 creature.conditions = labels
 
+            # Sync HP from Foundry snapshot (covers player-initiated HP changes)
+            hp_data = combatant.get("hp", {})
+            if isinstance(hp_data, dict):
+                hp_value = hp_data.get("value")
+                hp_max = hp_data.get("max")
+                if hp_value is not None:
+                    try:
+                        new_hp = int(hp_value)
+                        if new_hp != getattr(creature, "curr_hp", None):
+                            creature.curr_hp = new_hp
+                    except (TypeError, ValueError):
+                        pass
+                if hp_max is not None:
+                    try:
+                        new_max = int(hp_max)
+                        if new_max != getattr(creature, "max_hp", None):
+                            creature.max_hp = new_max
+                    except (TypeError, ValueError):
+                        pass
+
             ac_value = self._extract_combatant_ac(combatant)
             if ac_value is not None:
                 try:
