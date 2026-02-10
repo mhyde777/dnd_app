@@ -155,7 +155,11 @@ async function postSnapshot(reason) {
 async function ackCommand(commandId, result) {
   const bridgeUrl = getBridgeUrl();
   const endpoint = `${bridgeUrl}/commands/${commandId}/ack`;
+  const secret = getBridgeSecret();
   const headers = {};
+  if (secret) {
+    headers["X-Bridge-Secret"] = secret;
+  }
   let body;
   if (result) {
     headers["Content-Type"] = "application/json";
@@ -467,21 +471,15 @@ async function applyRemoveCondition(payload) {
 // ------------------------------------------------------------------------
 
 async function handleCommand(cmd) {
-  let result = { ok: false };
   try {
     if (!cmd || !cmd.type) {
       console.warn(`${LOG_PREFIX} Invalid command payload`, cmd);
-      result.error = "invalid_command";
-      // Still ACK invalid commands so they don't block the queue
-      if (cmd?.id) await ackCommand(cmd.id, result);
       return;
     }
 
-    // Skip commands we've already processed (prevents duplicate execution
-    // when ACK previously failed or network was flaky)
+    // Skip commands we've already processed (secondary safety net)
     if (cmd.id && processedCommandIds.has(cmd.id)) {
       console.log(`${LOG_PREFIX} Skipping already-processed command ${cmd.id}`);
-      await ackCommand(cmd.id, { ok: true, skipped: "duplicate" });
       return;
     }
 
@@ -493,66 +491,36 @@ async function handleCommand(cmd) {
       applied = true;
     } else if (type === "set_hp") {
       applied = await applySetHp(payload);
-      if (!applied) {
-        result.error = "apply_failed";
-      }
     } else if (type === "set_initiative") {
       applied = await applySetInitiative(payload);
-      if (!applied) {
-        result.error = "apply_failed";
-      }
     } else if (type === "next_turn") {
       applied = await applyNextTurn();
-      if (!applied) {
-        result.error = "apply_failed";
-      }
     } else if (type === "prev_turn") {
       applied = await applyPrevTurn();
-      if (!applied) {
-        result.error = "apply_failed";
-      }
     } else if (type === "add_condition") {
       applied = await applyAddCondition(payload);
-      if (!applied) {
-        result.error = "apply_failed";
-      }
     } else if (type === "remove_condition") {
       applied = await applyRemoveCondition(payload);
-      if (!applied) {
-        result.error = "apply_failed";
-      }
     } else {
-      const rawType = cmd?.type;
-      console.warn(`${LOG_PREFIX} Unknown command type`, rawType);
-      result.error = `unknown_type:${String(rawType)}`;
+      console.warn(`${LOG_PREFIX} Unknown command type`, cmd?.type);
     }
 
     if (applied) {
-      result.ok = true;
+      console.log(`${LOG_PREFIX} Command applied type=${type} id=${cmd.id ?? "?"}`);
+    } else {
+      console.warn(`${LOG_PREFIX} Command not applied type=${type} id=${cmd.id ?? "?"}`);
     }
   } catch (err) {
-    const message = truncateErrorMessage(err?.message ?? err);
     console.error(`${LOG_PREFIX} Command error`, err);
-    result.error = message || "error";
   }
 
   // Track this command as processed to prevent re-execution
   if (cmd?.id) {
     processedCommandIds.add(cmd.id);
-    // Cap the set size to avoid unbounded memory growth
     if (processedCommandIds.size > MAX_PROCESSED_IDS) {
       const oldest = processedCommandIds.values().next().value;
       processedCommandIds.delete(oldest);
     }
-  }
-
-  // Always ACK commands to remove them from the queue, regardless of success/failure.
-  // Previously, failed commands were never ACKed, causing them to be re-polled and
-  // re-executed indefinitely (e.g. next_turn advancing multiple times).
-  if (cmd?.id) {
-    await ackCommand(cmd.id, result);
-  } else {
-    console.warn(`${LOG_PREFIX} Command missing id`, cmd);
   }
 }
 
@@ -565,7 +533,12 @@ async function pollCommands() {
   try {
     const bridgeUrl = getBridgeUrl();
     const endpoint = `${bridgeUrl}/commands`;
-    const response = await fetch(endpoint, { method: "GET" });
+    const secret = getBridgeSecret();
+    const headers = {};
+    if (secret) {
+      headers["X-Bridge-Secret"] = secret;
+    }
+    const response = await fetch(endpoint, { method: "GET", headers });
 
     if (!response.ok) {
       console.warn(
@@ -660,6 +633,12 @@ function startCommandStream() {
     if (!commands.length) return;
     const toProcess = commands.slice(0, MAX_COMMANDS_PER_TICK);
     for (const cmd of toProcess) {
+      if (!cmd?.id) continue;
+      if (processedCommandIds.has(cmd.id)) continue;
+      // Claim-first: ACK (remove) the command before processing.
+      // If another consumer already claimed it, ackCommand returns false — skip.
+      const claimed = await ackCommand(cmd.id);
+      if (!claimed) continue;
       await handleCommand(cmd);
     }
   });

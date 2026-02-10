@@ -50,6 +50,17 @@ class CommandQueue:
         with self.lock:
             return self.items[0] if self.items else None
 
+    def pop_next(self) -> Optional[Dict[str, Any]]:
+        with self.lock:
+            if not self.items:
+                return None
+            cmd = self.items.pop(0)
+            self._persist()
+        with self.condition:
+            self.version += 1
+            self.condition.notify_all()
+        return cmd
+
     def get_all(self) -> List[Dict[str, Any]]:
         with self.lock:
             return list(self.items)

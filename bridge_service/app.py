@@ -218,7 +218,10 @@ def create_app() -> Flask:
         if request.method == "OPTIONS":
             return ("", 204)
         if request.method == "GET":
-            cmd = commands.get_next()
+            auth = require_ingest_secret()
+            if auth:
+                return auth
+            cmd = commands.pop_next()
             count = 1 if cmd else 0
             print(f"[Bridge] Commands polled count={count}")
             return jsonify({"commands": [cmd] if cmd else []})
@@ -261,6 +264,9 @@ def create_app() -> Flask:
     def commands_ack(cmd_id: str) -> Any:
         if request.method == "OPTIONS":
             return ("", 204)
+        auth = require_ingest_secret()
+        if auth:
+            return auth
         if not commands.ack(cmd_id):
             print(f"[Bridge] Command ack missing id={cmd_id}")
             return jsonify({"error": "not_found"}), 404
