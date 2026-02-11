@@ -267,6 +267,8 @@ class Application:
                 except Exception:
                     setattr(creature, "_armor_class", ac_value)
 
+        old_round = getattr(self, "round_counter", 1)
+
         combat = snapshot.get("combat", {})
         if isinstance(combat, dict):
             round_value = combat.get("round")
@@ -309,6 +311,47 @@ class Application:
                 self.update_active_ui()
         else:
             self.update_active_ui()
+
+        # --- Turn-change side effects (mirror what next_turn() does) ---
+
+        round_advanced = (self.round_counter > old_round)
+
+        if round_advanced:
+            # Reset action/bonus_action/object_interaction for ALL creatures at top of round
+            for cr in self.manager.creatures.values():
+                if hasattr(cr, "action"):
+                    cr.action = False
+                if hasattr(cr, "bonus_action"):
+                    cr.bonus_action = False
+                if hasattr(cr, "object_interaction"):
+                    cr.object_interaction = False
+
+            # Tick status timers
+            any_tick = False
+            for cr in self.manager.creatures.values():
+                st = getattr(cr, "status_time", None)
+                try:
+                    st_int = int(st) if st is not None else None
+                except (ValueError, TypeError):
+                    st_int = None
+                if st_int is not None and st_int > 0:
+                    cr.status_time = max(0, st_int - 6)
+                    any_tick = True
+            if any_tick:
+                if hasattr(self, "update_table") and callable(self.update_table):
+                    self.update_table()
+
+        if updated_active and self.current_creature_name:
+            cr = self.manager.creatures.get(self.current_creature_name)
+            if cr:
+                # Reset reaction on creature's own turn
+                if hasattr(cr, "reaction"):
+                    cr.reaction = False
+                # Show statblock for monsters
+                if getattr(cr, "_type", None) == CreatureType.MONSTER:
+                    self.active_statblock_image(cr)
+                # Prompt death saves
+                self._maybe_prompt_death_saves(cr)
 
     def _ensure_foundry_combatants_present(
         self, combatants: List[Dict[str, Any]]
@@ -1569,10 +1612,19 @@ class Application:
             self.current_idx = 0
             wrapped = True
 
-# 4) On wrap: advance round/time and tick only existing numeric timers
+# 4) On wrap: advance round/time, reset economy, and tick only existing numeric timers
         if wrapped:
             self.round_counter += 1
             self.time_counter += 6
+
+            # Reset action/bonus_action/object_interaction for ALL creatures at top of round
+            for cr in self.manager.creatures.values():
+                if hasattr(cr, "action"):
+                    cr.action = False
+                if hasattr(cr, "bonus_action"):
+                    cr.bonus_action = False
+                if hasattr(cr, "object_interaction"):
+                    cr.object_interaction = False
 
             any_tick = False
             for cr in self.manager.creatures.values():
@@ -1604,16 +1656,10 @@ class Application:
             self.update_active_ui()
             return
 
-        # Reset ONLY active creature's economy at THEIR turn start
+        # Reset ONLY reaction on creature's own turn start
         cr = self.manager.creatures[self.current_creature_name]
-        if hasattr(cr, "action"):
-            cr.action = False
-        if hasattr(cr, "bonus_action"):
-            cr.bonus_action = False
-        if hasattr(cr, "object_interaction"):
-            cr.object_interaction = False
         if hasattr(cr, "reaction"):
-            cr.reaction = False  # False = unused in your semantics
+            cr.reaction = False
 
         self.update_active_ui()
         self._maybe_prompt_death_saves(cr)
