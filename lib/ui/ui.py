@@ -241,37 +241,28 @@ class InitiativeTracker(QMainWindow, Application):
     def update_size_constraints(self):
         # Get the current screen where the app is being displayed
         current_screen = QDesktopWidget().screenNumber(self)
-        screen = QDesktopWidget().screenGeometry(current_screen)
+        screen = QDesktopWidget().availableGeometry(current_screen)
 
         self.screen_width = screen.width()
         self.screen_height = screen.height()
 
-        # Set the maximum size to the screen size to avoid going beyond bounds
-        self.setMaximumSize(self.screen_width, self.screen_height)
-
-        # Optionally set the window size to be full screen on the current screen
-        self.setWindowState(self.windowState() | Qt.WindowMaximized)
-
     def moveEvent(self, event):
         current_screen = QDesktopWidget().screenNumber(self)
-        screen = QDesktopWidget().screenGeometry(current_screen)
+        screen = QDesktopWidget().availableGeometry(current_screen)
         new_width = screen.width()
         new_height = screen.height()
 
-        # Only update if the screen size has changed
+        # Update stored screen dimensions when the screen changes
         if (new_width, new_height) != (self.screen_width, self.screen_height):
             self.screen_width = new_width
             self.screen_height = new_height
-            self.update_size_constraints()  # Update constraints to keep the window within the screen bounds
-
-            # Optionally, center the window on the new screen
-            self.center()
 
         super().moveEvent(event)
 
     def center(self):
         frame_geometry = self.frameGeometry()
-        screen_center = QDesktopWidget().availableGeometry().center()
+        current_screen = QDesktopWidget().screenNumber(self)
+        screen_center = QDesktopWidget().availableGeometry(current_screen).center()
         frame_geometry.moveCenter(screen_center)
         self.move(frame_geometry.topLeft())
 
