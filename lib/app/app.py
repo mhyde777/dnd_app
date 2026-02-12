@@ -1108,12 +1108,16 @@ class Application:
                 # save_data["_meta"] = {"description": description}
                 self.storage_api.put_json(filename, save_data)
                 print("[INFO] Saved state to Storage API as last_state.json")
+                if hasattr(self, "show_status_message"):
+                    self.show_status_message("State saved to Storage API")
             else:
                 # --- Fallback: save to local file ---
                 file_path = self.get_data_path(filename)
                 with open(file_path, "w", encoding="utf-8") as f:
                     json.dump(save_data, f, ensure_ascii=False, indent=2)
                 print("[INFO] Saved state locally as last_state.json")
+                if hasattr(self, "show_status_message"):
+                    self.show_status_message("State saved locally")
         except Exception as e:
             print(f"[ERROR] Failed to save state: {e}")
 
@@ -1409,6 +1413,12 @@ class Application:
                     self.table_model.set_active_creature(name or "")
                 except Exception:
                     pass
+        # Keep delegate in sync for active-row rendering
+        if hasattr(self, "table_delegate") and self.table_delegate:
+            try:
+                self.table_delegate.set_active_creature(name or "")
+            except Exception:
+                pass
             if hasattr(self.table_model, "refresh"):
                 try:
                     self.table_model.refresh()
@@ -1662,6 +1672,9 @@ class Application:
             cr.reaction = False
 
         self.update_active_ui()
+
+        if hasattr(self, "show_status_message"):
+            self.show_status_message(f"Turn: {self.current_creature_name}")
         self._maybe_prompt_death_saves(cr)
 
         # Monster statblock
@@ -1862,8 +1875,8 @@ class Application:
         screen_width = screen_geometry.width()
         screen_height = screen_geometry.height()
 
-        max_width = int(screen_width * 0.4)
-        max_height = int(screen_height * 0.9)
+        max_width = int(screen_width * 0.35)
+        max_height = int(screen_height * 0.7)
 
         extensions = self.get_extensions()
         for ext in extensions:
@@ -1995,6 +2008,11 @@ class Application:
         self.value_input.clear()
         self.update_table()
 
+        if hasattr(self, "show_status_message") and selected_items:
+            names = ", ".join(item.text() for item in selected_items)
+            action = "Healed" if positive else "Damaged"
+            self.show_status_message(f"{action} {names} by {value}")
+
     # ================= Encounter Builder =====================
     def save_encounter(self):
         dialog = BuildEncounterWindow(self)
@@ -2060,6 +2078,8 @@ class Application:
                 cr = self.manager.creatures.get(name)
                 if cr and cr._type == CreatureType.MONSTER:
                     self.active_statblock_image(cr)
+            if hasattr(self, "show_status_message"):
+                self.show_status_message(f"Loaded encounter: {dialog.selected_file}")
 
     def merge_encounter(self):
         dialog = LoadEncounterWindow(self)
