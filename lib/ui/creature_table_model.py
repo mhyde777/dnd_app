@@ -150,6 +150,13 @@ class CreatureTableModel(QAbstractTableModel):
             if attr in ("_init", "_status_time", "_armor_class") and value == -1:
                 return ""
 
+            # HP cell: show temp HP marker when present
+            if attr == "_curr_hp":
+                curr_hp = int(getattr(creature, "_curr_hp", 0) or 0)
+                temp_hp = int(getattr(creature, "_temp_hp", 0) or 0)
+                if temp_hp > 0:
+                    return f"{curr_hp} (+{temp_hp})"
+
             # Keep your prior "0 means blank" behavior
             if value == 0:
                 return ""
@@ -191,7 +198,7 @@ class CreatureTableModel(QAbstractTableModel):
 
             # HP-based coloring + active row
             curr_hp = getattr(creature, "_curr_hp", -1)
-            max_hp = getattr(creature, "_max_hp", -1)
+            max_hp = int(getattr(creature, "_max_hp", -1) or -1) + int(getattr(creature, "_max_hp_bonus", 0) or 0)
 
             if isinstance(curr_hp, int) and isinstance(max_hp, int) and max_hp > 0:
                 hp_ratio = curr_hp / max_hp

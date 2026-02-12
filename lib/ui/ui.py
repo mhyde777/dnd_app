@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import (
     QHBoxLayout, QMainWindow, QListWidget,
     QAction, QMenuBar, QDesktopWidget, QTableView,
     QSizePolicy, QMessageBox, QDialog, QDialogButtonBox,
-    QMenu, QTextEdit, QGroupBox, QStatusBar, QShortcut
+    QMenu, QTextEdit, QGroupBox, QStatusBar, QShortcut, QInputDialog
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QKeySequence
@@ -373,6 +373,9 @@ class InitiativeTracker(QMainWindow, Application):
         if attr == "_conditions":
             self.show_conditions_dropdown(creature, index)
             return
+        if attr == "_curr_hp":
+            self.show_hp_dropdown(creature, index)
+            return
 
         self.toggle_boolean_cell(index)
     
@@ -385,6 +388,60 @@ class InitiativeTracker(QMainWindow, Application):
         name = self.table_model.creature_names[row]
         creature = self.manager.creatures.get(name)
         return name, creature
+
+    def show_hp_dropdown(self, creature, index):
+        menu = QMenu(self)
+
+        set_temp_action = menu.addAction("Set Temp HP")
+        set_max_bonus_action = menu.addAction("Set Max HP Bonus")
+        clear_bonus_action = menu.addAction("Clear Temp/Bonus HP")
+
+        pos = self.table.viewport().mapToGlobal(self.table.visualRect(index).bottomLeft())
+        chosen = menu.exec_(pos)
+
+        if chosen == set_temp_action:
+            current = int(getattr(creature, "temp_hp", 0) or 0)
+            value, ok = QInputDialog.getInt(
+                self,
+                f"Temp HP: {getattr(creature, 'name', '')}",
+                "Temporary HP:",
+                current,
+                0,
+                9999,
+                1,
+            )
+            if ok:
+                creature.temp_hp = value
+                self.update_table()
+            return
+
+        if chosen == set_max_bonus_action:
+            current = int(getattr(creature, "max_hp_bonus", 0) or 0)
+            value, ok = QInputDialog.getInt(
+                self,
+                f"Max HP Bonus: {getattr(creature, 'name', '')}",
+                "Bonus Max HP (can be negative):",
+                current,
+                -9999,
+                9999,
+                1,
+            )
+            if ok:
+                creature.max_hp_bonus = value
+                max_total = int(getattr(creature, "effective_max_hp", creature.max_hp) or 0)
+                creature.curr_hp = min(int(getattr(creature, "curr_hp", 0) or 0), max_total)
+                self._enqueue_bridge_set_hp(getattr(creature, "name", ""), creature.curr_hp)
+                self.update_table()
+            return
+
+        if chosen == clear_bonus_action:
+            creature.temp_hp = 0
+            creature.max_hp_bonus = 0
+            capped_hp = int(getattr(creature, "max_hp", 0) or 0)
+            creature.curr_hp = min(int(getattr(creature, "curr_hp", 0) or 0), capped_hp)
+            self._enqueue_bridge_set_hp(getattr(creature, "name", ""), creature.curr_hp)
+            self.update_table()
+
 
     def _show_notes_editor(self, title: str, text: str) -> Optional[str]:
         dialog = QDialog(self)
