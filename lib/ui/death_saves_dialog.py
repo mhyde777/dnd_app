@@ -23,6 +23,10 @@ class DeathSavesDialog(QDialog):
 
         root = QVBoxLayout(self)
 
+        title = QLabel(f"Death Saves — {getattr(creature, 'name', 'Creature')}")
+        title.setStyleSheet("font-size: 16px; font-weight: bold;")
+        root.addWidget(title)
+
         self.status_label = QLabel("")
         root.addWidget(self.status_label)
 
