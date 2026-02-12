@@ -1983,17 +1983,22 @@ class Application:
             if not creature:
                 continue
 
-            # Snapshot pre-damage HP and concentration state
-            pre_hp = creature.curr_hp
+            # Snapshot pre-change HP for bridge sync and concentration checks
+            pre_hp = int(getattr(creature, "curr_hp", 0) or 0)
 
             if positive:
-                creature.curr_hp += value
+                if hasattr(creature, "apply_healing"):
+                    creature.apply_healing(value)
+                else:
+                    creature.curr_hp += value
             else:
-                creature.curr_hp -= value
-                if creature.curr_hp < 0:
-                    creature.curr_hp = 0
-
-                damage_taken = max(0, pre_hp - creature.curr_hp)
+                if hasattr(creature, "apply_damage"):
+                    damage_taken = creature.apply_damage(value)
+                else:
+                    creature.curr_hp -= value
+                    if creature.curr_hp < 0:
+                        creature.curr_hp = 0
+                    damage_taken = max(0, pre_hp - creature.curr_hp)
 
                 if damage_taken > 0 and self._is_concentrating(creature):
                     if creature.curr_hp <= 0:
