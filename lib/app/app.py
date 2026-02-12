@@ -1974,11 +1974,11 @@ class Application:
             return
 
         selected_items = self.creature_list.selectedItems()
-        if not selected_items:
+        selected_names = [item.text() for item in selected_items if item and item.text()]
+        if not selected_names:
             return
 
-        for item in selected_items:
-            creature_name = item.text()
+        for creature_name in selected_names:
             creature = self.manager.creatures.get(creature_name)
             if not creature:
                 continue
@@ -2008,8 +2008,8 @@ class Application:
         self.value_input.clear()
         self.update_table()
 
-        if hasattr(self, "show_status_message") and selected_items:
-            names = ", ".join(item.text() for item in selected_items)
+        if hasattr(self, "show_status_message") and selected_names:
+            names = ", ".join(selected_names)
             action = "Healed" if positive else "Damaged"
             self.show_status_message(f"{action} {names} by {value}")
 
