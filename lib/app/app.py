@@ -1,5 +1,5 @@
 from typing import Dict, Any, List, Optional
-import json, os, re, sys
+import json, os, re, sys, threading
 from dotenv import load_dotenv
 
 from PyQt5.QtWidgets import(
@@ -16,9 +16,17 @@ from app.creature import (
 from app.save_json import GameState
 from app.manager import CreatureManager
 from app.storage_api import StorageAPI
-from app.config import get_storage_api_base, use_storage_api_only, get_config_path
+from app.config import (
+    bridge_stream_enabled,
+    get_storage_api_base,
+    get_config_path,
+    local_bridge_enabled,
+    player_view_enabled,
+    use_storage_api_only,
+)
 from app.player_view_server import PlayerViewServer
 from app.bridge_client import BridgeClient
+from app.local_bridge_server import LocalBridgeServer
 from ui.windows import (
     AddCombatantWindow, RemoveCombatantWindow, BuildEncounterWindow
 )
@@ -58,21 +66,31 @@ class Application:
             # '_object_interaction': 'set_creature_object_interaction'
         }
         
-        self.player_view_live = True
-        self.player_view_snapshot: Optional[Dict[str, Any]] = None
-        self.player_view_server = PlayerViewServer(self.get_player_view_payload)
-        self.player_view_server.start()
+        self.local_bridge: Optional[LocalBridgeServer] = None
+        if local_bridge_enabled():
+            if not os.getenv("BRIDGE_TOKEN"):
+                os.environ["BRIDGE_TOKEN"] = "local-dev"
+                print("[Bridge] BRIDGE_TOKEN not set; defaulting to 'local-dev'.")
+            if not os.getenv("BRIDGE_INGEST_SECRET"):
+                os.environ["BRIDGE_INGEST_SECRET"] = os.environ["BRIDGE_TOKEN"]
+                print("[Bridge] BRIDGE_INGEST_SECRET not set; using BRIDGE_TOKEN for local bridge.")
+            self.local_bridge = LocalBridgeServer.from_env()
+            self.local_bridge.start()
 
         self.bridge_client = BridgeClient.from_env()
         self.bridge_snapshot: Optional[Dict[str, Any]] = None
         self.bridge_timer: Optional[QTimer] = None
+        self.bridge_stream_thread: Optional[threading.Thread] = None
+        self.bridge_stream_stop: Optional[threading.Event] = None
         self.bridge_combatants_by_name: Dict[str, List[Dict[str, Any]]] = {}
         self._initiative_reset_pending = False
 
         self.player_view_live = True
         self.player_view_snapshot: Optional[Dict[str, Any]] = None
-        self.player_view_server = PlayerViewServer(self.get_player_view_payload)
-        self.player_view_server.start()
+        self.player_view_server: Optional[PlayerViewServer] = None
+        if player_view_enabled():
+            self.player_view_server = PlayerViewServer(self.get_player_view_payload)
+            self.player_view_server.start()
 
         # --- Storage API only mode ---
         self.storage_api: Optional[StorageAPI] = None
@@ -93,11 +111,34 @@ class Application:
         if not self.bridge_client.enabled:
             print("[Bridge] BRIDGE_TOKEN is not set; bridge sync is disabled.")
             return
+        if bridge_stream_enabled():
+            self.start_bridge_stream()
+            return
         if self.bridge_timer is None:
             self.bridge_timer = QTimer(self)
             self.bridge_timer.timeout.connect(self.refresh_bridge_state)
             self.bridge_timer.start(5000)
         self.refresh_bridge_state()
+
+    def start_bridge_stream(self) -> None:
+        if self.bridge_stream_thread and self.bridge_stream_thread.is_alive():
+            return
+        if not self.bridge_client.enabled:
+            print("[Bridge] BRIDGE_TOKEN is not set; bridge stream is disabled.")
+            return
+        if self.bridge_stream_stop is None:
+            self.bridge_stream_stop = threading.Event()
+
+        def on_snapshot(snapshot: Dict[str, Any]) -> None:
+            QTimer.singleShot(0, lambda payload=snapshot: self._set_bridge_snapshot(payload))
+
+        self.bridge_stream_thread = threading.Thread(
+            target=self.bridge_client.stream_state,
+            args=(on_snapshot, self.bridge_stream_stop),
+            daemon=True,
+        )
+        self.bridge_stream_thread.start()
+        print("[Bridge] Using SSE stream for snapshots.")
 
     def refresh_bridge_state(self) -> None:
         try:
@@ -106,16 +147,19 @@ class Application:
         except Exception as exc:
             print(f"[Bridge] Failed to fetch state: {exc}")
             return
-        if snapshot is None:
+        self._set_bridge_snapshot(snapshot)
+
+    def _set_bridge_snapshot(self, snapshot: Optional[Dict[str, Any]]) -> None:
+        if snapshot is None or not isinstance(snapshot, dict):
             return
         self.bridge_snapshot = snapshot
-        combatants = snapshot.get("combatants", []) if isinstance(snapshot, dict) else []
+        combatants = snapshot.get("combatants", [])
+        if not isinstance(combatants, list):
+            combatants = []
         self.bridge_combatants_by_name = self._index_bridge_combatants(combatants)
         self._apply_bridge_snapshot(snapshot)
-        world = snapshot.get("world") if isinstance(snapshot, dict) else None
-        print(
-            f"[Bridge] Snapshot loaded world={world!r} combatants={len(combatants)}"
-        )
+        world = snapshot.get("world")
+        print(f"[Bridge] Snapshot loaded world={world!r} combatants={len(combatants)}")
 
     def _has_missing_initiatives(self) -> bool:
         if not getattr(self, "manager", None) or not getattr(self.manager, "creatures", None):
@@ -196,12 +240,34 @@ class Application:
                 labels = [effect.get("label") for effect in effects if effect.get("label")]
                 creature.conditions = labels
 
+            # Sync HP from Foundry snapshot (covers player-initiated HP changes)
+            hp_data = combatant.get("hp", {})
+            if isinstance(hp_data, dict):
+                hp_value = hp_data.get("value")
+                hp_max = hp_data.get("max")
+                if hp_value is not None:
+                    try:
+                        new_hp = int(hp_value)
+                        if new_hp != getattr(creature, "curr_hp", None):
+                            creature.curr_hp = new_hp
+                    except (TypeError, ValueError):
+                        pass
+                if hp_max is not None:
+                    try:
+                        new_max = int(hp_max)
+                        if new_max != getattr(creature, "max_hp", None):
+                            creature.max_hp = new_max
+                    except (TypeError, ValueError):
+                        pass
+
             ac_value = self._extract_combatant_ac(combatant)
             if ac_value is not None:
                 try:
                     creature.armor_class = int(ac_value)
                 except Exception:
                     setattr(creature, "_armor_class", ac_value)
+
+        old_round = getattr(self, "round_counter", 1)
 
         combat = snapshot.get("combat", {})
         if isinstance(combat, dict):
@@ -245,6 +311,47 @@ class Application:
                 self.update_active_ui()
         else:
             self.update_active_ui()
+
+        # --- Turn-change side effects (mirror what next_turn() does) ---
+
+        round_advanced = (self.round_counter > old_round)
+
+        if round_advanced:
+            # Reset action/bonus_action/object_interaction for ALL creatures at top of round
+            for cr in self.manager.creatures.values():
+                if hasattr(cr, "action"):
+                    cr.action = False
+                if hasattr(cr, "bonus_action"):
+                    cr.bonus_action = False
+                if hasattr(cr, "object_interaction"):
+                    cr.object_interaction = False
+
+            # Tick status timers
+            any_tick = False
+            for cr in self.manager.creatures.values():
+                st = getattr(cr, "status_time", None)
+                try:
+                    st_int = int(st) if st is not None else None
+                except (ValueError, TypeError):
+                    st_int = None
+                if st_int is not None and st_int > 0:
+                    cr.status_time = max(0, st_int - 6)
+                    any_tick = True
+            if any_tick:
+                if hasattr(self, "update_table") and callable(self.update_table):
+                    self.update_table()
+
+        if updated_active and self.current_creature_name:
+            cr = self.manager.creatures.get(self.current_creature_name)
+            if cr:
+                # Reset reaction on creature's own turn
+                if hasattr(cr, "reaction"):
+                    cr.reaction = False
+                # Show statblock for monsters
+                if getattr(cr, "_type", None) == CreatureType.MONSTER:
+                    self.active_statblock_image(cr)
+                # Prompt death saves
+                self._maybe_prompt_death_saves(cr)
 
     def _ensure_foundry_combatants_present(
         self, combatants: List[Dict[str, Any]]
@@ -1001,12 +1108,16 @@ class Application:
                 # save_data["_meta"] = {"description": description}
                 self.storage_api.put_json(filename, save_data)
                 print("[INFO] Saved state to Storage API as last_state.json")
+                if hasattr(self, "show_status_message"):
+                    self.show_status_message("State saved to Storage API")
             else:
                 # --- Fallback: save to local file ---
                 file_path = self.get_data_path(filename)
                 with open(file_path, "w", encoding="utf-8") as f:
                     json.dump(save_data, f, ensure_ascii=False, indent=2)
                 print("[INFO] Saved state locally as last_state.json")
+                if hasattr(self, "show_status_message"):
+                    self.show_status_message("State saved locally")
         except Exception as e:
             print(f"[ERROR] Failed to save state: {e}")
 
@@ -1302,6 +1413,12 @@ class Application:
                     self.table_model.set_active_creature(name or "")
                 except Exception:
                     pass
+        # Keep delegate in sync for active-row rendering
+        if hasattr(self, "table_delegate") and self.table_delegate:
+            try:
+                self.table_delegate.set_active_creature(name or "")
+            except Exception:
+                pass
             if hasattr(self.table_model, "refresh"):
                 try:
                     self.table_model.refresh()
@@ -1505,10 +1622,19 @@ class Application:
             self.current_idx = 0
             wrapped = True
 
-# 4) On wrap: advance round/time and tick only existing numeric timers
+# 4) On wrap: advance round/time, reset economy, and tick only existing numeric timers
         if wrapped:
             self.round_counter += 1
             self.time_counter += 6
+
+            # Reset action/bonus_action/object_interaction for ALL creatures at top of round
+            for cr in self.manager.creatures.values():
+                if hasattr(cr, "action"):
+                    cr.action = False
+                if hasattr(cr, "bonus_action"):
+                    cr.bonus_action = False
+                if hasattr(cr, "object_interaction"):
+                    cr.object_interaction = False
 
             any_tick = False
             for cr in self.manager.creatures.values():
@@ -1540,18 +1666,15 @@ class Application:
             self.update_active_ui()
             return
 
-        # Reset ONLY active creature's economy at THEIR turn start
+        # Reset ONLY reaction on creature's own turn start
         cr = self.manager.creatures[self.current_creature_name]
-        if hasattr(cr, "action"):
-            cr.action = False
-        if hasattr(cr, "bonus_action"):
-            cr.bonus_action = False
-        if hasattr(cr, "object_interaction"):
-            cr.object_interaction = False
         if hasattr(cr, "reaction"):
-            cr.reaction = False  # False = unused in your semantics
+            cr.reaction = False
 
         self.update_active_ui()
+
+        if hasattr(self, "show_status_message"):
+            self.show_status_message(f"Turn: {self.current_creature_name}")
         self._maybe_prompt_death_saves(cr)
 
         # Monster statblock
@@ -1752,8 +1875,8 @@ class Application:
         screen_width = screen_geometry.width()
         screen_height = screen_geometry.height()
 
-        max_width = int(screen_width * 0.4)
-        max_height = int(screen_height * 0.9)
+        max_width = int(screen_width * 0.35)
+        max_height = int(screen_height * 0.7)
 
         extensions = self.get_extensions()
         for ext in extensions:
@@ -1851,26 +1974,31 @@ class Application:
             return
 
         selected_items = self.creature_list.selectedItems()
-        if not selected_items:
+        selected_names = [item.text() for item in selected_items if item and item.text()]
+        if not selected_names:
             return
 
-        for item in selected_items:
-            creature_name = item.text()
+        for creature_name in selected_names:
             creature = self.manager.creatures.get(creature_name)
             if not creature:
                 continue
 
-            # Snapshot pre-damage HP and concentration state
-            pre_hp = creature.curr_hp
+            # Snapshot pre-change HP for bridge sync and concentration checks
+            pre_hp = int(getattr(creature, "curr_hp", 0) or 0)
 
             if positive:
-                creature.curr_hp += value
+                if hasattr(creature, "apply_healing"):
+                    creature.apply_healing(value)
+                else:
+                    creature.curr_hp += value
             else:
-                creature.curr_hp -= value
-                if creature.curr_hp < 0:
-                    creature.curr_hp = 0
-
-                damage_taken = max(0, pre_hp - creature.curr_hp)
+                if hasattr(creature, "apply_damage"):
+                    damage_taken = creature.apply_damage(value)
+                else:
+                    creature.curr_hp -= value
+                    if creature.curr_hp < 0:
+                        creature.curr_hp = 0
+                    damage_taken = max(0, pre_hp - creature.curr_hp)
 
                 if damage_taken > 0 and self._is_concentrating(creature):
                     if creature.curr_hp <= 0:
@@ -1884,6 +2012,11 @@ class Application:
 
         self.value_input.clear()
         self.update_table()
+
+        if hasattr(self, "show_status_message") and selected_names:
+            names = ", ".join(selected_names)
+            action = "Healed" if positive else "Damaged"
+            self.show_status_message(f"{action} {names} by {value}")
 
     # ================= Encounter Builder =====================
     def save_encounter(self):
@@ -1950,6 +2083,8 @@ class Application:
                 cr = self.manager.creatures.get(name)
                 if cr and cr._type == CreatureType.MONSTER:
                     self.active_statblock_image(cr)
+            if hasattr(self, "show_status_message"):
+                self.show_status_message(f"Loaded encounter: {dialog.selected_file}")
 
     def merge_encounter(self):
         dialog = LoadEncounterWindow(self)
