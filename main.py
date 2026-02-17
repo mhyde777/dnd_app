@@ -4,6 +4,7 @@ import os, sys
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtGui import QIcon
 from ui.ui import InitiativeTracker
+from ui.theme import get_stylesheet
 import qdarktheme
 
 def resource_path(relative_path: str) -> str:
@@ -14,7 +15,8 @@ if __name__ == "__main__":
     qdarktheme.enable_hi_dpi()
     app = QApplication(sys.argv)
     app.setWindowIcon(QIcon(resource_path("images/d20_icon.png")))
-    qdarktheme.setup_theme("auto")
+    qdarktheme.setup_theme("dark")
+    app.setStyleSheet(app.styleSheet() + get_stylesheet())
     mainWin = InitiativeTracker()
     mainWin.showMaximized()
     sys.exit(app.exec_())

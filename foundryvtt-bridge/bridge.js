@@ -3,6 +3,7 @@ const MODULE_ID = "foundryvtt-bridge";
 const DEFAULT_BRIDGE_URL = "http://127.0.0.1:8787";
 const LOG_PREFIX = "[bridge]";
 const COMMAND_POLL_INTERVAL_MS = 1500;
+const DEFAULT_USE_COMMAND_STREAM = true;
 
 function getBridgeUrl() {
   const raw = game.settings.get(MODULE_ID, "bridgeUrl") || DEFAULT_BRIDGE_URL;
@@ -100,6 +101,11 @@ let snapshotTimer = null;
 let commandPollTimer = null;
 let commandPollInFlight = false;
 let lastCommandPollAtMs = 0;
+let commandStream = null;
+
+// Track processed command IDs to prevent duplicate execution (e.g. after ACK failure)
+const processedCommandIds = new Set();
+const MAX_PROCESSED_IDS = 200;
 
 // Optional: cap how many commands we process per poll tick
 const MAX_COMMANDS_PER_TICK = 25;
@@ -149,7 +155,11 @@ async function postSnapshot(reason) {
 async function ackCommand(commandId, result) {
   const bridgeUrl = getBridgeUrl();
   const endpoint = `${bridgeUrl}/commands/${commandId}/ack`;
+  const secret = getBridgeSecret();
   const headers = {};
+  if (secret) {
+    headers["X-Bridge-Secret"] = secret;
+  }
   let body;
   if (result) {
     headers["Content-Type"] = "application/json";
@@ -461,11 +471,15 @@ async function applyRemoveCondition(payload) {
 // ------------------------------------------------------------------------
 
 async function handleCommand(cmd) {
-  let result = { ok: false };
   try {
     if (!cmd || !cmd.type) {
       console.warn(`${LOG_PREFIX} Invalid command payload`, cmd);
-      result.error = "invalid_command";
+      return;
+    }
+
+    // Skip commands we've already processed (secondary safety net)
+    if (cmd.id && processedCommandIds.has(cmd.id)) {
+      console.log(`${LOG_PREFIX} Skipping already-processed command ${cmd.id}`);
       return;
     }
 
@@ -477,61 +491,36 @@ async function handleCommand(cmd) {
       applied = true;
     } else if (type === "set_hp") {
       applied = await applySetHp(payload);
-      if (!applied) {
-        result.error = "apply_failed";
-      }
     } else if (type === "set_initiative") {
       applied = await applySetInitiative(payload);
-      if (!applied) {
-        result.error = "apply_failed";
-      }
     } else if (type === "next_turn") {
       applied = await applyNextTurn();
-      if (!applied) {
-        result.error = "apply_failed";
-      }
     } else if (type === "prev_turn") {
       applied = await applyPrevTurn();
-      if (!applied) {
-        result.error = "apply_failed";
-      }
     } else if (type === "add_condition") {
       applied = await applyAddCondition(payload);
-      if (!applied) {
-        result.error = "apply_failed";
-      }
     } else if (type === "remove_condition") {
       applied = await applyRemoveCondition(payload);
-      if (!applied) {
-        result.error = "apply_failed";
-      }
     } else {
-      const rawType = cmd?.type;
-      console.warn(`${LOG_PREFIX} Unknown command type`, rawType);
-      result.error = `unknown_type:${String(rawType)}`;
+      console.warn(`${LOG_PREFIX} Unknown command type`, cmd?.type);
     }
 
     if (applied) {
-      result.ok = true;
+      console.log(`${LOG_PREFIX} Command applied type=${type} id=${cmd.id ?? "?"}`);
+    } else {
+      console.warn(`${LOG_PREFIX} Command not applied type=${type} id=${cmd.id ?? "?"}`);
     }
   } catch (err) {
-    const message = truncateErrorMessage(err?.message ?? err);
     console.error(`${LOG_PREFIX} Command error`, err);
-    result.error = message || "error";
   }
 
-  if (result.ok) {
-    if (cmd?.id) {
-      await ackCommand(cmd.id, result);
-    } else {
-      console.warn(`${LOG_PREFIX} Command missing id`, cmd);
+  // Track this command as processed to prevent re-execution
+  if (cmd?.id) {
+    processedCommandIds.add(cmd.id);
+    if (processedCommandIds.size > MAX_PROCESSED_IDS) {
+      const oldest = processedCommandIds.values().next().value;
+      processedCommandIds.delete(oldest);
     }
-  } else {
-    console.warn(`${LOG_PREFIX} Command not applied; skipping ack`, {
-      id: cmd?.id ?? null,
-      type: cmd?.type ?? null,
-      error: result.error ?? null,
-    });
   }
 }
 
@@ -544,7 +533,12 @@ async function pollCommands() {
   try {
     const bridgeUrl = getBridgeUrl();
     const endpoint = `${bridgeUrl}/commands`;
-    const response = await fetch(endpoint, { method: "GET" });
+    const secret = getBridgeSecret();
+    const headers = {};
+    if (secret) {
+      headers["X-Bridge-Secret"] = secret;
+    }
+    const response = await fetch(endpoint, { method: "GET", headers });
 
     if (!response.ok) {
       console.warn(
@@ -572,6 +566,7 @@ async function pollCommands() {
 }
 
 function startCommandPolling() {
+  if (commandStream) return;
   if (commandPollTimer) return;
 
   console.log(`${LOG_PREFIX} Starting command polling every ${COMMAND_POLL_INTERVAL_MS}ms`);
@@ -593,6 +588,69 @@ function startCommandPolling() {
   }, 5000);
 }
 
+function stopCommandPolling() {
+  if (commandPollTimer) {
+    clearInterval(commandPollTimer);
+    commandPollTimer = null;
+  }
+}
+
+function buildCommandStreamUrl() {
+  const bridgeUrl = getBridgeUrl();
+  const secret = getBridgeSecret();
+  const params = new URLSearchParams();
+  if (secret) {
+    params.set("secret", secret);
+  }
+  const suffix = params.toString();
+  return `${bridgeUrl}/commands/stream${suffix ? `?${suffix}` : ""}`;
+}
+
+function startCommandStream() {
+  if (commandStream) return;
+  if (typeof EventSource === "undefined") {
+    console.warn(`${LOG_PREFIX} EventSource not available; falling back to polling`);
+    startCommandPolling();
+    return;
+  }
+
+  const endpoint = buildCommandStreamUrl();
+  console.log(`${LOG_PREFIX} Starting command stream ${endpoint}`);
+  stopCommandPolling();
+
+  commandStream = new EventSource(endpoint);
+
+  commandStream.addEventListener("commands", async (event) => {
+    if (!event?.data) return;
+    let payload;
+    try {
+      payload = JSON.parse(event.data);
+    } catch (err) {
+      console.warn(`${LOG_PREFIX} Command stream parse error`, err);
+      return;
+    }
+    const commands = Array.isArray(payload?.commands) ? payload.commands : [];
+    if (!commands.length) return;
+    const toProcess = commands.slice(0, MAX_COMMANDS_PER_TICK);
+    for (const cmd of toProcess) {
+      if (!cmd?.id) continue;
+      if (processedCommandIds.has(cmd.id)) continue;
+      // Claim-first: ACK (remove) the command before processing.
+      // If another consumer already claimed it, ackCommand returns false — skip.
+      const claimed = await ackCommand(cmd.id);
+      if (!claimed) continue;
+      await handleCommand(cmd);
+    }
+  });
+
+  commandStream.addEventListener("error", () => {
+    console.warn(`${LOG_PREFIX} Command stream error; falling back to polling`);
+    commandStream.close();
+    commandStream = null;
+    startCommandPolling();
+  });
+}
+
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "bridgeUrl", {
     name: "Bridge URL",
@@ -611,36 +669,59 @@ Hooks.once("init", () => {
     type: String,
     default: "",
   });
+
+  game.settings.register(MODULE_ID, "useCommandStream", {
+    name: "Use command stream (EventSource)",
+    hint: "Prefer a persistent connection for commands instead of polling.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: DEFAULT_USE_COMMAND_STREAM,
+  });
 });
 
 Hooks.once("ready", () => {
+  // Only the GM client should send snapshots and process commands.
+  // Player clients don't have permission to modify other actors or advance
+  // combat, and their attempts to do so cause errors visible to players.
+  if (!game.user?.isGM) {
+    console.log(`${LOG_PREFIX} Non-GM user; bridge sync disabled for this client.`);
+    return;
+  }
+
   scheduleSnapshot("ready");
-  startCommandPolling();
+  if (game.settings.get(MODULE_ID, "useCommandStream")) {
+    startCommandStream();
+  } else {
+    startCommandPolling();
+  }
 });
 
-Hooks.on("createCombat", () => scheduleSnapshot("createCombat"));
-Hooks.on("deleteCombat", () => scheduleSnapshot("deleteCombat"));
-Hooks.on("combatStart", () => scheduleSnapshot("combatStart"));
-Hooks.on("combatRound", () => scheduleSnapshot("combatRound"));
-Hooks.on("combatTurn", () => scheduleSnapshot("combatTurn"));
-Hooks.on("updateCombat", () => scheduleSnapshot("updateCombat"));
-Hooks.on("updateCombatant", () => scheduleSnapshot("updateCombatant"));
+// All snapshot hooks are guarded to only run on the GM client.
+Hooks.on("createCombat", () => { if (game.user?.isGM) scheduleSnapshot("createCombat"); });
+Hooks.on("deleteCombat", () => { if (game.user?.isGM) scheduleSnapshot("deleteCombat"); });
+Hooks.on("combatStart", () => { if (game.user?.isGM) scheduleSnapshot("combatStart"); });
+Hooks.on("combatRound", () => { if (game.user?.isGM) scheduleSnapshot("combatRound"); });
+Hooks.on("combatTurn", () => { if (game.user?.isGM) scheduleSnapshot("combatTurn"); });
+Hooks.on("updateCombat", () => { if (game.user?.isGM) scheduleSnapshot("updateCombat"); });
+Hooks.on("updateCombatant", () => { if (game.user?.isGM) scheduleSnapshot("updateCombatant"); });
 
 Hooks.on("updateActor", (actor, changes) => {
+  if (!game.user?.isGM) return;
   if (
     changes.system?.attributes?.hp ||
-    changes.system?.attributes?.conditions || // <-- NEW
+    changes.system?.attributes?.conditions ||
     changes.effects
   ) {
     scheduleSnapshot("updateActor");
   }
 });
 
-Hooks.on("createActiveEffect", () => scheduleSnapshot("createActiveEffect"));
-Hooks.on("deleteActiveEffect", () => scheduleSnapshot("deleteActiveEffect"));
-Hooks.on("updateActiveEffect", () => scheduleSnapshot("updateActiveEffect"));
+Hooks.on("createActiveEffect", () => { if (game.user?.isGM) scheduleSnapshot("createActiveEffect"); });
+Hooks.on("deleteActiveEffect", () => { if (game.user?.isGM) scheduleSnapshot("deleteActiveEffect"); });
+Hooks.on("updateActiveEffect", () => { if (game.user?.isGM) scheduleSnapshot("updateActiveEffect"); });
 
-Hooks.on("controlToken", () => scheduleSnapshot("controlToken"));
+Hooks.on("controlToken", () => { if (game.user?.isGM) scheduleSnapshot("controlToken"); });
 
 Hooks.on("renderActorSheet", (app, html) => {
   const actor = app?.actor;
