@@ -11,6 +11,23 @@ from app.bulk_spell_import import dedupe_prefer_non_legacy, parse_bulk_spells
 from app.storage_api import StorageAPI
 
 
+def _filter_for_import(spells, *, include_legacy: bool, dedupe: bool):
+    """Apply import-time filters for legacy and incomplete third-party spells."""
+    filtered = list(spells)
+
+    # Keep legacy spells only when no non-legacy version is available.
+    if not include_legacy:
+        filtered = dedupe_prefer_non_legacy(filtered)
+    elif dedupe:
+        # Preserve existing dedupe behavior when callers opt in to dedupe.
+        filtered = dedupe_prefer_non_legacy(filtered)
+
+    # Skip entries missing full text; these are usually partial/locked previews.
+    filtered = [s for s in filtered if "Missing description" not in s.warnings]
+
+    return filtered
+
+
 def _read_input(path: str | None) -> str:
     if path:
         with open(path, "r", encoding="utf-8") as f:
@@ -58,9 +75,14 @@ def main() -> int:
     args = parser.parse_args()
 
     raw = _read_input(args.input)
-    spells = parse_bulk_spells(raw, include_legacy=args.include_legacy)
-    if not args.no_dedupe:
-        spells = dedupe_prefer_non_legacy(spells)
+    # Always parse legacy blocks first so we can keep them only as fallback when
+    # a non-legacy entry for the same spell does not exist.
+    spells = parse_bulk_spells(raw, include_legacy=True)
+    spells = _filter_for_import(
+        spells,
+        include_legacy=args.include_legacy,
+        dedupe=not args.no_dedupe,
+    )
 
     if not spells:
         print("No parseable spells found.")
