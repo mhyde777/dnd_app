@@ -221,8 +221,8 @@ class TestParseMage2024:
         names = [a["name"] for a in self.data["actions"]]
         assert "Multiattack" in names
         assert "Arcane Burst" in names
-        # Spellcasting should also be listed as an action
-        assert "Spellcasting" in names
+        # Spellcasting is extracted into the structured spellcasting block, not actions
+        assert "Spellcasting" not in names
 
     def test_bonus_actions(self):
         assert len(self.data["bonus_actions"]) >= 1
@@ -345,6 +345,51 @@ class TestParseAdultRedDragon:
             if "Wing Attack" in a["name"]
         )
         assert wing["cost"] == 2
+
+
+# ── 2024 bare Resistances / Vulnerabilities / Immunities (Scarecrow) ──
+
+class TestParseScarecrow2024:
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        self.data = parse_statblock(_load_fixture("scarecrow_2024.txt"))
+
+    def test_name(self):
+        assert self.data["name"] == "Scarecrow"
+
+    def test_damage_vulnerabilities(self):
+        assert "Fire" in self.data["damage_vulnerabilities"]
+
+    def test_damage_resistances(self):
+        resistances = self.data["damage_resistances"]
+        assert any("Bludgeoning" in r for r in resistances)
+        assert any("Piercing" in r for r in resistances)
+
+    def test_damage_immunities(self):
+        immunities = self.data["damage_immunities"]
+        assert "Lightning" in immunities
+        assert "Necrotic" in immunities
+        assert "Poison" in immunities
+
+    def test_condition_immunities(self):
+        cond = self.data["condition_immunities"]
+        assert "Charmed" in cond
+        assert "Frightened" in cond
+        assert "Poisoned" in cond
+        assert "Unconscious" in cond
+
+    def test_cr(self):
+        assert self.data["challenge_rating"] == "1"
+        assert self.data["xp"] == 200
+
+    def test_traits(self):
+        names = [t["name"] for t in self.data["special_traits"]]
+        assert "False Appearance" in names
+
+    def test_actions(self):
+        names = [a["name"] for a in self.data["actions"]]
+        assert "Multiattack" in names
+        assert "Claw" in names
 
 
 # ── Validation tests ────────────────────────────────────────────────

@@ -1321,7 +1321,9 @@ class Application:
         # 3) Always hide Movement ("M") and Object Interaction ("OI") columns
         hide_aliases = {
             "_movement", "movement", "M",
-            "_object_interaction", "object_interaction", "OI"
+            "_object_interaction", "object_interaction", "OI",
+            "_temp_hp", "temp_hp",
+            "_max_hp_bonus", "max_hp_bonus",
         }
         for alias in hide_aliases:
             if alias in fields:
@@ -1467,8 +1469,15 @@ class Application:
         self.tracking_by_name = by_name
 
     def adjust_table_size(self):
+        _COL_MAX_WIDTHS = {
+            "_name":       200,
+            "_notes":      180,
+            "_conditions": 160,
+        }
+
         screen_geometry = QApplication.desktop().availableGeometry(self)
         screen_height = screen_geometry.height()
+        screen_width = screen_geometry.width()
 
         font_size = max(int(screen_height * 0.012), 10) if screen_height < 1440 else 18
         self.table.setFont(QFont('Arial', font_size))
@@ -1478,19 +1487,31 @@ class Application:
 
         total_width = self.table.verticalHeader().width()
         model = self.table.model()
+        source_fields = getattr(self, "table_model", None)
+        source_fields = getattr(source_fields, "fields", []) if source_fields else []
         if model:
             for column in range(model.columnCount()):
                 self.table.resizeColumnToContents(column)
                 if not self.table.isColumnHidden(column):
+                    field = source_fields[column] if column < len(source_fields) else ""
+                    cap = _COL_MAX_WIDTHS.get(field)
+                    if cap is not None and self.table.columnWidth(column) > cap:
+                        self.table.setColumnWidth(column, cap)
                     total_width += self.table.columnWidth(column)
 
         total_height = self.table.horizontalHeader().height()
         for row in range(model.rowCount() if model else 0):
             total_height += self.table.rowHeight(row)
 
-        self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        max_width = int(screen_width * 0.55)
+        if total_width > max_width:
+            self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            total_width = max_width
+        else:
+            self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
         self.table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.table.setFixedSize(total_width + 2, total_height + 2)  # ✅ extra padding for gutter
+        self.table.setFixedSize(total_width + 2, total_height + 2)  # extra padding for gutter
 
     # ============== Populate Lists ====================
     def pop_lists(self):
