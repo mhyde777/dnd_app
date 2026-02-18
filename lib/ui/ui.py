@@ -5,8 +5,10 @@ from PyQt5.QtWidgets import (
     QHBoxLayout, QMainWindow, QListWidget,
     QAction, QMenuBar, QDesktopWidget, QTableView,
     QSizePolicy, QMessageBox, QDialog, QDialogButtonBox,
-    QMenu, QTextEdit, QGroupBox, QStatusBar, QShortcut, QInputDialog
+    QMenu, QTextEdit, QGroupBox, QStatusBar, QShortcut, QInputDialog,
+    QStackedWidget,
 )
+from ui.statblock_widget import StatblockWidget
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QKeySequence
 from app.app import Application
@@ -156,19 +158,27 @@ class InitiativeTracker(QMainWindow, Application):
         # === RIGHT PANEL: STATBLOCK VIEW ===
         self.stat_layout = QVBoxLayout()
 
+        # Stacked widget: index 0 = image fallback (QLabel), index 1 = JSON renderer
         self.statblock = QLabel(self)
         self.statblock.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
+        self.statblock_widget = StatblockWidget(self)
+        self.statblock_stack = QStackedWidget(self)
+        self.statblock_stack.addWidget(self.statblock)         # 0 — image
+        self.statblock_stack.addWidget(self.statblock_widget)  # 1 — JSON
+        self.statblock_stack.setCurrentIndex(1)
 
         self.monster_list = QListWidget(self)
         self.monster_list.setSelectionMode(QListWidget.SingleSelection)
         self.monster_list.itemSelectionChanged.connect(self.update_statblock_image)
         self.monster_list.setFixedSize(200, 100)
+        self.monster_list.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.monster_list.customContextMenuRequested.connect(self._monster_list_context_menu)
 
-        self.hide_img = QPushButton("Hide Image", self)
-        self.hide_img.setToolTip("Hide the statblock image")
+        self.hide_img = QPushButton("Hide", self)
+        self.hide_img.setToolTip("Hide the statblock panel")
         self.hide_img.clicked.connect(self.hide_statblock)
-        self.show_img = QPushButton("Show Image", self)
-        self.show_img.setToolTip("Show the selected monster's statblock")
+        self.show_img = QPushButton("Show", self)
+        self.show_img.setToolTip("Show the statblock panel")
         self.show_img.clicked.connect(self.show_statblock)
 
         self.list_buttons = QHBoxLayout()
@@ -180,7 +190,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.list_buttons.addStretch()
 
         # Statblock fills available space; buttons pinned at bottom
-        self.stat_layout.addWidget(self.statblock, stretch=1)
+        self.stat_layout.addWidget(self.statblock_stack, stretch=1)
         self.stat_layout.addLayout(self.list_buttons)
 
         # === Wrap and attach all to main layout ===
@@ -204,6 +214,13 @@ class InitiativeTracker(QMainWindow, Application):
         if hasattr(self, "status_bar"):
             self.status_bar.showMessage(msg, timeout_ms)
 
+    def _monster_list_context_menu(self, pos):
+        menu = QMenu(self)
+        import_action = menu.addAction("Import Statblock...")
+        action = menu.exec_(self.monster_list.mapToGlobal(pos))
+        if action == import_action:
+            self.open_import_statblock_dialog()
+
     def setup_menu_and_toolbar(self):
         self.menu_bar = QMenuBar(self)
         self.setMenuBar(self.menu_bar)
@@ -214,6 +231,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.edit_menu = self.menu_bar.addMenu("&Edit")
         self.encounter_menu = self.menu_bar.addMenu("&Encounters")
         self.images_menu = self.menu_bar.addMenu("&Images")
+        self.monsters_menu = self.menu_bar.addMenu("&Monsters")
 
         self.filetool_bar = QToolBar("File", self)
         self.addToolBar(self.filetool_bar)
@@ -271,6 +289,10 @@ class InitiativeTracker(QMainWindow, Application):
         self.manage_images_action = QAction("Mange Images", self)
         self.manage_images_action.triggered.connect(self.manage_images)
         self.images_menu.addAction(self.manage_images_action)
+
+        self.import_statblock_action = QAction("Import Statblock...", self)
+        self.import_statblock_action.triggered.connect(self.open_import_statblock_dialog)
+        self.monsters_menu.addAction(self.import_statblock_action)
 
         # -- Keyboard shortcuts --
         self.save_action.setShortcut(QKeySequence("Ctrl+S"))

@@ -29,6 +29,20 @@ def _build_command_payload(
     return cmd
 
 
+def _build_set_hp_payload(
+    token_id: str,
+    hp: int,
+    actor_id: Optional[str] = None,
+    command_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    cmd: Dict[str, Any] = {"source": "app", "type": "set_hp", "tokenId": token_id, "hp": hp}
+    if actor_id:
+        cmd["actorId"] = actor_id
+    if command_id:
+        cmd["id"] = command_id
+    return cmd
+
+
 @dataclass
 class BridgeClient:
     base_url: str
