@@ -56,6 +56,8 @@ class CreatureTableModel(QAbstractTableModel):
                 "_foundry_combatant_id",
                 "_foundry_token_id",
                 "_foundry_actor_id",
+                "_temp_hp",
+                "_max_hp_bonus",
             }
             sample = next(iter(self.manager.creatures.values()))
             self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
@@ -413,6 +415,8 @@ class CreatureTableModel(QAbstractTableModel):
             "_foundry_combatant_id",
             "_foundry_token_id",
             "_foundry_actor_id",
+            "_temp_hp",
+            "_max_hp_bonus",
         }
         sample = next(iter(self.manager.creatures.values()))
         self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
@@ -439,6 +443,8 @@ class CreatureTableModel(QAbstractTableModel):
                 "_foundry_combatant_id",
                 "_foundry_token_id",
                 "_foundry_actor_id",
+                "_temp_hp",
+                "_max_hp_bonus",
             }
             sample = next(iter(self.manager.creatures.values()))
             self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]

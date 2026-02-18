@@ -655,12 +655,18 @@ def parse_statblock(text: str) -> dict:
             result["damage_vulnerabilities"] = _parse_csv_list(
                 line, "Damage Vulnerabilities"
             )
+        elif low.startswith("vulnerabilities"):
+            # 2024 bare prefix — always damage vulnerabilities
+            result["damage_vulnerabilities"] = _parse_csv_list(line, "Vulnerabilities")
         elif low.startswith("damage resistances"):
             result["damage_resistances"] = _parse_csv_list(line, "Damage Resistances")
+        elif low.startswith("resistances"):
+            # 2024 bare prefix — always damage resistances
+            result["damage_resistances"] = _parse_csv_list(line, "Resistances")
         elif low.startswith("damage immunities"):
             result["damage_immunities"] = _parse_csv_list(line, "Damage Immunities")
         elif low.startswith("immunities"):
-            # 2024 D&D Beyond uses a single bare "Immunities" line for both types
+            # 2024 bare prefix — auto-classify damage types vs conditions
             dmg, cond = _classify_immunities(line)
             if dmg:
                 result["damage_immunities"].extend(dmg)

@@ -415,17 +415,9 @@ class InitiativeTracker(QMainWindow, Application):
         creature = self.manager.creatures.get(name)
         return name, creature
 
-    def show_hp_dropdown(self, creature, index):
-        menu = QMenu(self)
-
-        set_temp_action = menu.addAction("Set Temp HP")
-        set_max_bonus_action = menu.addAction("Set Max HP Bonus")
-        clear_bonus_action = menu.addAction("Clear Temp/Bonus HP")
-
-        pos = self.table.viewport().mapToGlobal(self.table.visualRect(index).bottomLeft())
-        chosen = menu.exec_(pos)
-
-        if chosen == set_temp_action:
+    def _apply_temp_hp_action(self, action_name: str, creature) -> None:
+        """Shared logic for Temp HP / Max HP Bonus / Clear from any menu."""
+        if action_name == "set_temp":
             current = int(getattr(creature, "temp_hp", 0) or 0)
             value, ok = QInputDialog.getInt(
                 self,
@@ -439,9 +431,8 @@ class InitiativeTracker(QMainWindow, Application):
             if ok:
                 creature.temp_hp = value
                 self.update_table()
-            return
 
-        if chosen == set_max_bonus_action:
+        elif action_name == "set_max_bonus":
             current = int(getattr(creature, "max_hp_bonus", 0) or 0)
             value, ok = QInputDialog.getInt(
                 self,
@@ -458,15 +449,31 @@ class InitiativeTracker(QMainWindow, Application):
                 creature.curr_hp = min(int(getattr(creature, "curr_hp", 0) or 0), max_total)
                 self._enqueue_bridge_set_hp(getattr(creature, "name", ""), creature.curr_hp)
                 self.update_table()
-            return
 
-        if chosen == clear_bonus_action:
+        elif action_name == "clear":
             creature.temp_hp = 0
             creature.max_hp_bonus = 0
             capped_hp = int(getattr(creature, "max_hp", 0) or 0)
             creature.curr_hp = min(int(getattr(creature, "curr_hp", 0) or 0), capped_hp)
             self._enqueue_bridge_set_hp(getattr(creature, "name", ""), creature.curr_hp)
             self.update_table()
+
+    def show_hp_dropdown(self, creature, index):
+        menu = QMenu(self)
+
+        set_temp_action = menu.addAction("Set Temp HP")
+        set_max_bonus_action = menu.addAction("Set Max HP Bonus")
+        clear_bonus_action = menu.addAction("Clear Temp/Bonus HP")
+
+        pos = self.table.viewport().mapToGlobal(self.table.visualRect(index).bottomLeft())
+        chosen = menu.exec_(pos)
+
+        if chosen == set_temp_action:
+            self._apply_temp_hp_action("set_temp", creature)
+        elif chosen == set_max_bonus_action:
+            self._apply_temp_hp_action("set_max_bonus", creature)
+        elif chosen == clear_bonus_action:
+            self._apply_temp_hp_action("clear", creature)
 
 
     def _show_notes_editor(self, title: str, text: str) -> Optional[str]:
@@ -542,6 +549,12 @@ class InitiativeTracker(QMainWindow, Application):
         else:
             visibility_action = None
 
+        menu.addSeparator()
+        set_temp_action = menu.addAction("Set Temp HP...")
+        set_max_bonus_action = menu.addAction("Set Max HP Bonus...")
+        clear_bonus_action = menu.addAction("Clear Temp/Bonus HP")
+        menu.addSeparator()
+
         edit_public_action = menu.addAction("Edit Public Notes...")
         edit_private_action = menu.addAction("Edit Private Notes...")
         menu.addSeparator()
@@ -558,6 +571,15 @@ class InitiativeTracker(QMainWindow, Application):
             self.table_model.refresh()
             self.update_table()
             self._refresh_player_view()
+            return
+
+        if chosen in (set_temp_action, set_max_bonus_action, clear_bonus_action):
+            action_map = {
+                set_temp_action: "set_temp",
+                set_max_bonus_action: "set_max_bonus",
+                clear_bonus_action: "clear",
+            }
+            self._apply_temp_hp_action(action_map[chosen], creature)
             return
 
         if chosen == edit_public_action:
