@@ -2,10 +2,8 @@ from typing import List
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QCheckBox,
-    QGroupBox, QPushButton, QHBoxLayout, QGridLayout
+    QScrollArea, QGroupBox, QPushButton, QHBoxLayout
 )
-from PyQt5.QtWidgets import QGraphicsDropShadowEffect
-from PyQt5.QtGui import QColor
 
 # === Foundry Conditions + Concentrating ===
 DEFAULT_CONDITIONS: List[str] = [
@@ -43,37 +41,32 @@ class ConditionsDropdown(QFrame):
         names = condition_names or DEFAULT_CONDITIONS
 
         self.setFrameShape(QFrame.Box)
-        self.setMinimumWidth(320)
-
-        # Drop shadow
-        shadow = QGraphicsDropShadowEffect(self)
-        shadow.setBlurRadius(16)
-        shadow.setOffset(0, 4)
-        shadow.setColor(QColor(0, 0, 0, 120))
-        self.setGraphicsEffect(shadow)
 
         root = QVBoxLayout(self)
-        root.setContentsMargins(10, 10, 10, 10)
+        root.setContentsMargins(8, 8, 8, 8)
         root.setSpacing(6)
 
         title = QLabel(f"Conditions: {getattr(creature, 'name', '')}")
         title.setStyleSheet("font-weight: bold;")
         root.addWidget(title)
 
-        # 2-column grid layout (no scroll needed for 16 items)
         group = QGroupBox()
-        grid = QGridLayout(group)
-        grid.setContentsMargins(6, 6, 6, 6)
-        grid.setSpacing(4)
+        group_layout = QVBoxLayout(group)
+        group_layout.setContentsMargins(6, 6, 6, 6)
+        group_layout.setSpacing(4)
 
-        cols = 2
-        for i, name in enumerate(names):
-            cb = QCheckBox(f"\u2022 {name}")
+        for name in names:
+            cb = QCheckBox(name)
             cb.stateChanged.connect(self._on_change)
             self._boxes[name] = cb
-            grid.addWidget(cb, i // cols, i % cols)
+            group_layout.addWidget(cb)
 
-        root.addWidget(group)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(group)
+        scroll.setMinimumWidth(220)
+        scroll.setMinimumHeight(260)
+        root.addWidget(scroll)
 
         # Bottom buttons
         btn_row = QHBoxLayout()

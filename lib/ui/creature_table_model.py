@@ -2,14 +2,6 @@ from PyQt5.QtCore import Qt, QAbstractTableModel, QModelIndex, QVariant, QTimer
 from PyQt5.QtGui import QColor, QFont
 from dataclasses import fields as dataclass_fields
 
-from ui.colors import (
-    HP_HEALTHY_ACTIVE, HP_LOW_ACTIVE, HP_LOW_INACTIVE,
-    HP_ZERO_ACTIVE, HP_ZERO_INACTIVE,
-    DEAD_BG_ACTIVE, DEAD_BG_INACTIVE, DEAD_TEXT,
-    STABLE_BG_ACTIVE, STABLE_BG_INACTIVE,
-    BOOL_TRUE_BG, BOOL_FALSE_BG,
-)
-
 SPELL_ICON_COLUMN_NAME = "_spellbook"
 _COND_ABBR = {
     "Blinded": "Bli",
@@ -142,20 +134,13 @@ class CreatureTableModel(QAbstractTableModel):
 
         # ----- Display -----
         if role == Qt.DisplayRole:
-            # Boolean cells: show ✔/✘ symbols (delegate paints them with color)
+            # Hide checkboxes' raw text
             if isinstance(value, bool):
-                return "\u2714" if value else "\u2718"
+                return ""
 
             # Treat sentinel -1 as "unset" for these fields (UI blank)
             if attr in ("_init", "_status_time", "_armor_class") and value == -1:
                 return ""
-
-            # HP cell: show temp HP marker when present
-            if attr == "_curr_hp":
-                curr_hp = int(getattr(creature, "_curr_hp", 0) or 0)
-                temp_hp = int(getattr(creature, "_temp_hp", 0) or 0)
-                if temp_hp > 0:
-                    return f"{curr_hp} (+{temp_hp})"
 
             # Keep your prior "0 means blank" behavior
             if value == 0:
@@ -173,9 +158,9 @@ class CreatureTableModel(QAbstractTableModel):
 
         # ----- Background/Foreground coloring -----
         if role == Qt.BackgroundRole:
-            # Boolean columns: muted tint backgrounds
+            # Boolean columns: green/red
             if isinstance(value, bool):
-                return QColor(BOOL_TRUE_BG) if value else QColor(BOOL_FALSE_BG)
+                return QColor("#006400") if value else QColor("darkred")
 
             # Death save visuals (Players only)
             try:
@@ -190,27 +175,27 @@ class CreatureTableModel(QAbstractTableModel):
 
             # dead = gray (slightly lighter if active)
             if fail >= 3:
-                return QColor(DEAD_BG_ACTIVE) if is_active else QColor(DEAD_BG_INACTIVE)
+                return QColor("#808080") if is_active else QColor("#6b6b6b")
 
             # stable = blue (slightly brighter if active)
             if stable:
-                return QColor(STABLE_BG_ACTIVE) if is_active else QColor(STABLE_BG_INACTIVE)
+                return QColor("#3a74c8") if is_active else QColor("#2b5aa6")
 
             # HP-based coloring + active row
             curr_hp = getattr(creature, "_curr_hp", -1)
-            max_hp = int(getattr(creature, "_max_hp", -1) or -1) + int(getattr(creature, "_max_hp_bonus", 0) or 0)
+            max_hp = getattr(creature, "_max_hp", -1)
 
             if isinstance(curr_hp, int) and isinstance(max_hp, int) and max_hp > 0:
                 hp_ratio = curr_hp / max_hp
 
                 if curr_hp == 0:
-                    return QColor(HP_ZERO_ACTIVE) if is_active else QColor(HP_ZERO_INACTIVE)
+                    return QColor("red") if name == self.active_creature_name else QColor("darkRed")
 
                 if hp_ratio <= 0.5:
-                    return QColor(HP_LOW_ACTIVE) if is_active else QColor(HP_LOW_INACTIVE)
+                    return QColor("#7a663a") if name == self.active_creature_name else QColor("#5e4e2a")
 
-                if is_active:
-                    return QColor(HP_HEALTHY_ACTIVE)
+                if name == self.active_creature_name:
+                    return QColor("#006400")
 
         if role == Qt.ForegroundRole:
             try:
@@ -218,32 +203,7 @@ class CreatureTableModel(QAbstractTableModel):
             except Exception:
                 fail = 0
             if fail >= 3:
-                return QColor(DEAD_TEXT)
-
-        # ----- Font -----
-        if role == Qt.FontRole:
-            is_active = (name == self.active_creature_name)
-
-            # Conditions column: italic
-            if attr == "_conditions":
-                font = QFont()
-                font.setItalic(True)
-                if is_active:
-                    font.setBold(True)
-                return font
-
-            # Numeric columns: monospace
-            if attr in ("_init", "_curr_hp", "_max_hp", "_armor_class"):
-                font = QFont("monospace")
-                if is_active:
-                    font.setBold(True)
-                return font
-
-            # Active creature: bold
-            if is_active:
-                font = QFont()
-                font.setBold(True)
-                return font
+                return QColor("#e6e6e6")  # light text on gray
 
         return QVariant()
 

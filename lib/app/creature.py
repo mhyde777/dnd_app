@@ -30,9 +30,7 @@ class I_Creature:
     _name: str = field(default="")
     _init: int = field(default=-1)
     _max_hp: int = field(default=-1)
-    _max_hp_bonus: int = field(default=0)
     _curr_hp: int = field(default=-1)
-    _temp_hp: int = field(default=0)
     _armor_class: int = field(default=-1)
     _movement: int = field(default=-1)
     _action: bool = field(default=False)
@@ -78,9 +76,7 @@ class I_Creature:
             "_name": self.name,
             "_init": self.initiative,
             "_max_hp": self.max_hp,
-            "_max_hp_bonus": self.max_hp_bonus,
             "_curr_hp": self.curr_hp,
-            "_temp_hp": self.temp_hp,
             "_armor_class": self.armor_class,
             "_movement": self.movement,
             "_action": self.action,
@@ -110,8 +106,6 @@ class I_Creature:
     def from_dict(data: Dict[str, Any]) -> I_Creature:
         creature_type = CreatureType(data["_type"])
         conditions = data.get("_conditions", [])
-        max_hp_bonus = data.get("_max_hp_bonus", 0)
-        temp_hp = data.get("_temp_hp", 0)
         public_notes = data.get("_public_notes", "")
         player_visible = data.get("_player_visible")
         spell_slots = data.get("_spell_slots", {})
@@ -137,9 +131,7 @@ class I_Creature:
                 name=data["_name"],
                 init=data["_init"],
                 max_hp=data["_max_hp"],
-                max_hp_bonus=max_hp_bonus,
                 curr_hp=data["_curr_hp"],
-                temp_hp=temp_hp,
                 armor_class=data["_armor_class"],
                 movement=data["_movement"],
                 action=data["_action"],
@@ -170,9 +162,7 @@ class I_Creature:
                 name=data["_name"],
                 init=data["_init"],
                 max_hp=data["_max_hp"],
-                max_hp_bonus=max_hp_bonus,
                 curr_hp=data["_curr_hp"],
-                temp_hp=temp_hp,
                 armor_class=data["_armor_class"],
                 movement=data["_movement"],
                 action=data["_action"],
@@ -214,39 +204,9 @@ class I_Creature:
     def max_hp(self, value: int): self._max_hp = value
 
     @property
-    def max_hp_bonus(self) -> int: return int(self._max_hp_bonus or 0)
-    @max_hp_bonus.setter
-    def max_hp_bonus(self, value: int): self._max_hp_bonus = int(value)
-
-    @property
     def curr_hp(self) -> int: return self._curr_hp
     @curr_hp.setter
     def curr_hp(self, value: int): self._curr_hp = value
-
-    @property
-    def temp_hp(self) -> int: return max(0, int(self._temp_hp or 0))
-    @temp_hp.setter
-    def temp_hp(self, value: int): self._temp_hp = max(0, int(value))
-
-    @property
-    def effective_max_hp(self) -> int:
-        return int(self._max_hp or 0) + int(self._max_hp_bonus or 0)
-
-    def apply_healing(self, amount: int) -> int:
-        heal = max(0, int(amount))
-        before = int(self._curr_hp or 0)
-        self._curr_hp = min(before + heal, self.effective_max_hp)
-        return max(0, int(self._curr_hp or 0) - before)
-
-    def apply_damage(self, amount: int) -> int:
-        dmg = max(0, int(amount))
-        temp_before = self.temp_hp
-        absorbed = min(temp_before, dmg)
-        self.temp_hp = temp_before - absorbed
-        remaining = dmg - absorbed
-        hp_before = max(0, int(self._curr_hp or 0))
-        self._curr_hp = max(0, hp_before - remaining)
-        return max(0, hp_before - int(self._curr_hp or 0))
 
     @property
     def armor_class(self) -> int: return self._armor_class
@@ -335,7 +295,7 @@ class I_Creature:
 
 
 class Monster(I_Creature):
-    def __init__(self, name, init=0, max_hp=0, max_hp_bonus=0, curr_hp=0, temp_hp=0, armor_class=0,
+    def __init__(self, name, init=0, max_hp=0, curr_hp=0, armor_class=0,
                  movement=0, action=False, bonus_action=False, reaction=False,
                  notes='', public_notes='', player_visible=True, conditions=None, status_time='',
                  spell_slots=None, innate_slots=None, spell_slots_used=None,
@@ -346,9 +306,7 @@ class Monster(I_Creature):
             _name=name,
             _init=init,
             _max_hp=max_hp,
-            _max_hp_bonus=max_hp_bonus,
             _curr_hp=curr_hp,
-            _temp_hp=temp_hp,
             _armor_class=armor_class,
             _movement=movement,
             _action=action,
@@ -372,7 +330,7 @@ class Monster(I_Creature):
 
 
 class Player(I_Creature):
-    def __init__(self, name, init=0, max_hp=0, max_hp_bonus=0, curr_hp=0, temp_hp=0, armor_class=0,
+    def __init__(self, name, init=0, max_hp=0, curr_hp=0, armor_class=0,
                  movement=0, action=False, bonus_action=False, reaction=False,
                  object_interaction=False, notes='', public_notes='', player_visible=True,
                  conditions=None, status_time='',
@@ -384,9 +342,7 @@ class Player(I_Creature):
             _name=name,
             _init=init,
             _max_hp=max_hp,
-            _max_hp_bonus=max_hp_bonus,
             _curr_hp=curr_hp,
-            _temp_hp=temp_hp,
             _armor_class=armor_class,
             _movement=movement,
             _action=action,
