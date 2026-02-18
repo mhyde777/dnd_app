@@ -231,7 +231,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.edit_menu = self.menu_bar.addMenu("&Edit")
         self.encounter_menu = self.menu_bar.addMenu("&Encounters")
         self.images_menu = self.menu_bar.addMenu("&Images")
-        self.monsters_menu = self.menu_bar.addMenu("&Monsters")
+        self.monsters_menu = self.menu_bar.addMenu("&Parsers")
 
         self.filetool_bar = QToolBar("File", self)
         self.addToolBar(self.filetool_bar)
@@ -293,6 +293,10 @@ class InitiativeTracker(QMainWindow, Application):
         self.import_statblock_action = QAction("Import Statblock...", self)
         self.import_statblock_action.triggered.connect(self.open_import_statblock_dialog)
         self.monsters_menu.addAction(self.import_statblock_action)
+
+        self.import_spell_action = QAction("Import Spell...", self)
+        self.import_spell_action.triggered.connect(self.open_import_spell_dialog)
+        self.monsters_menu.addAction(self.import_spell_action)
 
         # -- Keyboard shortcuts --
         self.save_action.setShortcut(QKeySequence("Ctrl+S"))

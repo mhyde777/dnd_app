@@ -54,8 +54,8 @@ def _detect_format(text: str) -> str:
     # 2024 puts AC and Initiative on the same line: "AC 12    Initiative +2 (12)"
     if re.search(r'^AC\s+\d+.*Initiative', text, re.MULTILINE):
         return "2024"
-    # 2024 uses tab-separated ability scores with Mod/Save headers
-    if re.search(r'^Mod\tSave', text, re.MULTILINE):
+    # 2024 uses Mod/Save header above ability score block
+    if re.search(r'^Mod\s+Save', text, re.MULTILINE):
         return "2024"
     return "2014"
 
@@ -144,6 +144,34 @@ def _parse_cr_line(text: str, fmt: str) -> tuple[str, int, int]:
     return cr, xp, pb
 
 
+_CONDITION_IMMUNITY_NAMES = {
+    "blinded", "charmed", "deafened", "exhaustion", "frightened",
+    "grappled", "incapacitated", "invisible", "paralyzed", "petrified",
+    "poisoned", "prone", "restrained", "stunned", "unconscious",
+}
+
+
+def _classify_immunities(text: str) -> tuple[list[str], list[str]]:
+    """Split a bare 'Immunities' line into (damage_immunities, condition_immunities).
+
+    The 2024 D&D Beyond format uses a single 'Immunities' line that mixes damage
+    types and conditions. We auto-classify each entry by checking against known
+    condition names; anything else is treated as a damage type.
+    """
+    text = re.sub(r'^Immunities\s*:?\s*', '', text, flags=re.IGNORECASE)
+    damage: list[str] = []
+    conditions: list[str] = []
+    for part in re.split(r'[;,]', text):
+        part = part.strip()
+        if not part or part.lower() in ('none', '—', '-'):
+            continue
+        if part.lower() in _CONDITION_IMMUNITY_NAMES:
+            conditions.append(part)
+        else:
+            damage.append(part)
+    return damage, conditions
+
+
 def _parse_csv_list(text: str, prefix: str) -> list[str]:
     """Strip a prefix and split on commas/semicolons."""
     text = re.sub(rf'^{prefix}\s*:?\s*', '', text, flags=re.IGNORECASE)
@@ -219,35 +247,75 @@ def _parse_ability_scores_2014(lines: list[str]) -> dict[str, int]:
     return scores
 
 
-def _parse_ability_scores_2024(lines: list[str]) -> dict[str, int]:
-    """Parse 2024-style tab-separated ability scores.
+def _parse_ability_scores_2024(
+    lines: list[str],
+) -> tuple[dict[str, int], dict[str, int]]:
+    """Parse 2024-style ability scores and implicit saving throws.
 
-    Format:
-        Mod	Save
-        STR	8	-1
-        -1
-        DEX	15	+2
-        +2
+    D&D Beyond pastes each ability on one line (space or tab separated):
+        STR    18    +4
+        (blank)
+        +4          ← saving throw on its own line
+        (blank)
+        DEX    12    +1
         ...
+
+    Returns (scores, saves) where saves only includes values that differ
+    from the raw modifier (i.e. only proficient saves).
     """
-    scores = {a: 10 for a in _ABILITY_NAMES}
+    scores: dict[str, int] = {a: 10 for a in _ABILITY_NAMES}
+    raw_saves: dict[str, int] = {}
+    pending: Optional[str] = None   # ability waiting for its save line
+
     for line in lines:
-        parts = line.split('\t')
-        if len(parts) >= 2:
-            ability = parts[0].strip().lower()
-            if ability in _ABILITY_NAMES:
-                try:
-                    scores[ability] = int(parts[1].strip())
-                except ValueError:
-                    pass
-    return scores
+        stripped = line.strip()
+
+        if not stripped:
+            continue  # blank lines don't reset pending; save may be a few lines later
+
+        # "STR 18 +4" — ability score line
+        m = re.match(
+            r'^(STR|DEX|CON|INT|WIS|CHA)\s+(\d+)',
+            stripped, re.IGNORECASE,
+        )
+        if m:
+            pending = m.group(1).lower()
+            try:
+                scores[pending] = int(m.group(2))
+            except ValueError:
+                pending = None
+            continue
+
+        # Standalone signed integer — saving throw for the pending ability
+        if pending and re.fullmatch(r'[+-]\d+', stripped):
+            try:
+                raw_saves[pending] = int(stripped)
+            except ValueError:
+                pass
+            pending = None
+            continue
+
+        # Anything else resets pending (but skip "Mod", "Save" header words)
+        if stripped.lower() not in {'mod', 'save'}:
+            pending = None
+
+    # Only keep saves that differ from the raw modifier (proficient saves)
+    saves: dict[str, int] = {}
+    for ability, save_val in raw_saves.items():
+        mod = (scores.get(ability, 10) - 10) // 2
+        if save_val != mod:
+            saves[ability] = save_val
+
+    return scores, saves
 
 
-def _parse_ability_scores(lines: list[str], fmt: str) -> dict[str, int]:
-    """Dispatch to the right ability score parser based on format."""
+def _parse_ability_scores(
+    lines: list[str], fmt: str
+) -> tuple[dict[str, int], dict[str, int]]:
+    """Dispatch to the right ability score parser. Returns (scores, saves)."""
     if fmt == "2024":
         return _parse_ability_scores_2024(lines)
-    return _parse_ability_scores_2014(lines)
+    return _parse_ability_scores_2014(lines), {}
 
 
 # ── Section splitting ───────────────────────────────────────────────
@@ -446,14 +514,37 @@ def _parse_spellcasting_block(description: str) -> dict:
 
 
 def _split_spell_list(text: str) -> list[str]:
-    """Split a comma-separated spell list, stripping annotations."""
-    spells = []
-    for part in text.split(','):
-        spell = part.strip().rstrip('.')
-        # Remove trailing asterisks or other markers
-        spell = re.sub(r'[*†]+$', '', spell).strip()
-        if spell:
-            spells.append(spell.lower())
+    """Split a comma-separated spell list, preserving parenthetical notes.
+
+    Commas inside parentheses are not treated as delimiters, so entries like
+    'fireball (level 3, cold damage)' remain intact as a single item.
+    """
+    spells: list[str] = []
+    current: list[str] = []
+    depth = 0
+
+    for ch in text:
+        if ch == '(':
+            depth += 1
+            current.append(ch)
+        elif ch == ')':
+            depth = max(0, depth - 1)
+            current.append(ch)
+        elif ch == ',' and depth == 0:
+            part = ''.join(current).strip().rstrip('.')
+            part = re.sub(r'[*†]+$', '', part).strip()
+            if part:
+                spells.append(part.lower())
+            current = []
+        else:
+            current.append(ch)
+
+    # Final entry
+    part = ''.join(current).strip().rstrip('.')
+    part = re.sub(r'[*†]+$', '', part).strip()
+    if part:
+        spells.append(part.lower())
+
     return spells
 
 
@@ -548,8 +639,10 @@ def parse_statblock(text: str) -> dict:
             if m:
                 result["initiative_bonus"] = int(m.group(1))
 
-    # ── Ability scores ──
-    result["ability_scores"] = _parse_ability_scores(lines, fmt)
+    # ── Ability scores (and implicit saves for 2024 format) ──
+    result["ability_scores"], parsed_saves = _parse_ability_scores(lines, fmt)
+    if parsed_saves:
+        result["saving_throws"] = parsed_saves
 
     # ── Optional stat lines ──
     for line in lines_noblank:
@@ -566,6 +659,13 @@ def parse_statblock(text: str) -> dict:
             result["damage_resistances"] = _parse_csv_list(line, "Damage Resistances")
         elif low.startswith("damage immunities"):
             result["damage_immunities"] = _parse_csv_list(line, "Damage Immunities")
+        elif low.startswith("immunities"):
+            # 2024 D&D Beyond uses a single bare "Immunities" line for both types
+            dmg, cond = _classify_immunities(line)
+            if dmg:
+                result["damage_immunities"].extend(dmg)
+            if cond:
+                result["condition_immunities"].extend(cond)
         elif low.startswith("condition immunities"):
             result["condition_immunities"] = _parse_csv_list(
                 line, "Condition Immunities"
@@ -642,12 +742,18 @@ def parse_statblock(text: str) -> dict:
 
 
 def _extract_spellcasting(result: dict) -> None:
-    """Find spellcasting traits and convert to structured block."""
+    """Find spellcasting traits and convert to structured block.
+
+    Removes the entry from its source list so it isn't rendered twice
+    (once as a plain trait and once via the structured spellcasting block).
+    """
     for trait_list_key in ("special_traits", "actions"):
-        for trait in result.get(trait_list_key, []):
+        trait_list = result.get(trait_list_key, [])
+        for i, trait in enumerate(trait_list):
             name_lower = trait["name"].lower()
             if "spellcasting" in name_lower:
                 result["spellcasting"] = _parse_spellcasting_block(trait["description"])
+                trait_list.pop(i)
                 return
 
 

@@ -204,4 +204,49 @@ class StatblockImportDialog(QDialog):
 
         self.saved_key  = key
         self.saved_data = self._parsed_data
+
+        # Phase 8: prompt to import any spells missing from the library
+        self._check_missing_spells(self._parsed_data)
+
         self.accept()
+
+    def _check_missing_spells(self, data: dict) -> None:
+        """If the statblock has spells, find which are absent from the library."""
+        sc = data.get("spellcasting")
+        if not sc:
+            return
+
+        # Collect every spell name referenced in the statblock
+        all_spells: list[str] = []
+        for spell_list in sc.get("spells_by_level", {}).values():
+            all_spells.extend(spell_list)
+        for spell_list in sc.get("innate", {}).values():
+            all_spells.extend(spell_list)
+
+        if not all_spells:
+            return
+
+        try:
+            existing_keys = set(self.storage_api.list_spell_keys())
+        except Exception:
+            return  # don't block the save on a spell-list failure
+
+        from app.spell_parser import spell_key as _spell_key
+        missing = [s for s in all_spells if _spell_key(s) not in existing_keys]
+
+        if missing:
+            # Deduplicate while preserving order
+            seen: set[str] = set()
+            unique_missing: list[str] = []
+            for s in missing:
+                if s.lower() not in seen:
+                    seen.add(s.lower())
+                    unique_missing.append(s)
+
+            from ui.missing_spells_dialog import MissingSpellsDialog
+            dlg = MissingSpellsDialog(
+                missing=unique_missing,
+                storage_api=self.storage_api,
+                parent=self,
+            )
+            dlg.exec_()

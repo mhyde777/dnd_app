@@ -16,6 +16,9 @@ from PyQt5.QtWidgets import QTextBrowser, QToolTip
 
 from app.conditions import get_condition
 
+_SPELL_ORDINALS = {0: "Cantrip", 1: "1st", 2: "2nd", 3: "3rd",
+                   4: "4th", 5: "5th", 6: "6th", 7: "7th", 8: "8th", 9: "9th"}
+
 # ── Constants ───────────────────────────────────────────────────────
 
 _ABILITY_LABELS = ["STR", "DEX", "CON", "INT", "WIS", "CHA"]
@@ -38,6 +41,12 @@ _CONDITION_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Matches "following spells:" / "following spell:" patterns in trait descriptions
+_FOLLOWING_SPELLS_RE = re.compile(
+    r'(following\s+spells?\s*(?:[^:]{0,40})?:)\s*([^\n]+)',
+    re.IGNORECASE,
+)
+
 # Colours — 2024 D&D Beyond palette
 _BG       = "#FEF5E5"   # warm parchment
 _MAROON   = "#58180D"   # deep maroon — name, section headers, ability labels
@@ -53,6 +62,28 @@ _BLUE     = "#1a4d8f"
 def _modifier(score: int) -> str:
     mod = (score - 10) // 2
     return f"+{mod}" if mod >= 0 else str(mod)
+
+
+def _spell_title(name: str) -> str:
+    """Title-case a spell name without uppercasing the letter after an apostrophe.
+
+    'melf\'s acid arrow' → 'Melf\'s Acid Arrow'  (not 'Melf\'S Acid Arrow')
+    """
+    result: list[str] = []
+    capitalize_next = True
+    for ch in name:
+        if ch == ' ':
+            result.append(ch)
+            capitalize_next = True
+        elif ch in ("'", "\u2019"):
+            result.append(ch)
+            capitalize_next = False   # don't capitalize the 's' in "Melf's"
+        elif capitalize_next and ch.isalpha():
+            result.append(ch.upper())
+            capitalize_next = False
+        else:
+            result.append(ch)
+    return ''.join(result)
 
 
 def _linkify_conditions(text: str) -> str:
@@ -88,11 +119,18 @@ class StatblockWidget(QTextBrowser):
         self.setOpenLinks(False)
         self.setMouseTracking(True)
         self._last_mouse_pos: QPoint = QPoint(0, 0)
+        self._storage_api = None
+        self._spell_cache: dict[str, Optional[dict]] = {}
 
         # highlighted(str) fires when the mouse moves over/away from a link
         self.highlighted[str].connect(self._on_link_hovered)
 
         self.clear_statblock()
+
+    def set_storage_api(self, api) -> None:
+        """Attach a StorageAPI instance for live spell tooltip lookup."""
+        self._storage_api = api
+        self._spell_cache.clear()
 
     # ── Public API ───────────────────────────────────────────────────
 
@@ -137,12 +175,71 @@ class StatblockWidget(QTextBrowser):
             return
 
         if url.startswith("spell:"):
-            name = url[len("spell:"):].replace("_", " ").title()
-            QToolTip.showText(
-                global_pos,
-                f"<i>Spell data not yet loaded: {name}</i>",
-                self,
-            )
+            key = url[len("spell:"):]          # e.g. "fireball"
+            data = self._fetch_spell(key)
+            if data:
+                QToolTip.showText(global_pos, self._format_spell_tooltip(data), self)
+            else:
+                name = key.replace("_", " ").title()
+                QToolTip.showText(
+                    global_pos,
+                    f"<b>{name}</b><br><i>Spell data not in library.</i>",
+                    self,
+                )
+
+    # ── Spell tooltip helpers ─────────────────────────────────────────
+
+    def _fetch_spell(self, key: str) -> Optional[dict]:
+        """Return spell dict from cache or storage API. Returns None on miss/error."""
+        if key in self._spell_cache:
+            return self._spell_cache[key]
+        if self._storage_api is None:
+            return None
+        try:
+            data = self._storage_api.get_spell(f"{key}.json")
+            self._spell_cache[key] = data  # cache even None (404)
+            return data
+        except Exception:
+            self._spell_cache[key] = None
+            return None
+
+    def _format_spell_tooltip(self, data: dict) -> str:
+        """Format a spell dict as rich-text HTML for QToolTip."""
+        name   = data.get("name", "Unknown")
+        level  = data.get("level", 0)
+        school = data.get("school", "")
+
+        ord_str = _SPELL_ORDINALS.get(level, f"{level}th")
+        em_dash = "\u2014"
+        if level == 0:
+            subtitle = f"Cantrip{(' ' + em_dash + ' ' + school) if school else ''}"
+        else:
+            subtitle = f"{ord_str}-level {school}".strip()
+
+        parts: list[str] = [
+            f"<b style='color:{_RED};'>{name}</b>",
+        ]
+        if subtitle:
+            parts.append(f"<i style='color:#555;'>{subtitle}</i>")
+
+        conc = data.get("concentration", False)
+        for label, field in [
+            ("Casting Time", "casting_time"),
+            ("Range",        "range"),
+            ("Components",   "components"),
+            ("Duration",     "duration"),
+        ]:
+            val = data.get(field, "")
+            if val:
+                if field == "duration" and conc:
+                    val = "\u25C6 " + val
+                parts.append(f"<b>{label}:</b> {val}")
+
+        desc = data.get("description", "")
+        if desc:
+            parts.append("<br>" + desc.replace("\n", "<br>"))
+
+        return "<br>".join(parts)
 
     # ── HTML builder ─────────────────────────────────────────────────
 
@@ -283,13 +380,14 @@ class StatblockWidget(QTextBrowser):
         if spellcasting:
             p.append(self._render_spellcasting(spellcasting))
 
-        # Actions / Bonus Actions / Reactions
+        # Actions / Bonus Actions / Reactions (skip spellcasting — rendered separately)
         for key, label in [
             ("actions",       "Actions"),
             ("bonus_actions", "Bonus Actions"),
             ("reactions",     "Reactions"),
         ]:
-            entries = data.get(key, [])
+            entries = [e for e in data.get(key, [])
+                       if "spellcasting" not in e["name"].lower()]
             if entries:
                 p.append(_section_header(label))
                 for entry in entries:
@@ -375,7 +473,9 @@ class StatblockWidget(QTextBrowser):
 
     def _render_entry(self, entry: dict, name_suffix: str = "") -> str:
         name = entry.get("name", "")
-        desc = _linkify_conditions(entry.get("description", ""))
+        desc = entry.get("description", "")
+        desc = self._linkify_following_spells(desc)
+        desc = _linkify_conditions(desc)
         desc = desc.replace("\n", "<br>")
         return (
             f'<p style="margin:3px 0;">'
@@ -448,13 +548,77 @@ class StatblockWidget(QTextBrowser):
 
         return "".join(p)
 
+    @staticmethod
+    def _heal_split_parens(spell_list: list[str]) -> list[str]:
+        """Merge entries that were incorrectly split inside parentheses.
+
+        Old storage may contain ['invisibility (self only,', 'hag leaves no tracks)']
+        because the parser once split on every comma. This re-joins them.
+        """
+        healed: list[str] = []
+        buf: list[str] = []
+        depth = 0
+
+        for entry in spell_list:
+            depth += entry.count('(') - entry.count(')')
+            buf.append(entry)
+            if depth <= 0:
+                healed.append(', '.join(p.rstrip(', ') for p in buf))
+                buf = []
+                depth = 0
+
+        if buf:                       # leftover with unmatched open paren
+            healed.append(', '.join(p.rstrip(', ') for p in buf))
+
+        return healed
+
+    def _linkify_following_spells(self, text: str) -> str:
+        """Linkify spell names that follow a 'following spells:' pattern.
+
+        Handles traits like 'Coven Magic' that list spells in their description
+        but are not named 'Spellcasting'.
+        """
+        def _replace(m: re.Match) -> str:
+            intro = m.group(1)
+            spells_text = m.group(2).strip().rstrip('.')
+            parts = [s.strip().rstrip('.').lower()
+                     for s in spells_text.split(',') if s.strip()]
+            if not parts:
+                return m.group(0)
+            return f"{intro} {self._linkify_spells(parts)}"
+        return _FOLLOWING_SPELLS_RE.sub(_replace, text)
+
     def _linkify_spells(self, spell_list: list[str]) -> str:
-        """Wrap spell names in anchor links."""
+        """Wrap spell names in anchor links, rendering parenthetical notes as plain text.
+
+        Rule: everything before the first '(' is the spell name; everything from
+        '(' onward is the note.
+        """
+        spell_list = self._heal_split_parens(spell_list)
         linked = []
         for spell in spell_list:
-            key = spell.lower().replace(" ", "_")
-            linked.append(
+            spell = spell.strip()
+            paren_idx = spell.find('(')
+            if paren_idx > 0:
+                name = spell[:paren_idx].strip()
+                note = spell[paren_idx:].strip()
+            else:
+                name = spell
+                note = ""
+
+            if not name:
+                continue
+
+            key = name.lower().replace(" ", "_")
+            link = (
                 f'<a href="spell:{key}" '
-                f'style="color:{_BLUE}; text-decoration:none;">{spell.title()}</a>'
+                f'style="color:{_BLUE}; text-decoration:none;">{_spell_title(name)}</a>'
             )
+            if note:
+                linked.append(
+                    f'{link}'
+                    f'<span style="color:#777; font-style:italic;"> {note}</span>'
+                )
+            else:
+                linked.append(link)
         return ", ".join(linked)
