@@ -3,12 +3,75 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import sys
 
 from dotenv import find_dotenv, load_dotenv
 
 from app.bulk_spell_import import dedupe_prefer_non_legacy, parse_bulk_spells
 from app.storage_api import StorageAPI
+
+
+_LEGACY_NAME_RE = re.compile(r"\blegacy\b", re.IGNORECASE)
+
+
+def _canonical_spell_key(key: str) -> str:
+    stem = key.strip().lower()
+    if stem.endswith(".json"):
+        stem = stem[:-5]
+    stem = re.sub(r"(?:_|\(|\[)?legacy(?:\)|\])?$", "", stem).strip("_ ")
+    return f"{stem}.json" if stem else key
+
+
+def _spell_is_legacy(*, key: str, data: dict | None) -> bool:
+    if _LEGACY_NAME_RE.search(key.replace("_", " ")):
+        return True
+    if not isinstance(data, dict):
+        return False
+    if bool(data.get("legacy")):
+        return True
+    name = str(data.get("name", ""))
+    source = str(data.get("source", ""))
+    return bool(_LEGACY_NAME_RE.search(name) or _LEGACY_NAME_RE.search(source))
+
+
+def _prepare_api_replacements(api: StorageAPI, spells) -> tuple[set[str], set[str]]:
+    """
+    Decide which existing API entries to delete and which parsed spells to skip.
+
+    - If a non-legacy spell exists, skip uploading a legacy variant.
+    - If uploading non-legacy and a legacy variant exists, delete legacy first.
+    - If uploading legacy and only non-legacy exists, keep non-legacy and skip legacy.
+    """
+    existing_by_canonical: dict[str, list[str]] = {}
+    for existing_key in api.list_spell_keys():
+        existing_by_canonical.setdefault(_canonical_spell_key(existing_key), []).append(existing_key)
+
+    delete_keys: set[str] = set()
+    skip_upload_keys: set[str] = set()
+
+    for spell in spells:
+        canonical_key = _canonical_spell_key(spell.key)
+        existing_matches = existing_by_canonical.get(canonical_key, [])
+        if not existing_matches:
+            continue
+
+        for existing_key in existing_matches:
+            if existing_key == spell.key:
+                continue
+            existing_data = api.get_spell(existing_key)
+            existing_is_legacy = _spell_is_legacy(key=existing_key, data=existing_data)
+            incoming_is_legacy = spell.is_legacy
+
+            if incoming_is_legacy:
+                if not existing_is_legacy:
+                    skip_upload_keys.add(spell.key)
+                else:
+                    delete_keys.add(existing_key)
+            else:
+                delete_keys.add(existing_key)
+
+    return delete_keys, skip_upload_keys
 
 
 def _filter_for_import(spells, *, include_legacy: bool, dedupe: bool):
@@ -112,10 +175,30 @@ def main() -> int:
         return 2
 
     api = StorageAPI(args.base_url)
+    try:
+        delete_keys, skip_upload_keys = _prepare_api_replacements(api, spells)
+    except Exception as exc:
+        print(f"Failed to inspect existing spells in Storage API: {exc}", file=sys.stderr)
+        return 4
+
+    for key in sorted(delete_keys):
+        try:
+            api.delete_spell(key)
+            print(f"Deleted existing spell variant: {key}")
+        except Exception as exc:
+            print(f"Failed deleting existing spell variant {key}: {exc}", file=sys.stderr)
+
     uploaded = 0
     failed = 0
+    skipped = 0
 
     for spell in spells:
+        if spell.key in skip_upload_keys:
+            skipped += 1
+            print(
+                f"Skipping legacy spell {spell.key}: non-legacy variant already exists in API."
+            )
+            continue
         try:
             api.save_spell(spell.key, spell.data)
             uploaded += 1
@@ -123,7 +206,7 @@ def main() -> int:
             failed += 1
             print(f"Failed upload {spell.key}: {exc}", file=sys.stderr)
 
-    print(f"\nUpload complete: {uploaded} succeeded, {failed} failed.")
+    print(f"\nUpload complete: {uploaded} succeeded, {skipped} skipped, {failed} failed.")
     return 0 if failed == 0 else 3
 
 
