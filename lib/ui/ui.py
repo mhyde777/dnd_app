@@ -5,17 +5,15 @@ from PyQt5.QtWidgets import (
     QHBoxLayout, QMainWindow, QListWidget,
     QAction, QMenuBar, QDesktopWidget, QTableView,
     QSizePolicy, QMessageBox, QDialog, QDialogButtonBox,
-    QMenu, QTextEdit, QGroupBox, QStatusBar, QShortcut, QInputDialog
+    QMenu, QTextEdit
 )
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QKeySequence
 from app.app import Application
 from app.creature import CreatureType
 from app.manager import CreatureManager
 from ui.creature_table_model import CreatureTableModel
-from ui.delegates import CreatureTableDelegate
 from ui.spellcasting_dropdown import SpellcastingDropdown
-from app.config import player_view_enabled, use_storage_api_only
+from app.config import use_storage_api_only
 from ui.conditions_dropdown import ConditionsDropdown, DEFAULT_CONDITIONS
 
 class InitiativeTracker(QMainWindow, Application):
@@ -53,17 +51,17 @@ class InitiativeTracker(QMainWindow, Application):
         self.label_layout.setContentsMargins(0, 0, 0, 0)
 
         self.active_init_label = QLabel("Active: None", self)
-        self.active_init_label.setObjectName("combatInfoLabel")
+        self.active_init_label.setStyleSheet("font-size: 18px;")
         self.active_init_label.setMinimumHeight(24)
         self.label_layout.addWidget(self.active_init_label)
 
         self.round_counter_label = QLabel("Round: 1", self)
-        self.round_counter_label.setObjectName("combatInfoLabel")
+        self.round_counter_label.setStyleSheet("font-size: 18px;")
         self.round_counter_label.setMinimumHeight(24)
         self.label_layout.addWidget(self.round_counter_label)
 
         self.time_counter_label = QLabel("Time: 0 seconds", self)
-        self.time_counter_label.setObjectName("combatInfoLabel")
+        self.time_counter_label.setStyleSheet("font-size: 18px;")
         self.time_counter_label.setMinimumHeight(24)
         self.label_layout.addWidget(self.time_counter_label)
 
@@ -73,22 +71,16 @@ class InitiativeTracker(QMainWindow, Application):
         self.player_view_toggle.setCheckable(True)
         self.player_view_toggle.setChecked(False)
         self.player_view_toggle.clicked.connect(self.toggle_player_view_live)
-        if player_view_enabled():
-            self.label_layout.addWidget(self.player_view_toggle)
-        else:
-            self.player_view_toggle.hide()
+        self.label_layout.addWidget(self.player_view_toggle)
 
         # === TABLE AREA (under labels) ===
         self.table_model = CreatureTableModel(self.manager, parent=self, bridge_owner=self)
         self.table = QTableView(self)
         self.table.setModel(self.table_model)
-        self.table_delegate = CreatureTableDelegate(self.table)
-        self.table.setItemDelegate(self.table_delegate)
-        self.table_delegate.commitData.connect(self.on_commit_data)
+        self.table.itemDelegate().commitData.connect(self.on_commit_data)
         self.table.clicked.connect(self.handle_cell_clicked)
         self.table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self.show_table_context_menu)
-        self.table.setMouseTracking(True)
         self.installEventFilter(self)
         # Ensure that the table's size is fixed and matches its content
         self.table.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
@@ -100,64 +92,44 @@ class InitiativeTracker(QMainWindow, Application):
         self.table_layout.addWidget(self.table)
 
         # === SIDEBAR with buttons ===
-        self.dam_layout = QVBoxLayout()
-
-        # -- Turn Controls group --
-        turn_group = QGroupBox("Turn Controls")
-        turn_group_layout = QVBoxLayout(turn_group)
+        self.nextprev_layout = QVBoxLayout()
         self.prev_button = QPushButton("Prev", self)
-        self.prev_button.setToolTip("Go to previous turn (Ctrl+Shift+N)")
         self.prev_button.clicked.connect(self.prev_turn)
-        turn_group_layout.addWidget(self.prev_button)
+        self.nextprev_layout.addWidget(self.prev_button)
 
         self.next_button = QPushButton("Next", self)
-        self.next_button.setToolTip("Advance to next turn (Ctrl+N)")
         self.next_button.clicked.connect(self.next_turn)
-        turn_group_layout.addWidget(self.next_button)
-        self.dam_layout.addWidget(turn_group)
+        self.nextprev_layout.addWidget(self.next_button)
 
-        # -- Combatants group --
-        combatants_group = QGroupBox("Combatants")
-        combatants_group_layout = QVBoxLayout(combatants_group)
-        combatants_group_layout.setContentsMargins(6, 6, 6, 6)
+        self.dam_layout = QVBoxLayout()
         self.creature_list = QListWidget(self)
         self.creature_list.setSelectionMode(QListWidget.MultiSelection)
-        self.creature_list.setFixedWidth(200)
-        self.creature_list.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum)
-        combatants_group_layout.addWidget(self.creature_list)
-        combatants_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
-        self.dam_layout.addWidget(combatants_group)
-
-        # -- HP Controls group --
-        hp_group = QGroupBox("HP Controls")
-        hp_group_layout = QVBoxLayout(hp_group)
-
-        self.heal_button = QPushButton("Heal", self)
-        self.heal_button.setObjectName("healButton")
-        self.heal_button.setToolTip("Heal selected creatures by the entered value")
-        self.heal_button.clicked.connect(self.heal_selected_creatures)
 
         self.value_input = QLineEdit(self)
-        self.value_input.setPlaceholderText("HP value...")
-        self.value_input.setFixedWidth(200)
+
+        self.heal_button = QPushButton("Heal", self)
+        self.heal_button.clicked.connect(self.heal_selected_creatures)
 
         self.dam_button = QPushButton("Damage", self)
-        self.dam_button.setObjectName("damageButton")
-        self.dam_button.setToolTip("Damage selected creatures by the entered value")
         self.dam_button.clicked.connect(self.damage_selected_creatures)
 
-        hp_group_layout.addWidget(self.heal_button)
-        hp_group_layout.addWidget(self.value_input)
-        hp_group_layout.addWidget(self.dam_button)
-        self.dam_layout.addWidget(hp_group)
+        self.heal_dam_layout = QVBoxLayout()
+        self.heal_dam_layout.addWidget(self.heal_button)
+        self.heal_dam_layout.addWidget(self.value_input)
+        self.heal_dam_layout.addWidget(self.dam_button)
 
+        self.creature_list.setFixedWidth(200)
+        self.value_input.setFixedWidth(200)
+
+        self.dam_layout.addLayout(self.nextprev_layout)
+        self.dam_layout.addWidget(self.creature_list)
+        self.dam_layout.addLayout(self.heal_dam_layout)
         self.dam_layout.addStretch()
 
         # === RIGHT PANEL: STATBLOCK VIEW ===
         self.stat_layout = QVBoxLayout()
-
         self.statblock = QLabel(self)
-        self.statblock.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
+        self.statblock.setScaledContents(True)
 
         self.monster_list = QListWidget(self)
         self.monster_list.setSelectionMode(QListWidget.SingleSelection)
@@ -165,10 +137,8 @@ class InitiativeTracker(QMainWindow, Application):
         self.monster_list.setFixedSize(200, 100)
 
         self.hide_img = QPushButton("Hide Image", self)
-        self.hide_img.setToolTip("Hide the statblock image")
         self.hide_img.clicked.connect(self.hide_statblock)
         self.show_img = QPushButton("Show Image", self)
-        self.show_img.setToolTip("Show the selected monster's statblock")
         self.show_img.clicked.connect(self.show_statblock)
 
         self.list_buttons = QHBoxLayout()
@@ -179,9 +149,9 @@ class InitiativeTracker(QMainWindow, Application):
         self.list_buttons.addLayout(self.show_hide_butts)
         self.list_buttons.addStretch()
 
-        # Statblock fills available space; buttons pinned at bottom
-        self.stat_layout.addWidget(self.statblock, stretch=1)
+        self.stat_layout.addWidget(self.statblock)
         self.stat_layout.addLayout(self.list_buttons)
+        self.stat_layout.addStretch()
 
         # === Wrap and attach all to main layout ===
         self.dam_widget = QWidget()
@@ -192,17 +162,10 @@ class InitiativeTracker(QMainWindow, Application):
 
         self.mainlayout.addWidget(self.dam_widget, alignment=Qt.AlignLeft)
         self.mainlayout.addWidget(self.table_widget, alignment=Qt.AlignTop)
-        self.mainlayout.addWidget(self.stat_widget, stretch=1)
+        self.mainlayout.addStretch()
+        self.mainlayout.addWidget(self.stat_widget, alignment=Qt.AlignRight)
 
         self.setup_menu_and_toolbar()
-
-        # === Status Bar ===
-        self.status_bar = QStatusBar(self)
-        self.setStatusBar(self.status_bar)
-
-    def show_status_message(self, msg: str, timeout_ms: int = 4000):
-        if hasattr(self, "status_bar"):
-            self.status_bar.showMessage(msg, timeout_ms)
 
     def setup_menu_and_toolbar(self):
         self.menu_bar = QMenuBar(self)
@@ -272,52 +235,40 @@ class InitiativeTracker(QMainWindow, Application):
         self.manage_images_action.triggered.connect(self.manage_images)
         self.images_menu.addAction(self.manage_images_action)
 
-        # -- Keyboard shortcuts --
-        self.save_action.setShortcut(QKeySequence("Ctrl+S"))
-
-        self.next_turn_action = QAction("Next Turn", self)
-        self.next_turn_action.setShortcut(QKeySequence("Ctrl+N"))
-        self.next_turn_action.triggered.connect(self.next_turn)
-        self.edit_menu.addAction(self.next_turn_action)
-
-        self.prev_turn_action = QAction("Previous Turn", self)
-        self.prev_turn_action.setShortcut(QKeySequence("Ctrl+Shift+N"))
-        self.prev_turn_action.triggered.connect(self.prev_turn)
-        self.edit_menu.addAction(self.prev_turn_action)
-
-        # -- Toolbar tooltips --
-        self.load_enc_button.setToolTip("Load a saved encounter")
-        self.add_button.setToolTip("Add new combatants to the encounter")
-        self.rmv_button.setToolTip("Remove combatants from the encounter")
-        self.merge_encounters.setToolTip("Merge another encounter into the current one")
-        self.save_action.setToolTip("Save current state (Ctrl+S)")
-        self.save_as_action.setToolTip("Save current encounter as a new file")
-
     def update_size_constraints(self):
         # Get the current screen where the app is being displayed
         current_screen = QDesktopWidget().screenNumber(self)
-        screen = QDesktopWidget().availableGeometry(current_screen)
+        screen = QDesktopWidget().screenGeometry(current_screen)
 
         self.screen_width = screen.width()
         self.screen_height = screen.height()
 
+        # Set the maximum size to the screen size to avoid going beyond bounds
+        self.setMaximumSize(self.screen_width, self.screen_height)
+
+        # Optionally set the window size to be full screen on the current screen
+        self.setWindowState(self.windowState() | Qt.WindowMaximized)
+
     def moveEvent(self, event):
         current_screen = QDesktopWidget().screenNumber(self)
-        screen = QDesktopWidget().availableGeometry(current_screen)
+        screen = QDesktopWidget().screenGeometry(current_screen)
         new_width = screen.width()
         new_height = screen.height()
 
-        # Update stored screen dimensions when the screen changes
+        # Only update if the screen size has changed
         if (new_width, new_height) != (self.screen_width, self.screen_height):
             self.screen_width = new_width
             self.screen_height = new_height
+            self.update_size_constraints()  # Update constraints to keep the window within the screen bounds
+
+            # Optionally, center the window on the new screen
+            self.center()
 
         super().moveEvent(event)
 
     def center(self):
         frame_geometry = self.frameGeometry()
-        current_screen = QDesktopWidget().screenNumber(self)
-        screen_center = QDesktopWidget().availableGeometry(current_screen).center()
+        screen_center = QDesktopWidget().availableGeometry().center()
         frame_geometry.moveCenter(screen_center)
         self.move(frame_geometry.topLeft())
 
@@ -373,9 +324,6 @@ class InitiativeTracker(QMainWindow, Application):
         if attr == "_conditions":
             self.show_conditions_dropdown(creature, index)
             return
-        if attr == "_curr_hp":
-            self.show_hp_dropdown(creature, index)
-            return
 
         self.toggle_boolean_cell(index)
     
@@ -388,60 +336,6 @@ class InitiativeTracker(QMainWindow, Application):
         name = self.table_model.creature_names[row]
         creature = self.manager.creatures.get(name)
         return name, creature
-
-    def show_hp_dropdown(self, creature, index):
-        menu = QMenu(self)
-
-        set_temp_action = menu.addAction("Set Temp HP")
-        set_max_bonus_action = menu.addAction("Set Max HP Bonus")
-        clear_bonus_action = menu.addAction("Clear Temp/Bonus HP")
-
-        pos = self.table.viewport().mapToGlobal(self.table.visualRect(index).bottomLeft())
-        chosen = menu.exec_(pos)
-
-        if chosen == set_temp_action:
-            current = int(getattr(creature, "temp_hp", 0) or 0)
-            value, ok = QInputDialog.getInt(
-                self,
-                f"Temp HP: {getattr(creature, 'name', '')}",
-                "Temporary HP:",
-                current,
-                0,
-                9999,
-                1,
-            )
-            if ok:
-                creature.temp_hp = value
-                self.update_table()
-            return
-
-        if chosen == set_max_bonus_action:
-            current = int(getattr(creature, "max_hp_bonus", 0) or 0)
-            value, ok = QInputDialog.getInt(
-                self,
-                f"Max HP Bonus: {getattr(creature, 'name', '')}",
-                "Bonus Max HP (can be negative):",
-                current,
-                -9999,
-                9999,
-                1,
-            )
-            if ok:
-                creature.max_hp_bonus = value
-                max_total = int(getattr(creature, "effective_max_hp", creature.max_hp) or 0)
-                creature.curr_hp = min(int(getattr(creature, "curr_hp", 0) or 0), max_total)
-                self._enqueue_bridge_set_hp(getattr(creature, "name", ""), creature.curr_hp)
-                self.update_table()
-            return
-
-        if chosen == clear_bonus_action:
-            creature.temp_hp = 0
-            creature.max_hp_bonus = 0
-            capped_hp = int(getattr(creature, "max_hp", 0) or 0)
-            creature.curr_hp = min(int(getattr(creature, "curr_hp", 0) or 0), capped_hp)
-            self._enqueue_bridge_set_hp(getattr(creature, "name", ""), creature.curr_hp)
-            self.update_table()
-
 
     def _show_notes_editor(self, title: str, text: str) -> Optional[str]:
         dialog = QDialog(self)
@@ -639,16 +533,13 @@ class InitiativeTracker(QMainWindow, Application):
                 server.stop()
             except Exception:
                 pass
-        local_bridge = getattr(self, "local_bridge", None)
-        if local_bridge is not None:
+        super().closeEvent(event)
+
+    def closeEvent(self, event):
+        server = getattr(self, "player_view_server", None)
+        if server is not None:
             try:
-                local_bridge.stop()
-            except Exception:
-                pass
-        stream_stop = getattr(self, "bridge_stream_stop", None)
-        if stream_stop is not None:
-            try:
-                stream_stop.set()
+                server.stop()
             except Exception:
                 pass
         super().closeEvent(event)

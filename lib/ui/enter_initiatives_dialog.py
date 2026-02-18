@@ -19,10 +19,6 @@ class EnterInitiativesDialog(QDialog):
 
         layout = QVBoxLayout(self)
 
-        title = QLabel("Enter Initiatives")
-        title.setStyleSheet("font-size: 16px; font-weight: bold;")
-        layout.addWidget(title)
-
         info = QLabel(
             "Enter initiatives for players that were missing values in the loaded file."
         )
