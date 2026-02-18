@@ -1010,7 +1010,7 @@ class Application:
             self.table_model.refresh()
             # Rebuild order after data load
             self.build_turn_order()
-            self.statblock.clear()
+            self._clear_statblock()
         except Exception as e:
             print(f"[ERROR] Failed to initialize players: {e}")
 
@@ -1586,9 +1586,9 @@ class Application:
                 if cr and cr._type == CreatureType.MONSTER:
                     self.active_statblock_image(cr)
                 else:
-                    self.statblock.clear()
+                    self._clear_statblock()
             else:
-                self.statblock.clear()
+                self._clear_statblock()
         self.init_tracking_mode(False)
 
     # ====================== Button Logic ======================
@@ -1860,7 +1860,7 @@ class Application:
             monster_name = selected_items[0].text()
             self.resize_to_fit_screen(monster_name)
         else:
-            self.statblock.clear()
+            self._clear_statblock()
 
     def active_statblock_image(self, creature_name_or_obj):
         # Backward compatibility: accept either name string or creature object
@@ -1871,6 +1871,21 @@ class Application:
         self.resize_to_fit_screen(base_name)
 
     def resize_to_fit_screen(self, base_name):
+        # 1) Try JSON statblock first
+        if self.storage_api:
+            try:
+                from app.statblock_parser import statblock_key
+                data = self.storage_api.get_statblock(statblock_key(base_name))
+                if data:
+                    self.statblock_widget.load_statblock(data)
+                    self.statblock_stack.setCurrentIndex(1)
+                    return
+            except Exception:
+                pass
+
+        # 2) Fall back to image
+        self.statblock_stack.setCurrentIndex(0)
+
         screen_geometry = QApplication.desktop().availableGeometry(self)
         screen_width = screen_geometry.width()
         screen_height = screen_geometry.height()
@@ -1884,7 +1899,7 @@ class Application:
             image_path = self.get_image_path(filename)
             pixmap = None
 
-            # 1) Prefer server (prevents stale local cache)
+            # 2a) Prefer server (prevents stale local cache)
             data = self.get_image_bytes(filename)
             if data:
                 pixmap = QPixmap()
@@ -1899,7 +1914,7 @@ class Application:
                     except Exception:
                         pass
 
-            # 2) Fallback to local file if server didn't return anything
+            # 2b) Fallback to local file if server didn't return anything
             if (pixmap is None or pixmap.isNull()) and os.path.exists(image_path):
                 pixmap = QPixmap(image_path)
 
@@ -1915,11 +1930,22 @@ class Application:
                 self.statblock.setPixmap(scaled_pixmap)
                 break
 
+    def _clear_statblock(self):
+        """Clear both statblock widgets and show the JSON placeholder."""
+        self.statblock.clear()
+        self.statblock_widget.clear_statblock()
+        self.statblock_stack.setCurrentIndex(1)
+
+    def open_import_statblock_dialog(self):
+        from ui.statblock_import_dialog import StatblockImportDialog
+        dlg = StatblockImportDialog(storage_api=self.storage_api, parent=self)
+        dlg.exec_()
+
     def hide_statblock(self):
-        self.statblock.hide()
+        self.statblock_stack.hide()
 
     def show_statblock(self):
-        self.statblock.show()
+        self.statblock_stack.show()
 
 # ================= Damage/Healing ======================
     def heal_selected_creatures(self):
