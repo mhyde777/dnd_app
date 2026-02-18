@@ -294,7 +294,14 @@ class Application:
                 if active_label:
                     active_name = active_label
 
-            if active_name and active_name != getattr(self, "current_creature_name", None):
+            current_cr = self.manager.creatures.get(
+                getattr(self, "current_creature_name", None) or ""
+            )
+            if (
+                active_name
+                and active_name != getattr(self, "current_creature_name", None)
+                and not getattr(current_cr, "_is_lair_action", False)
+            ):
                 self.current_creature_name = active_name
                 updated_active = True
 
@@ -1465,12 +1472,7 @@ class Application:
                     self.table_model.set_active_creature(name or "")
                 except Exception:
                     pass
-        # Keep delegate in sync for active-row rendering
         if hasattr(self, "table_delegate") and self.table_delegate:
-            try:
-                self.table_delegate.set_active_creature(name or "")
-            except Exception:
-                pass
             if hasattr(self.table_model, "refresh"):
                 try:
                     self.table_model.refresh()
