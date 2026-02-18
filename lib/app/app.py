@@ -215,6 +215,8 @@ class Application:
         updated_active = False
 
         for creature_name, creature in self.manager.creatures.items():
+            if getattr(creature, "_is_lair_action", False):
+                continue
             combatant = self._resolve_bridge_combatant(creature_name)
             if not combatant:
                 continue
@@ -391,6 +393,8 @@ class Application:
 
         # For creatures that have no IDs yet, try to resolve and attach IDs (no new creatures created here).
         for creature in self.manager.creatures.values():
+            if getattr(creature, "_is_lair_action", False):
+                continue
             has_any_id = bool(
                 getattr(creature, "foundry_combatant_id", None)
                 or getattr(creature, "foundry_token_id", None)
@@ -418,6 +422,34 @@ class Application:
                 matched_keys.add(rtid)
             if raid:
                 setattr(creature, "foundry_actor_id", raid)  # keep as metadata only
+
+        # Build sets of IDs currently present in the snapshot (for cross-scene orphan detection).
+        snapshot_combatant_ids = {
+            _normalize_id(c.get("combatantId"))
+            for c in combatants
+            if isinstance(c, dict) and _normalize_id(c.get("combatantId"))
+        }
+        snapshot_token_ids = {
+            _normalize_id(c.get("tokenId"))
+            for c in combatants
+            if isinstance(c, dict) and _normalize_id(c.get("tokenId"))
+        }
+
+        # Build actorId index for orphaned creatures (scene-transition fallback).
+        # Only include creatures whose stored combatantId/tokenId are absent from the current snapshot.
+        existing_by_actor_id: Dict[str, I_Creature] = {}
+        for creature in self.manager.creatures.values():
+            if getattr(creature, "_is_lair_action", False):
+                continue
+            aid = _normalize_id(getattr(creature, "foundry_actor_id", None))
+            if not aid:
+                continue
+            old_cid = _normalize_id(getattr(creature, "foundry_combatant_id", None))
+            old_tid = _normalize_id(getattr(creature, "foundry_token_id", None))
+            # Only eligible if old IDs are gone from snapshot (scene transition)
+            if old_cid in snapshot_combatant_ids or old_tid in snapshot_token_ids:
+                continue
+            existing_by_actor_id[aid] = creature
 
         # Add missing Foundry combatants into the app (membership add-only).
         added = False
@@ -463,6 +495,20 @@ class Application:
                     if resolved_type == CreatureType.PLAYER:
                         existing.death_saves_prompt = True
                 continue
+
+            # Fallback: match by actorId for scene-transition orphans (old IDs gone from snapshot)
+            if aid and aid in existing_by_actor_id:
+                existing = existing_by_actor_id[aid]
+                if cid:
+                    setattr(existing, "foundry_combatant_id", cid)
+                    existing_by_combatant_id[cid] = existing
+                    matched_keys.add(cid)
+                if tid:
+                    setattr(existing, "foundry_token_id", tid)
+                    existing_by_token_id[tid] = existing
+                    matched_keys.add(tid)
+                del existing_by_actor_id[aid]
+                continue  # don't create new creature
 
             # Create a new creature for this Foundry combatant
             creature = I_Creature(_name=str(name))
@@ -692,6 +738,8 @@ class Application:
         creature = None
         if getattr(self, "manager", None):
             creature = self.manager.creatures.get(creature_name)
+        if creature and getattr(creature, "_is_lair_action", False):
+            return
         token_id = (
             getattr(creature, "token_id", None)
             or getattr(creature, "foundry_token_id", None)
@@ -727,6 +775,8 @@ class Application:
         creature = None
         if getattr(self, "manager", None):
             creature = self.manager.creatures.get(creature_name)
+        if creature and getattr(creature, "_is_lair_action", False):
+            return
 
         token_id = (
             getattr(creature, "token_id", None)
@@ -1598,6 +1648,43 @@ class Application:
 
         self.init_tracking_mode(False)
 
+    def add_lair_action_combatant(self):
+        from ui.windows import LairActionDialog
+        from PyQt5.QtWidgets import QDialog
+        dlg = LairActionDialog(parent=self)
+        if dlg.exec_() != QDialog.Accepted:
+            return
+        name, init, notes = dlg.get_values()
+        creature = Monster(
+            name=name,
+            init=int(init),
+            is_lair_action=True,
+            lair_action_notes=notes,
+        )
+        # Ensure unique name
+        base = creature.name
+        counter = 1
+        while creature.name in self.manager.creatures:
+            creature.name = f"{base}_{counter}"
+            counter += 1
+        self.manager.add_creature(creature)
+        self.manager.sort_creatures()
+        self.table_model.set_fields_from_sample()
+        self.table_model.refresh()
+        self.build_turn_order()
+        self.update_table()
+        self.pop_lists()
+
+    def _show_lair_action_popup(self, creature) -> None:
+        from PyQt5.QtWidgets import QMessageBox
+        msg = QMessageBox(self)
+        msg.setWindowTitle(creature.name)
+        msg.setIcon(QMessageBox.Information)
+        notes = getattr(creature, "_lair_action_notes", "").strip()
+        msg.setText(notes if notes else "Lair Action! The lair acts on initiative count.")
+        msg.setStandardButtons(QMessageBox.Ok)
+        msg.exec_()
+
     def remove_combatant(self):
         self.init_tracking_mode(True)
         dialog = RemoveCombatantWindow(self.manager, self)
@@ -1703,6 +1790,10 @@ class Application:
             cr.reaction = False
 
         self.update_active_ui()
+
+        if getattr(cr, "_is_lair_action", False):
+            self._show_lair_action_popup(cr)
+            return  # skip Foundry turn command + death saves
 
         if hasattr(self, "show_status_message"):
             self.show_status_message(f"Turn: {self.current_creature_name}")

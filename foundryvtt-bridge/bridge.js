@@ -95,6 +95,22 @@ function buildCombatSnapshot() {
   };
 }
 
+// Buffer combatants that leave the tracker so their initiative can be restored
+// when they re-join (e.g. token moved to a new scene mid-combat).
+// Keyed by actorId; entries expire after 5 minutes.
+const departedCombatants = new Map();
+
+const DEPARTED_TTL_MS = 5 * 60 * 1000;
+
+function pruneDepartedCombatants() {
+  const now = Date.now();
+  for (const [actorId, entry] of departedCombatants) {
+    if (now - entry.timestamp > DEPARTED_TTL_MS) {
+      departedCombatants.delete(actorId);
+    }
+  }
+}
+
 let snapshotTimer = null;
 
 // Command polling state
@@ -695,6 +711,39 @@ Hooks.once("ready", () => {
   } else {
     startCommandPolling();
   }
+});
+
+// Cross-scene combatant persistence: buffer initiative when a combatant leaves,
+// restore it when they re-join in a new scene.
+Hooks.on("deleteCombatant", (combatant) => {
+  if (!game.user?.isGM) return;
+  const actorId = combatant.actor?.id ?? null;
+  if (!actorId) return;
+  pruneDepartedCombatants();
+  departedCombatants.set(actorId, {
+    name: combatant.name,
+    initiative: combatant.initiative ?? null,
+    timestamp: Date.now(),
+  });
+});
+
+Hooks.on("createCombatant", async (combatant) => {
+  if (!game.user?.isGM) return;
+  const actorId = combatant.actor?.id ?? null;
+  if (!actorId) return;
+  pruneDepartedCombatants();
+  const departed = departedCombatants.get(actorId);
+  if (!departed) return;
+  // Expired? (>5 min) clean up and bail
+  if (Date.now() - departed.timestamp > DEPARTED_TTL_MS) {
+    departedCombatants.delete(actorId);
+    return;
+  }
+  if (departed.initiative !== null) {
+    await combatant.parent.setInitiative(combatant.id, departed.initiative);
+  }
+  departedCombatants.delete(actorId);
+  scheduleSnapshot("combatantRestored");
 });
 
 // All snapshot hooks are guarded to only run on the GM client.

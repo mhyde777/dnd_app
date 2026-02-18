@@ -58,6 +58,8 @@ class CreatureTableModel(QAbstractTableModel):
                 "_foundry_actor_id",
                 "_temp_hp",
                 "_max_hp_bonus",
+                "_is_lair_action",
+                "_lair_action_notes",
             }
             sample = next(iter(self.manager.creatures.values()))
             self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
@@ -175,6 +177,10 @@ class CreatureTableModel(QAbstractTableModel):
 
         # ----- Background/Foreground coloring -----
         if role == Qt.BackgroundRole:
+            # Lair action rows: dark purple
+            if getattr(creature, "_is_lair_action", False):
+                return QColor("#4a2060")
+
             # Boolean columns: muted tint backgrounds
             if isinstance(value, bool):
                 return QColor(BOOL_TRUE_BG) if value else QColor(BOOL_FALSE_BG)
@@ -417,6 +423,8 @@ class CreatureTableModel(QAbstractTableModel):
             "_foundry_actor_id",
             "_temp_hp",
             "_max_hp_bonus",
+            "_is_lair_action",
+            "_lair_action_notes",
         }
         sample = next(iter(self.manager.creatures.values()))
         self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
@@ -445,6 +453,8 @@ class CreatureTableModel(QAbstractTableModel):
                 "_foundry_actor_id",
                 "_temp_hp",
                 "_max_hp_bonus",
+                "_is_lair_action",
+                "_lair_action_notes",
             }
             sample = next(iter(self.manager.creatures.values()))
             self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
