@@ -251,7 +251,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.load_enc_button = QAction("Load Encounter", self)
         self.load_enc_button.triggered.connect(self.load_encounter)
         self.encounter_menu.addAction(self.load_enc_button)
-        self.filetool_bar.addAction(self.load_enc_button)
+        # self.filetool_bar.addAction(self.load_enc_button)
 
         self.add_button = QAction("Add Combatant", self)
         self.add_button.triggered.connect(self.add_combatant)
@@ -270,13 +270,15 @@ class InitiativeTracker(QMainWindow, Application):
         self.encounter_menu.addAction(self.merge_encounters)
         self.filetool_bar.addAction(self.merge_encounters)
 
+        self.add_lair_action_button = QAction("Add Lair Action", self)
+        self.add_lair_action_button.triggered.connect(self.add_lair_action_combatant)
+        self.encounter_menu.addAction(self.add_lair_action_button)
+        self.filetool_bar.addAction(self.add_lair_action_button)
+
         # self.edit_menu.addAction(self.load_enc_button)
         self.edit_menu.addAction(self.add_button)
         self.edit_menu.addAction(self.rmv_button)
 
-        self.add_lair_action_button = QAction("Add Lair Action", self)
-        self.add_lair_action_button.triggered.connect(self.add_lair_action_combatant)
-        self.edit_menu.addAction(self.add_lair_action_button)
 
         self.active_encounters = QAction("Activate/Deactivate Encounters", self)
         self.active_encounters.triggered.connect(self.manage_encounter_statuses)
@@ -301,6 +303,15 @@ class InitiativeTracker(QMainWindow, Application):
         self.import_spell_action = QAction("Import Spell...", self)
         self.import_spell_action.triggered.connect(self.open_import_spell_dialog)
         self.monsters_menu.addAction(self.import_spell_action)
+
+        self.monsters_menu.addSeparator()
+        self.lookup_action = QAction("Reference Lookup", self)
+        self.lookup_action.setShortcut(QKeySequence("Ctrl+L"))
+        self.lookup_action.setToolTip("Look up spells, monsters, and conditions (Ctrl+L)")
+        self.lookup_action.triggered.connect(self.open_lookup_dialog)
+        self.monsters_menu.addAction(self.lookup_action)
+        self.filetool_bar.addSeparator()
+        self.filetool_bar.addAction(self.lookup_action)
 
         # -- Keyboard shortcuts --
         self.save_action.setShortcut(QKeySequence("Ctrl+S"))

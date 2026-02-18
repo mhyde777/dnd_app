@@ -2069,6 +2069,15 @@ class Application:
         dlg = SpellImportDialog(storage_api=self.storage_api, parent=self)
         dlg.exec_()
 
+    def open_lookup_dialog(self):
+        from ui.lookup_dialog import LookupDialog
+        if not hasattr(self, "_lookup_dialog") or self._lookup_dialog is None:
+            self._lookup_dialog = LookupDialog(storage_api=self.storage_api, parent=self)
+        self._lookup_dialog.show()
+        self._lookup_dialog.raise_()
+        self._lookup_dialog.activateWindow()
+        self._lookup_dialog.focus_search()
+
     def hide_statblock(self):
         self.statblock_stack.hide()
 
