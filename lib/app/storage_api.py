@@ -44,6 +44,15 @@ class StorageAPI:
     def _item_url(self, key: str) -> str:
         return f"{self._encounters_url()}/{key}"
 
+    def _statblocks_url(self) -> str:
+        return f"{self.base_url}/v1/statblocks"
+
+    def _statblocks_items_url(self) -> str:
+        return f"{self._statblocks_url()}/items"
+
+    def _statblock_item_url(self, key: str) -> str:
+        return f"{self._statblocks_url()}/{key}"
+
     def _images_url(self) -> str:
         return f"{self.base_url}/v1/images"
 
@@ -226,6 +235,52 @@ class StorageAPI:
     def get_json(self, key: str) -> Optional[dict]:
         """GET and ensure dict result (or None)."""
         return self.get(key)
+
+    # ----- Statblock CRUD -----
+
+    def list_statblock_keys(self) -> List[str]:
+        """Return list of statblock keys (e.g. ['goblin.json', 'mage.json'])."""
+        candidates = [
+            self._statblocks_items_url(),
+            self._statblocks_url(),
+        ]
+        return self._list_from_candidates(candidates)
+
+    def get_statblock(self, key: str) -> Optional[dict]:
+        """GET a statblock by key. Returns dict or None if not found."""
+        try:
+            r: Response = self.session.get(self._statblock_item_url(key), timeout=8)
+            if r.status_code == 404:
+                return None
+            r.raise_for_status()
+            payload = r.json()
+            return self._unwrap_data(payload)
+        except Exception as e:
+            raise RuntimeError(f"StorageAPI.get_statblock({key}) failed: {e}") from e
+
+    def save_statblock(self, key: str, data: dict) -> bool:
+        """PUT a statblock. Returns True on success."""
+        try:
+            body = self._wrap_for_put(data)
+            r: Response = self.session.put(
+                self._statblock_item_url(key), json=body, timeout=10
+            )
+            r.raise_for_status()
+            return True
+        except Exception as e:
+            raise RuntimeError(f"StorageAPI.save_statblock({key}) failed: {e}") from e
+
+    def delete_statblock(self, key: str) -> bool:
+        """DELETE a statblock. Returns True on success."""
+        try:
+            r: Response = self.session.delete(self._statblock_item_url(key), timeout=8)
+            if r.status_code not in (200, 204, 404):
+                r.raise_for_status()
+            return True
+        except Exception as e:
+            raise RuntimeError(f"StorageAPI.delete_statblock({key}) failed: {e}") from e
+
+    # ----- Image helpers -----
 
     @staticmethod
     def _decode_image_payload(payload: Any) -> Optional[bytes]:
