@@ -274,6 +274,10 @@ class InitiativeTracker(QMainWindow, Application):
         self.edit_menu.addAction(self.add_button)
         self.edit_menu.addAction(self.rmv_button)
 
+        self.add_lair_action_button = QAction("Add Lair Action", self)
+        self.add_lair_action_button.triggered.connect(self.add_lair_action_combatant)
+        self.edit_menu.addAction(self.add_lair_action_button)
+
         self.active_encounters = QAction("Activate/Deactivate Encounters", self)
         self.active_encounters.triggered.connect(self.manage_encounter_statuses)
         self.encounter_menu.addAction(self.active_encounters)

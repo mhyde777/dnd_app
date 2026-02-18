@@ -5,7 +5,8 @@ from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
     QSpinBox, QLineEdit, QPushButton, QLabel, QCheckBox,
     QTableWidget, QTableWidgetItem, QHeaderView, QGroupBox,
-    QListWidget, QListWidgetItem, QDialogButtonBox, QInputDialog
+    QListWidget, QListWidgetItem, QDialogButtonBox, QInputDialog,
+    QTextEdit,
 )
 
 from app.creature import Monster
@@ -548,3 +549,39 @@ class UpdatePlayerWindow(QDialog):
 
         self.player_table.setFixedWidth(total_width + self.player_table.frameWidth() * 2)
         self.player_table.setFixedHeight(total_height + self.player_table.frameWidth() * 2)
+
+
+class LairActionDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Add Lair Action")
+        layout = QVBoxLayout(self)
+
+        form = QFormLayout()
+
+        self.name_input = QLineEdit("Lair Action")
+        form.addRow("Name:", self.name_input)
+
+        self.init_input = QSpinBox()
+        self.init_input.setRange(1, 30)
+        self.init_input.setValue(20)
+        form.addRow("Initiative:", self.init_input)
+
+        self.notes_input = QTextEdit()
+        self.notes_input.setPlaceholderText("Optional notes shown when this turn is reached...")
+        self.notes_input.setFixedHeight(80)
+        form.addRow("Notes:", self.notes_input)
+
+        layout.addLayout(form)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def get_values(self):
+        return (
+            self.name_input.text().strip() or "Lair Action",
+            self.init_input.value(),
+            self.notes_input.toPlainText().strip(),
+        )
