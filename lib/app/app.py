@@ -1541,9 +1541,19 @@ class Application:
         return base_name
 
     # ================== Edit Menu Actions =====================
+    def fetch_statblock_for_creature(self, name: str) -> dict | None:
+        """Look up a statblock JSON by creature name. Returns dict or None."""
+        if not self.storage_api:
+            return None
+        try:
+            from app.statblock_parser import statblock_key
+            return self.storage_api.get_statblock(statblock_key(name))
+        except Exception:
+            return None
+
     def add_combatant(self):
         self.init_tracking_mode(True)
-        dialog = AddCombatantWindow(self)
+        dialog = AddCombatantWindow(self, statblock_lookup=self.fetch_statblock_for_creature)
         if dialog.exec_() == QDialog.Accepted:
             data = dialog.get_data()
             for creature_data in data:
@@ -1877,6 +1887,7 @@ class Application:
                 from app.statblock_parser import statblock_key
                 data = self.storage_api.get_statblock(statblock_key(base_name))
                 if data:
+                    self.statblock_widget.set_storage_api(self.storage_api)
                     self.statblock_widget.load_statblock(data)
                     self.statblock_stack.setCurrentIndex(1)
                     return
@@ -1939,6 +1950,11 @@ class Application:
     def open_import_statblock_dialog(self):
         from ui.statblock_import_dialog import StatblockImportDialog
         dlg = StatblockImportDialog(storage_api=self.storage_api, parent=self)
+        dlg.exec_()
+
+    def open_import_spell_dialog(self):
+        from ui.spell_import_dialog import SpellImportDialog
+        dlg = SpellImportDialog(storage_api=self.storage_api, parent=self)
         dlg.exec_()
 
     def hide_statblock(self):
@@ -2046,7 +2062,7 @@ class Application:
 
     # ================= Encounter Builder =====================
     def save_encounter(self):
-        dialog = BuildEncounterWindow(self)
+        dialog = BuildEncounterWindow(self, statblock_lookup=self.fetch_statblock_for_creature)
         if dialog.exec_() != QDialog.Accepted:
             return
 

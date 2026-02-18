@@ -280,6 +280,54 @@ class StorageAPI:
         except Exception as e:
             raise RuntimeError(f"StorageAPI.delete_statblock({key}) failed: {e}") from e
 
+    # ----- Spell CRUD -----
+
+    def _spells_url(self) -> str:
+        return f"{self.base_url}/v1/spells"
+
+    def _spells_items_url(self) -> str:
+        return f"{self._spells_url()}/items"
+
+    def _spell_item_url(self, key: str) -> str:
+        return f"{self._spells_url()}/{key}"
+
+    def list_spell_keys(self) -> List[str]:
+        """Return list of spell keys (e.g. ['fireball.json', 'shield.json'])."""
+        candidates = [self._spells_items_url(), self._spells_url()]
+        return self._list_from_candidates(candidates)
+
+    def get_spell(self, key: str) -> Optional[dict]:
+        """GET a spell by key. Returns dict or None if not found."""
+        try:
+            r: Response = self.session.get(self._spell_item_url(key), timeout=8)
+            if r.status_code == 404:
+                return None
+            r.raise_for_status()
+            return self._unwrap_data(r.json())
+        except Exception as e:
+            raise RuntimeError(f"StorageAPI.get_spell({key}) failed: {e}") from e
+
+    def save_spell(self, key: str, data: dict) -> bool:
+        """PUT a spell. Returns True on success."""
+        try:
+            r: Response = self.session.put(
+                self._spell_item_url(key), json=self._wrap_for_put(data), timeout=10
+            )
+            r.raise_for_status()
+            return True
+        except Exception as e:
+            raise RuntimeError(f"StorageAPI.save_spell({key}) failed: {e}") from e
+
+    def delete_spell(self, key: str) -> bool:
+        """DELETE a spell. Returns True on success."""
+        try:
+            r: Response = self.session.delete(self._spell_item_url(key), timeout=8)
+            if r.status_code not in (200, 204, 404):
+                r.raise_for_status()
+            return True
+        except Exception as e:
+            raise RuntimeError(f"StorageAPI.delete_spell({key}) failed: {e}") from e
+
     # ----- Image helpers -----
 
     @staticmethod
