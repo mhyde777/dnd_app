@@ -234,7 +234,7 @@ class BuildEncounterWindow(QDialog):
         spellcaster_checkbox = QCheckBox("Spellcaster")
         death_saves_checkbox = QCheckBox("Death Saves")
         visible_checkbox = QCheckBox("Show")
-        visible_checkbox.setchecked(True)
+        visible_checkbox.setChecked(True)
 
         top_row.addWidget(QLabel("Name:"))
         top_row.addWidget(name_input)
