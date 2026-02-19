@@ -1867,6 +1867,10 @@ class Application:
         if cr and getattr(cr, "_type", None) == CreatureType.MONSTER:
             self.active_statblock_image(cr)
 
+        if cr and getattr(cr, "_is_lair_action", False):
+            self._show_lair_action_popup(cr)
+            return  # skip Foundry turn command
+
         self._enqueue_bridge_turn_command("prev")
     # ----------------
     # Path Functions
