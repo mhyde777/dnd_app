@@ -1,6 +1,6 @@
 from typing import Optional
 from PyQt5.QtWidgets import (
-    QVBoxLayout, QLabel, QLineEdit,
+    QApplication, QVBoxLayout, QLabel, QLineEdit,
     QPushButton, QToolBar, QWidget,
     QHBoxLayout, QMainWindow, QListWidget,
     QAction, QMenuBar, QDesktopWidget, QTableView,
@@ -199,6 +199,8 @@ class InitiativeTracker(QMainWindow, Application):
 
         self.stat_widget = QWidget()
         self.stat_widget.setLayout(self.stat_layout)
+        _screen_w = QApplication.primaryScreen().availableGeometry().width()
+        self.stat_widget.setMaximumWidth(min(int(_screen_w * 0.35), 520))
 
         self.mainlayout.addWidget(self.dam_widget, alignment=Qt.AlignLeft)
         self.mainlayout.addWidget(self.table_widget, alignment=Qt.AlignTop)
