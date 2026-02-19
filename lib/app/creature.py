@@ -132,10 +132,6 @@ class I_Creature:
         foundry_actor_id = data.get("_foundry_actor_id")
         is_lair_action = data.get("_is_lair_action", False)
         lair_action_notes = data.get("_lair_action_notes", "")
-        # print("[LOAD CREATURE]", data["_name"])
-        # print("  _innate_slots_used:", data.get("_innate_slots_used"))
-        # print("  _spell_slots_used:", data.get("_spell_slots_used"))
-
         if creature_type == CreatureType.PLAYER:
             if player_visible is None:
                 player_visible = True

@@ -53,10 +53,6 @@ class Application:
         self.current_idx: int = 0         # pointer into turn_order
         self.current_creature_name: Optional[str] = None
 
-        # Keep this for compatibility with other methods that reference it,
-        # but we will manage it via build_turn_order()
-        self.sorted_creatures: List[Any] = []
-
         self.image_cache: Dict[str, bytes] = {}
 
         self.boolean_fields = {
@@ -913,18 +909,15 @@ class Application:
     def build_turn_order(self) -> None:
         """
         Rebuild the authoritative turn order when creatures/initiatives change.
-        Also refresh self.sorted_creatures for any legacy code that reads it.
         """
-        # Prefer manager’s canonical ordering
+        # Prefer manager's canonical ordering
         if hasattr(self.manager, "ordered_items"):
             ordered = self.manager.ordered_items()  # List[Tuple[str, I_Creature]]
-            creatures = [cr for _, cr in ordered]
             names = [nm for nm, _ in ordered]
         else:
             creatures = self._creature_list_sorted()
             names = [getattr(c, "name", "") for c in creatures if getattr(c, "name", "")]
 
-        self.sorted_creatures = creatures[:]  # keep legacy list in sync
         self.turn_order = names
 
         if not self.turn_order:
@@ -979,9 +972,6 @@ class Application:
         if not paused and not self.player_view_live:
             self.player_view_live = True
             self.player_view_snapshot = None
-
-    def _build_player_vew_payload(self) -> Dict[str, Any]:
-        return self._build_player_view_payload()
 
     def _build_player_view_payload(self) -> Dict[str, Any]:
         if not getattr(self, "manager", None) or not getattr(self.manager, "creatures", None):
@@ -1485,9 +1475,9 @@ class Application:
             (self.time_counter <= 0) and
             (getattr(self, "current_idx", 0) == 0)
         )
-        if hasattr(self, "prev_btn") and self.prev_btn:
+        if hasattr(self, "prev_button") and self.prev_button:
             # Only enable Prev if we can actually go back
-            self.prev_btn.setEnabled(not at_absolute_start)
+            self.prev_button.setEnabled(not at_absolute_start)
 
     def handle_initiative_update(self):
         """
@@ -1527,7 +1517,7 @@ class Application:
             "_conditions": 160,
         }
 
-        screen_geometry = QApplication.desktop().availableGeometry(self)
+        screen_geometry = QApplication.primaryScreen().availableGeometry()
         screen_height = screen_geometry.height()
         screen_width = screen_geometry.width()
 
@@ -2011,7 +2001,7 @@ class Application:
         # 2) Fall back to image
         self.statblock_stack.setCurrentIndex(0)
 
-        screen_geometry = QApplication.desktop().availableGeometry(self)
+        screen_geometry = QApplication.primaryScreen().availableGeometry()
         screen_width = screen_geometry.width()
         screen_height = screen_geometry.height()
 

@@ -2,6 +2,7 @@ from PyQt5.QtCore import Qt, QAbstractTableModel, QModelIndex, QVariant, QTimer
 from PyQt5.QtGui import QColor, QFont
 from dataclasses import fields as dataclass_fields
 
+from app.creature import CreatureType
 from ui.colors import (
     HP_HEALTHY_ACTIVE, HP_LOW_ACTIVE, HP_LOW_INACTIVE,
     HP_ZERO_ACTIVE, HP_ZERO_INACTIVE,
@@ -117,8 +118,6 @@ class CreatureTableModel(QAbstractTableModel):
 
         # Spellbook icon column
         if attr == SPELL_ICON_COLUMN_NAME:
-            from app.creature import CreatureType
-
             if creature._type != CreatureType.MONSTER:
                 return QVariant()
 
