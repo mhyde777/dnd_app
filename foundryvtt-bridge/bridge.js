@@ -634,15 +634,6 @@ Hooks.once("ready", () => {
   startCommandPolling();
 });
 
-<<<<<<< HEAD
-Hooks.on("createCombat", () => scheduleSnapshot("createCombat"));
-Hooks.on("deleteCombat", () => scheduleSnapshot("deleteCombat"));
-Hooks.on("combatStart", () => scheduleSnapshot("combatStart"));
-Hooks.on("combatRound", () => scheduleSnapshot("combatRound"));
-Hooks.on("combatTurn", () => scheduleSnapshot("combatTurn"));
-Hooks.on("updateCombat", () => scheduleSnapshot("updateCombat"));
-Hooks.on("updateCombatant", () => scheduleSnapshot("updateCombatant"));
-=======
 // Cross-scene combatant persistence: buffer initiative when a combatant leaves,
 // restore it when they re-join in a new scene.
 Hooks.on("deleteCombatant", (combatant) => {
@@ -684,7 +675,6 @@ Hooks.on("combatRound", () => { if (game.user?.isGM) scheduleSnapshot("combatRou
 Hooks.on("combatTurn", () => { if (game.user?.isGM) scheduleSnapshot("combatTurn"); });
 Hooks.on("updateCombat", () => { if (game.user?.isGM) scheduleSnapshot("updateCombat"); });
 Hooks.on("updateCombatant", () => { if (game.user?.isGM) scheduleSnapshot("updateCombatant"); });
->>>>>>> chore/foundry-bridge
 
 Hooks.on("updateActor", (actor, changes) => {
   if (

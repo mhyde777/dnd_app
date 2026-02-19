@@ -5,15 +5,12 @@ from PyQt5.QtWidgets import (
     QHBoxLayout, QMainWindow, QListWidget,
     QAction, QMenuBar, QDesktopWidget, QTableView,
     QSizePolicy, QMessageBox, QDialog, QDialogButtonBox,
-<<<<<<< HEAD
-    QMenu, QTextEdit
-=======
     QMenu, QTextEdit, QGroupBox, QStatusBar, QShortcut, QInputDialog,
     QStackedWidget,
->>>>>>> chore/foundry-bridge
 )
 from ui.statblock_widget import StatblockWidget
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QKeySequence
 from app.app import Application
 from app.creature import CreatureType
 from app.manager import CreatureManager
@@ -134,10 +131,6 @@ class InitiativeTracker(QMainWindow, Application):
 
         # === RIGHT PANEL: STATBLOCK VIEW ===
         self.stat_layout = QVBoxLayout()
-<<<<<<< HEAD
-        self.statblock = QLabel(self)
-        self.statblock.setScaledContents(True)
-=======
 
         # Stacked widget: index 0 = image fallback (QLabel), index 1 = JSON renderer
         self.statblock = QLabel(self)
@@ -147,7 +140,6 @@ class InitiativeTracker(QMainWindow, Application):
         self.statblock_stack.addWidget(self.statblock)         # 0 — image
         self.statblock_stack.addWidget(self.statblock_widget)  # 1 — JSON
         self.statblock_stack.setCurrentIndex(1)
->>>>>>> chore/foundry-bridge
 
         self.monster_list = QListWidget(self)
         self.monster_list.setSelectionMode(QListWidget.SingleSelection)
@@ -156,17 +148,11 @@ class InitiativeTracker(QMainWindow, Application):
         self.monster_list.setContextMenuPolicy(Qt.CustomContextMenu)
         self.monster_list.customContextMenuRequested.connect(self._monster_list_context_menu)
 
-<<<<<<< HEAD
-        self.hide_img = QPushButton("Hide Image", self)
-        self.hide_img.clicked.connect(self.hide_statblock)
-        self.show_img = QPushButton("Show Image", self)
-=======
         self.hide_img = QPushButton("Hide", self)
         self.hide_img.setToolTip("Hide the statblock panel")
         self.hide_img.clicked.connect(self.hide_statblock)
         self.show_img = QPushButton("Show", self)
         self.show_img.setToolTip("Show the statblock panel")
->>>>>>> chore/foundry-bridge
         self.show_img.clicked.connect(self.show_statblock)
 
         self.list_buttons = QHBoxLayout()
@@ -177,12 +163,8 @@ class InitiativeTracker(QMainWindow, Application):
         self.list_buttons.addLayout(self.show_hide_butts)
         self.list_buttons.addStretch()
 
-<<<<<<< HEAD
-        self.stat_layout.addWidget(self.statblock)
-=======
         # Statblock fills available space; buttons pinned at bottom
         self.stat_layout.addWidget(self.statblock_stack, stretch=1)
->>>>>>> chore/foundry-bridge
         self.stat_layout.addLayout(self.list_buttons)
         self.stat_layout.addStretch()
 
@@ -202,8 +184,6 @@ class InitiativeTracker(QMainWindow, Application):
 
         self.setup_menu_and_toolbar()
 
-<<<<<<< HEAD
-=======
         # === Status Bar ===
         self.status_bar = QStatusBar(self)
         self.setStatusBar(self.status_bar)
@@ -219,7 +199,6 @@ class InitiativeTracker(QMainWindow, Application):
         if action == import_action:
             self.open_import_statblock_dialog()
 
->>>>>>> chore/foundry-bridge
     def setup_menu_and_toolbar(self):
         self.menu_bar = QMenuBar(self)
         self.setMenuBar(self.menu_bar)
@@ -295,8 +274,6 @@ class InitiativeTracker(QMainWindow, Application):
         self.manage_images_action.triggered.connect(self.manage_images)
         self.images_menu.addAction(self.manage_images_action)
 
-<<<<<<< HEAD
-=======
         self.import_statblock_action = QAction("Import Statblock...", self)
         self.import_statblock_action.triggered.connect(self.open_import_statblock_dialog)
         self.monsters_menu.addAction(self.import_statblock_action)
@@ -335,7 +312,6 @@ class InitiativeTracker(QMainWindow, Application):
         self.save_action.setToolTip("Save current state (Ctrl+S)")
         self.save_as_action.setToolTip("Save current encounter as a new file")
 
->>>>>>> chore/foundry-bridge
     def update_size_constraints(self):
         # Get the current screen where the app is being displayed
         current_screen = QDesktopWidget().screenNumber(self)
@@ -438,8 +414,6 @@ class InitiativeTracker(QMainWindow, Application):
         creature = self.manager.creatures.get(name)
         return name, creature
 
-<<<<<<< HEAD
-=======
     def _apply_temp_hp_action(self, action_name: str, creature) -> None:
         """Shared logic for Temp HP / Max HP Bonus / Clear from any menu."""
         if action_name == "set_temp":
@@ -500,8 +474,6 @@ class InitiativeTracker(QMainWindow, Application):
         elif chosen == clear_bonus_action:
             self._apply_temp_hp_action("clear", creature)
 
-
->>>>>>> chore/foundry-bridge
     def _show_notes_editor(self, title: str, text: str) -> Optional[str]:
         dialog = QDialog(self)
         dialog.setWindowTitle(title)

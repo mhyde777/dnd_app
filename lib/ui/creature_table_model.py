@@ -2,8 +2,6 @@ from PyQt5.QtCore import Qt, QAbstractTableModel, QModelIndex, QVariant, QTimer
 from PyQt5.QtGui import QColor, QFont
 from dataclasses import fields as dataclass_fields
 
-<<<<<<< HEAD
-=======
 from app.creature import CreatureType
 from ui.colors import (
     HP_HEALTHY_ACTIVE, HP_LOW_ACTIVE, HP_LOW_INACTIVE,
@@ -13,7 +11,7 @@ from ui.colors import (
     BOOL_TRUE_BG, BOOL_FALSE_BG,
 )
 
->>>>>>> chore/foundry-bridge
+
 SPELL_ICON_COLUMN_NAME = "_spellbook"
 _COND_ABBR = {
     "Blinded": "Bli",
@@ -172,15 +170,11 @@ class CreatureTableModel(QAbstractTableModel):
 
         # ----- Background/Foreground coloring -----
         if role == Qt.BackgroundRole:
-<<<<<<< HEAD
-            # Boolean columns: green/red
-=======
             # Lair action rows: dark purple
             if getattr(creature, "_is_lair_action", False):
                 return QColor("#4a2060")
 
             # Boolean columns: muted tint backgrounds
->>>>>>> chore/foundry-bridge
             if isinstance(value, bool):
                 return QColor("#006400") if value else QColor("darkred")
 
