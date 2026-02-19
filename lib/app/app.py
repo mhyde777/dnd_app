@@ -45,10 +45,6 @@ class Application:
         self.current_idx: int = 0         # pointer into turn_order
         self.current_creature_name: Optional[str] = None
 
-        # Keep this for compatibility with other methods that reference it,
-        # but we will manage it via build_turn_order()
-        self.sorted_creatures: List[Any] = []
-
         self.image_cache: Dict[str, bytes] = {}
 
         self.boolean_fields = {
@@ -171,6 +167,8 @@ class Application:
         updated_active = False
 
         for creature_name, creature in self.manager.creatures.items():
+            if getattr(creature, "_is_lair_action", False):
+                continue
             combatant = self._resolve_bridge_combatant(creature_name)
             if not combatant:
                 continue
@@ -226,7 +224,14 @@ class Application:
                 if active_label:
                     active_name = active_label
 
-            if active_name and active_name != getattr(self, "current_creature_name", None):
+            current_cr = self.manager.creatures.get(
+                getattr(self, "current_creature_name", None) or ""
+            )
+            if (
+                active_name
+                and active_name != getattr(self, "current_creature_name", None)
+                and not getattr(current_cr, "_is_lair_action", False)
+            ):
                 self.current_creature_name = active_name
                 updated_active = True
 
@@ -284,6 +289,8 @@ class Application:
 
         # For creatures that have no IDs yet, try to resolve and attach IDs (no new creatures created here).
         for creature in self.manager.creatures.values():
+            if getattr(creature, "_is_lair_action", False):
+                continue
             has_any_id = bool(
                 getattr(creature, "foundry_combatant_id", None)
                 or getattr(creature, "foundry_token_id", None)
@@ -311,6 +318,34 @@ class Application:
                 matched_keys.add(rtid)
             if raid:
                 setattr(creature, "foundry_actor_id", raid)  # keep as metadata only
+
+        # Build sets of IDs currently present in the snapshot (for cross-scene orphan detection).
+        snapshot_combatant_ids = {
+            _normalize_id(c.get("combatantId"))
+            for c in combatants
+            if isinstance(c, dict) and _normalize_id(c.get("combatantId"))
+        }
+        snapshot_token_ids = {
+            _normalize_id(c.get("tokenId"))
+            for c in combatants
+            if isinstance(c, dict) and _normalize_id(c.get("tokenId"))
+        }
+
+        # Build actorId index for orphaned creatures (scene-transition fallback).
+        # Only include creatures whose stored combatantId/tokenId are absent from the current snapshot.
+        existing_by_actor_id: Dict[str, I_Creature] = {}
+        for creature in self.manager.creatures.values():
+            if getattr(creature, "_is_lair_action", False):
+                continue
+            aid = _normalize_id(getattr(creature, "foundry_actor_id", None))
+            if not aid:
+                continue
+            old_cid = _normalize_id(getattr(creature, "foundry_combatant_id", None))
+            old_tid = _normalize_id(getattr(creature, "foundry_token_id", None))
+            # Only eligible if old IDs are gone from snapshot (scene transition)
+            if old_cid in snapshot_combatant_ids or old_tid in snapshot_token_ids:
+                continue
+            existing_by_actor_id[aid] = creature
 
         # Add missing Foundry combatants into the app (membership add-only).
         added = False
@@ -356,6 +391,20 @@ class Application:
                     if resolved_type == CreatureType.PLAYER:
                         existing.death_saves_prompt = True
                 continue
+
+            # Fallback: match by actorId for scene-transition orphans (old IDs gone from snapshot)
+            if aid and aid in existing_by_actor_id:
+                existing = existing_by_actor_id[aid]
+                if cid:
+                    setattr(existing, "foundry_combatant_id", cid)
+                    existing_by_combatant_id[cid] = existing
+                    matched_keys.add(cid)
+                if tid:
+                    setattr(existing, "foundry_token_id", tid)
+                    existing_by_token_id[tid] = existing
+                    matched_keys.add(tid)
+                del existing_by_actor_id[aid]
+                continue  # don't create new creature
 
             # Create a new creature for this Foundry combatant
             creature = I_Creature(_name=str(name))
@@ -585,6 +634,8 @@ class Application:
         creature = None
         if getattr(self, "manager", None):
             creature = self.manager.creatures.get(creature_name)
+        if creature and getattr(creature, "_is_lair_action", False):
+            return
         token_id = (
             getattr(creature, "token_id", None)
             or getattr(creature, "foundry_token_id", None)
@@ -620,6 +671,8 @@ class Application:
         creature = None
         if getattr(self, "manager", None):
             creature = self.manager.creatures.get(creature_name)
+        if creature and getattr(creature, "_is_lair_action", False):
+            return
 
         token_id = (
             getattr(creature, "token_id", None)
@@ -749,18 +802,15 @@ class Application:
     def build_turn_order(self) -> None:
         """
         Rebuild the authoritative turn order when creatures/initiatives change.
-        Also refresh self.sorted_creatures for any legacy code that reads it.
         """
-        # Prefer manager’s canonical ordering
+        # Prefer manager's canonical ordering
         if hasattr(self.manager, "ordered_items"):
             ordered = self.manager.ordered_items()  # List[Tuple[str, I_Creature]]
-            creatures = [cr for _, cr in ordered]
             names = [nm for nm, _ in ordered]
         else:
             creatures = self._creature_list_sorted()
             names = [getattr(c, "name", "") for c in creatures if getattr(c, "name", "")]
 
-        self.sorted_creatures = creatures[:]  # keep legacy list in sync
         self.turn_order = names
 
         if not self.turn_order:
@@ -815,9 +865,6 @@ class Application:
         if not paused and not self.player_view_live:
             self.player_view_live = True
             self.player_view_snapshot = None
-
-    def _build_player_vew_payload(self) -> Dict[str, Any]:
-        return self._build_player_view_payload()
 
     def _build_player_view_payload(self) -> Dict[str, Any]:
         if not getattr(self, "manager", None) or not getattr(self.manager, "creatures", None):
@@ -903,7 +950,7 @@ class Application:
             self.table_model.refresh()
             # Rebuild order after data load
             self.build_turn_order()
-            self.statblock.clear()
+            self._clear_statblock()
         except Exception as e:
             print(f"[ERROR] Failed to initialize players: {e}")
 
@@ -1210,7 +1257,9 @@ class Application:
         # 3) Always hide Movement ("M") and Object Interaction ("OI") columns
         hide_aliases = {
             "_movement", "movement", "M",
-            "_object_interaction", "object_interaction", "OI"
+            "_object_interaction", "object_interaction", "OI",
+            "_temp_hp", "temp_hp",
+            "_max_hp_bonus", "max_hp_bonus",
         }
         for alias in hide_aliases:
             if alias in fields:
@@ -1314,9 +1363,9 @@ class Application:
             (self.time_counter <= 0) and
             (getattr(self, "current_idx", 0) == 0)
         )
-        if hasattr(self, "prev_btn") and self.prev_btn:
+        if hasattr(self, "prev_button") and self.prev_button:
             # Only enable Prev if we can actually go back
-            self.prev_btn.setEnabled(not at_absolute_start)
+            self.prev_button.setEnabled(not at_absolute_start)
 
     def handle_initiative_update(self):
         """
@@ -1350,8 +1399,15 @@ class Application:
         self.tracking_by_name = by_name
 
     def adjust_table_size(self):
-        screen_geometry = QApplication.desktop().availableGeometry(self)
+        _COL_MAX_WIDTHS = {
+            "_name":       200,
+            "_notes":      180,
+            "_conditions": 160,
+        }
+
+        screen_geometry = QApplication.primaryScreen().availableGeometry()
         screen_height = screen_geometry.height()
+        screen_width = screen_geometry.width()
 
         font_size = max(int(screen_height * 0.012), 10) if screen_height < 1440 else 18
         self.table.setFont(QFont('Arial', font_size))
@@ -1361,19 +1417,31 @@ class Application:
 
         total_width = self.table.verticalHeader().width()
         model = self.table.model()
+        source_fields = getattr(self, "table_model", None)
+        source_fields = getattr(source_fields, "fields", []) if source_fields else []
         if model:
             for column in range(model.columnCount()):
                 self.table.resizeColumnToContents(column)
                 if not self.table.isColumnHidden(column):
+                    field = source_fields[column] if column < len(source_fields) else ""
+                    cap = _COL_MAX_WIDTHS.get(field)
+                    if cap is not None and self.table.columnWidth(column) > cap:
+                        self.table.setColumnWidth(column, cap)
                     total_width += self.table.columnWidth(column)
 
         total_height = self.table.horizontalHeader().height()
         for row in range(model.rowCount() if model else 0):
             total_height += self.table.rowHeight(row)
 
-        self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        max_width = int(screen_width * 0.55)
+        if total_width > max_width:
+            self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            total_width = max_width
+        else:
+            self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
         self.table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.table.setFixedSize(total_width + 2, total_height + 2)  # ✅ extra padding for gutter
+        self.table.setFixedSize(total_width + 2, total_height + 2)  # extra padding for gutter
 
     # ============== Populate Lists ====================
     def pop_lists(self):
@@ -1424,9 +1492,19 @@ class Application:
         return base_name
 
     # ================== Edit Menu Actions =====================
+    def fetch_statblock_for_creature(self, name: str) -> dict | None:
+        """Look up a statblock JSON by creature name. Returns dict or None."""
+        if not self.storage_api:
+            return None
+        try:
+            from app.statblock_parser import statblock_key
+            return self.storage_api.get_statblock(statblock_key(name))
+        except Exception:
+            return None
+
     def add_combatant(self):
         self.init_tracking_mode(True)
-        dialog = AddCombatantWindow(self)
+        dialog = AddCombatantWindow(self, statblock_lookup=self.fetch_statblock_for_creature)
         if dialog.exec_() == QDialog.Accepted:
             data = dialog.get_data()
             for creature_data in data:
@@ -1450,6 +1528,43 @@ class Application:
 
         self.init_tracking_mode(False)
 
+    def add_lair_action_combatant(self):
+        from ui.windows import LairActionDialog
+        from PyQt5.QtWidgets import QDialog
+        dlg = LairActionDialog(parent=self)
+        if dlg.exec_() != QDialog.Accepted:
+            return
+        name, init, notes = dlg.get_values()
+        creature = Monster(
+            name=name,
+            init=int(init),
+            is_lair_action=True,
+            lair_action_notes=notes,
+        )
+        # Ensure unique name
+        base = creature.name
+        counter = 1
+        while creature.name in self.manager.creatures:
+            creature.name = f"{base}_{counter}"
+            counter += 1
+        self.manager.add_creature(creature)
+        self.manager.sort_creatures()
+        self.table_model.set_fields_from_sample()
+        self.table_model.refresh()
+        self.build_turn_order()
+        self.update_table()
+        self.pop_lists()
+
+    def _show_lair_action_popup(self, creature) -> None:
+        from PyQt5.QtWidgets import QMessageBox
+        msg = QMessageBox(self)
+        msg.setWindowTitle(creature.name)
+        msg.setIcon(QMessageBox.Information)
+        notes = getattr(creature, "_lair_action_notes", "").strip()
+        msg.setText(notes if notes else "Lair Action! The lair acts on initiative count.")
+        msg.setStandardButtons(QMessageBox.Ok)
+        msg.exec_()
+
     def remove_combatant(self):
         self.init_tracking_mode(True)
         dialog = RemoveCombatantWindow(self.manager, self)
@@ -1469,9 +1584,9 @@ class Application:
                 if cr and cr._type == CreatureType.MONSTER:
                     self.active_statblock_image(cr)
                 else:
-                    self.statblock.clear()
+                    self._clear_statblock()
             else:
-                self.statblock.clear()
+                self._clear_statblock()
         self.init_tracking_mode(False)
 
     # ====================== Button Logic ======================
@@ -1552,6 +1667,13 @@ class Application:
             cr.reaction = False  # False = unused in your semantics
 
         self.update_active_ui()
+
+        if getattr(cr, "_is_lair_action", False):
+            self._show_lair_action_popup(cr)
+            return  # skip Foundry turn command + death saves
+
+        if hasattr(self, "show_status_message"):
+            self.show_status_message(f"Turn: {self.current_creature_name}")
         self._maybe_prompt_death_saves(cr)
 
         # Monster statblock
@@ -1629,6 +1751,10 @@ class Application:
         cr = self.manager.creatures.get(self.current_creature_name) if self.current_creature_name else None
         if cr and getattr(cr, "_type", None) == CreatureType.MONSTER:
             self.active_statblock_image(cr)
+
+        if cr and getattr(cr, "_is_lair_action", False):
+            self._show_lair_action_popup(cr)
+            return  # skip Foundry turn command
 
         self._enqueue_bridge_turn_command("prev")
     # ----------------
@@ -1737,7 +1863,7 @@ class Application:
             monster_name = selected_items[0].text()
             self.resize_to_fit_screen(monster_name)
         else:
-            self.statblock.clear()
+            self._clear_statblock()
 
     def active_statblock_image(self, creature_name_or_obj):
         # Backward compatibility: accept either name string or creature object
@@ -1748,7 +1874,24 @@ class Application:
         self.resize_to_fit_screen(base_name)
 
     def resize_to_fit_screen(self, base_name):
-        screen_geometry = QApplication.desktop().availableGeometry(self)
+        # 1) Try JSON statblock first
+        if self.storage_api:
+            try:
+                from app.statblock_parser import statblock_key
+                data = self.storage_api.get_statblock(statblock_key(base_name))
+                if data:
+                    self.statblock_widget.set_storage_api(self.storage_api)
+                    self.statblock_widget.load_statblock(data)
+                    self.statblock_stack.setCurrentIndex(1)
+                    self.statblock_stack.show()
+                    return
+            except Exception:
+                pass
+
+        # 2) Fall back to image
+        self.statblock_stack.setCurrentIndex(0)
+
+        screen_geometry = QApplication.primaryScreen().availableGeometry()
         screen_width = screen_geometry.width()
         screen_height = screen_geometry.height()
 
@@ -1761,7 +1904,7 @@ class Application:
             image_path = self.get_image_path(filename)
             pixmap = None
 
-            # 1) Prefer server (prevents stale local cache)
+            # 2a) Prefer server (prevents stale local cache)
             data = self.get_image_bytes(filename)
             if data:
                 pixmap = QPixmap()
@@ -1776,7 +1919,7 @@ class Application:
                     except Exception:
                         pass
 
-            # 2) Fallback to local file if server didn't return anything
+            # 2b) Fallback to local file if server didn't return anything
             if (pixmap is None or pixmap.isNull()) and os.path.exists(image_path):
                 pixmap = QPixmap(image_path)
 
@@ -1790,13 +1933,39 @@ class Application:
                 QPixmapCache.clear()
 
                 self.statblock.setPixmap(scaled_pixmap)
+                self.statblock_stack.show()
                 break
 
+    def _clear_statblock(self):
+        """Clear both statblock widgets and hide the panel."""
+        self.statblock.clear()
+        self.statblock_widget.clear_statblock()
+        self.statblock_stack.hide()
+
+    def open_import_statblock_dialog(self):
+        from ui.statblock_import_dialog import StatblockImportDialog
+        dlg = StatblockImportDialog(storage_api=self.storage_api, parent=self)
+        dlg.exec_()
+
+    def open_import_spell_dialog(self):
+        from ui.spell_import_dialog import SpellImportDialog
+        dlg = SpellImportDialog(storage_api=self.storage_api, parent=self)
+        dlg.exec_()
+
+    def open_lookup_dialog(self):
+        from ui.lookup_dialog import LookupDialog
+        if not hasattr(self, "_lookup_dialog") or self._lookup_dialog is None:
+            self._lookup_dialog = LookupDialog(storage_api=self.storage_api, parent=self)
+        self._lookup_dialog.show()
+        self._lookup_dialog.raise_()
+        self._lookup_dialog.activateWindow()
+        self._lookup_dialog.focus_search()
+
     def hide_statblock(self):
-        self.statblock.hide()
+        self.statblock_stack.hide()
 
     def show_statblock(self):
-        self.statblock.show()
+        self.statblock_stack.show()
 
 # ================= Damage/Healing ======================
     def heal_selected_creatures(self):
@@ -1887,7 +2056,7 @@ class Application:
 
     # ================= Encounter Builder =====================
     def save_encounter(self):
-        dialog = BuildEncounterWindow(self)
+        dialog = BuildEncounterWindow(self, statblock_lookup=self.fetch_statblock_for_creature)
         if dialog.exec_() != QDialog.Accepted:
             return
 

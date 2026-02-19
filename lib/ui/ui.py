@@ -1,12 +1,18 @@
 from typing import Optional
 from PyQt5.QtWidgets import (
-    QVBoxLayout, QLabel, QLineEdit,
+    QApplication, QVBoxLayout, QLabel, QLineEdit,
     QPushButton, QToolBar, QWidget,
     QHBoxLayout, QMainWindow, QListWidget,
     QAction, QMenuBar, QDesktopWidget, QTableView,
     QSizePolicy, QMessageBox, QDialog, QDialogButtonBox,
+<<<<<<< HEAD
     QMenu, QTextEdit
+=======
+    QMenu, QTextEdit, QGroupBox, QStatusBar, QShortcut, QInputDialog,
+    QStackedWidget,
+>>>>>>> chore/foundry-bridge
 )
+from ui.statblock_widget import StatblockWidget
 from PyQt5.QtCore import Qt
 from app.app import Application
 from app.creature import CreatureType
@@ -128,17 +134,39 @@ class InitiativeTracker(QMainWindow, Application):
 
         # === RIGHT PANEL: STATBLOCK VIEW ===
         self.stat_layout = QVBoxLayout()
+<<<<<<< HEAD
         self.statblock = QLabel(self)
         self.statblock.setScaledContents(True)
+=======
+
+        # Stacked widget: index 0 = image fallback (QLabel), index 1 = JSON renderer
+        self.statblock = QLabel(self)
+        self.statblock.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
+        self.statblock_widget = StatblockWidget(self)
+        self.statblock_stack = QStackedWidget(self)
+        self.statblock_stack.addWidget(self.statblock)         # 0 — image
+        self.statblock_stack.addWidget(self.statblock_widget)  # 1 — JSON
+        self.statblock_stack.setCurrentIndex(1)
+>>>>>>> chore/foundry-bridge
 
         self.monster_list = QListWidget(self)
         self.monster_list.setSelectionMode(QListWidget.SingleSelection)
         self.monster_list.itemSelectionChanged.connect(self.update_statblock_image)
         self.monster_list.setFixedSize(200, 100)
+        self.monster_list.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.monster_list.customContextMenuRequested.connect(self._monster_list_context_menu)
 
+<<<<<<< HEAD
         self.hide_img = QPushButton("Hide Image", self)
         self.hide_img.clicked.connect(self.hide_statblock)
         self.show_img = QPushButton("Show Image", self)
+=======
+        self.hide_img = QPushButton("Hide", self)
+        self.hide_img.setToolTip("Hide the statblock panel")
+        self.hide_img.clicked.connect(self.hide_statblock)
+        self.show_img = QPushButton("Show", self)
+        self.show_img.setToolTip("Show the statblock panel")
+>>>>>>> chore/foundry-bridge
         self.show_img.clicked.connect(self.show_statblock)
 
         self.list_buttons = QHBoxLayout()
@@ -149,7 +177,12 @@ class InitiativeTracker(QMainWindow, Application):
         self.list_buttons.addLayout(self.show_hide_butts)
         self.list_buttons.addStretch()
 
+<<<<<<< HEAD
         self.stat_layout.addWidget(self.statblock)
+=======
+        # Statblock fills available space; buttons pinned at bottom
+        self.stat_layout.addWidget(self.statblock_stack, stretch=1)
+>>>>>>> chore/foundry-bridge
         self.stat_layout.addLayout(self.list_buttons)
         self.stat_layout.addStretch()
 
@@ -159,6 +192,8 @@ class InitiativeTracker(QMainWindow, Application):
 
         self.stat_widget = QWidget()
         self.stat_widget.setLayout(self.stat_layout)
+        _screen_w = QApplication.primaryScreen().availableGeometry().width()
+        self.stat_widget.setMaximumWidth(min(int(_screen_w * 0.35), 520))
 
         self.mainlayout.addWidget(self.dam_widget, alignment=Qt.AlignLeft)
         self.mainlayout.addWidget(self.table_widget, alignment=Qt.AlignTop)
@@ -167,6 +202,24 @@ class InitiativeTracker(QMainWindow, Application):
 
         self.setup_menu_and_toolbar()
 
+<<<<<<< HEAD
+=======
+        # === Status Bar ===
+        self.status_bar = QStatusBar(self)
+        self.setStatusBar(self.status_bar)
+
+    def show_status_message(self, msg: str, timeout_ms: int = 4000):
+        if hasattr(self, "status_bar"):
+            self.status_bar.showMessage(msg, timeout_ms)
+
+    def _monster_list_context_menu(self, pos):
+        menu = QMenu(self)
+        import_action = menu.addAction("Import Statblock...")
+        action = menu.exec_(self.monster_list.mapToGlobal(pos))
+        if action == import_action:
+            self.open_import_statblock_dialog()
+
+>>>>>>> chore/foundry-bridge
     def setup_menu_and_toolbar(self):
         self.menu_bar = QMenuBar(self)
         self.setMenuBar(self.menu_bar)
@@ -177,6 +230,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.edit_menu = self.menu_bar.addMenu("&Edit")
         self.encounter_menu = self.menu_bar.addMenu("&Encounters")
         self.images_menu = self.menu_bar.addMenu("&Images")
+        self.monsters_menu = self.menu_bar.addMenu("&Parsers")
 
         self.filetool_bar = QToolBar("File", self)
         self.addToolBar(self.filetool_bar)
@@ -196,7 +250,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.load_enc_button = QAction("Load Encounter", self)
         self.load_enc_button.triggered.connect(self.load_encounter)
         self.encounter_menu.addAction(self.load_enc_button)
-        self.filetool_bar.addAction(self.load_enc_button)
+        # self.filetool_bar.addAction(self.load_enc_button)
 
         self.add_button = QAction("Add Combatant", self)
         self.add_button.triggered.connect(self.add_combatant)
@@ -215,9 +269,15 @@ class InitiativeTracker(QMainWindow, Application):
         self.encounter_menu.addAction(self.merge_encounters)
         self.filetool_bar.addAction(self.merge_encounters)
 
+        self.add_lair_action_button = QAction("Add Lair Action", self)
+        self.add_lair_action_button.triggered.connect(self.add_lair_action_combatant)
+        self.encounter_menu.addAction(self.add_lair_action_button)
+        self.filetool_bar.addAction(self.add_lair_action_button)
+
         # self.edit_menu.addAction(self.load_enc_button)
         self.edit_menu.addAction(self.add_button)
         self.edit_menu.addAction(self.rmv_button)
+
 
         self.active_encounters = QAction("Activate/Deactivate Encounters", self)
         self.active_encounters.triggered.connect(self.manage_encounter_statuses)
@@ -235,6 +295,47 @@ class InitiativeTracker(QMainWindow, Application):
         self.manage_images_action.triggered.connect(self.manage_images)
         self.images_menu.addAction(self.manage_images_action)
 
+<<<<<<< HEAD
+=======
+        self.import_statblock_action = QAction("Import Statblock...", self)
+        self.import_statblock_action.triggered.connect(self.open_import_statblock_dialog)
+        self.monsters_menu.addAction(self.import_statblock_action)
+
+        self.import_spell_action = QAction("Import Spell...", self)
+        self.import_spell_action.triggered.connect(self.open_import_spell_dialog)
+        self.monsters_menu.addAction(self.import_spell_action)
+
+        self.monsters_menu.addSeparator()
+        self.lookup_action = QAction("Reference Lookup", self)
+        self.lookup_action.setShortcut(QKeySequence("Ctrl+L"))
+        self.lookup_action.setToolTip("Look up spells, monsters, and conditions (Ctrl+L)")
+        self.lookup_action.triggered.connect(self.open_lookup_dialog)
+        self.monsters_menu.addAction(self.lookup_action)
+        self.filetool_bar.addSeparator()
+        self.filetool_bar.addAction(self.lookup_action)
+
+        # -- Keyboard shortcuts --
+        self.save_action.setShortcut(QKeySequence("Ctrl+S"))
+
+        self.next_turn_action = QAction("Next Turn", self)
+        self.next_turn_action.setShortcut(QKeySequence("Ctrl+N"))
+        self.next_turn_action.triggered.connect(self.next_turn)
+        self.edit_menu.addAction(self.next_turn_action)
+
+        self.prev_turn_action = QAction("Previous Turn", self)
+        self.prev_turn_action.setShortcut(QKeySequence("Ctrl+Shift+N"))
+        self.prev_turn_action.triggered.connect(self.prev_turn)
+        self.edit_menu.addAction(self.prev_turn_action)
+
+        # -- Toolbar tooltips --
+        self.load_enc_button.setToolTip("Load a saved encounter")
+        self.add_button.setToolTip("Add new combatants to the encounter")
+        self.rmv_button.setToolTip("Remove combatants from the encounter")
+        self.merge_encounters.setToolTip("Merge another encounter into the current one")
+        self.save_action.setToolTip("Save current state (Ctrl+S)")
+        self.save_as_action.setToolTip("Save current encounter as a new file")
+
+>>>>>>> chore/foundry-bridge
     def update_size_constraints(self):
         # Get the current screen where the app is being displayed
         current_screen = QDesktopWidget().screenNumber(self)
@@ -337,6 +438,70 @@ class InitiativeTracker(QMainWindow, Application):
         creature = self.manager.creatures.get(name)
         return name, creature
 
+<<<<<<< HEAD
+=======
+    def _apply_temp_hp_action(self, action_name: str, creature) -> None:
+        """Shared logic for Temp HP / Max HP Bonus / Clear from any menu."""
+        if action_name == "set_temp":
+            current = int(getattr(creature, "temp_hp", 0) or 0)
+            value, ok = QInputDialog.getInt(
+                self,
+                f"Temp HP: {getattr(creature, 'name', '')}",
+                "Temporary HP:",
+                current,
+                0,
+                9999,
+                1,
+            )
+            if ok:
+                creature.temp_hp = value
+                self.update_table()
+
+        elif action_name == "set_max_bonus":
+            current = int(getattr(creature, "max_hp_bonus", 0) or 0)
+            value, ok = QInputDialog.getInt(
+                self,
+                f"Max HP Bonus: {getattr(creature, 'name', '')}",
+                "Bonus Max HP (can be negative):",
+                current,
+                -9999,
+                9999,
+                1,
+            )
+            if ok:
+                creature.max_hp_bonus = value
+                max_total = int(getattr(creature, "effective_max_hp", creature.max_hp) or 0)
+                creature.curr_hp = min(int(getattr(creature, "curr_hp", 0) or 0), max_total)
+                self._enqueue_bridge_set_hp(getattr(creature, "name", ""), creature.curr_hp)
+                self.update_table()
+
+        elif action_name == "clear":
+            creature.temp_hp = 0
+            creature.max_hp_bonus = 0
+            capped_hp = int(getattr(creature, "max_hp", 0) or 0)
+            creature.curr_hp = min(int(getattr(creature, "curr_hp", 0) or 0), capped_hp)
+            self._enqueue_bridge_set_hp(getattr(creature, "name", ""), creature.curr_hp)
+            self.update_table()
+
+    def show_hp_dropdown(self, creature, index):
+        menu = QMenu(self)
+
+        set_temp_action = menu.addAction("Set Temp HP")
+        set_max_bonus_action = menu.addAction("Set Max HP Bonus")
+        clear_bonus_action = menu.addAction("Clear Temp/Bonus HP")
+
+        pos = self.table.viewport().mapToGlobal(self.table.visualRect(index).bottomLeft())
+        chosen = menu.exec_(pos)
+
+        if chosen == set_temp_action:
+            self._apply_temp_hp_action("set_temp", creature)
+        elif chosen == set_max_bonus_action:
+            self._apply_temp_hp_action("set_max_bonus", creature)
+        elif chosen == clear_bonus_action:
+            self._apply_temp_hp_action("clear", creature)
+
+
+>>>>>>> chore/foundry-bridge
     def _show_notes_editor(self, title: str, text: str) -> Optional[str]:
         dialog = QDialog(self)
         dialog.setWindowTitle(title)
@@ -410,6 +575,12 @@ class InitiativeTracker(QMainWindow, Application):
         else:
             visibility_action = None
 
+        menu.addSeparator()
+        set_temp_action = menu.addAction("Set Temp HP...")
+        set_max_bonus_action = menu.addAction("Set Max HP Bonus...")
+        clear_bonus_action = menu.addAction("Clear Temp/Bonus HP")
+        menu.addSeparator()
+
         edit_public_action = menu.addAction("Edit Public Notes...")
         edit_private_action = menu.addAction("Edit Private Notes...")
         menu.addSeparator()
@@ -426,6 +597,15 @@ class InitiativeTracker(QMainWindow, Application):
             self.table_model.refresh()
             self.update_table()
             self._refresh_player_view()
+            return
+
+        if chosen in (set_temp_action, set_max_bonus_action, clear_bonus_action):
+            action_map = {
+                set_temp_action: "set_temp",
+                set_max_bonus_action: "set_max_bonus",
+                clear_bonus_action: "clear",
+            }
+            self._apply_temp_hp_action(action_map[chosen], creature)
             return
 
         if chosen == edit_public_action:

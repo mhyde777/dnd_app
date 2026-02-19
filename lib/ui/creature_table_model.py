@@ -2,6 +2,18 @@ from PyQt5.QtCore import Qt, QAbstractTableModel, QModelIndex, QVariant, QTimer
 from PyQt5.QtGui import QColor, QFont
 from dataclasses import fields as dataclass_fields
 
+<<<<<<< HEAD
+=======
+from app.creature import CreatureType
+from ui.colors import (
+    HP_HEALTHY_ACTIVE, HP_LOW_ACTIVE, HP_LOW_INACTIVE,
+    HP_ZERO_ACTIVE, HP_ZERO_INACTIVE,
+    DEAD_BG_ACTIVE, DEAD_BG_INACTIVE, DEAD_TEXT,
+    STABLE_BG_ACTIVE, STABLE_BG_INACTIVE,
+    BOOL_TRUE_BG, BOOL_FALSE_BG,
+)
+
+>>>>>>> chore/foundry-bridge
 SPELL_ICON_COLUMN_NAME = "_spellbook"
 _COND_ABBR = {
     "Blinded": "Bli",
@@ -48,6 +60,10 @@ class CreatureTableModel(QAbstractTableModel):
                 "_foundry_combatant_id",
                 "_foundry_token_id",
                 "_foundry_actor_id",
+                "_temp_hp",
+                "_max_hp_bonus",
+                "_is_lair_action",
+                "_lair_action_notes",
             }
             sample = next(iter(self.manager.creatures.values()))
             self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
@@ -105,8 +121,6 @@ class CreatureTableModel(QAbstractTableModel):
 
         # Spellbook icon column
         if attr == SPELL_ICON_COLUMN_NAME:
-            from app.creature import CreatureType
-
             if creature._type != CreatureType.MONSTER:
                 return QVariant()
 
@@ -158,7 +172,15 @@ class CreatureTableModel(QAbstractTableModel):
 
         # ----- Background/Foreground coloring -----
         if role == Qt.BackgroundRole:
+<<<<<<< HEAD
             # Boolean columns: green/red
+=======
+            # Lair action rows: dark purple
+            if getattr(creature, "_is_lair_action", False):
+                return QColor("#4a2060")
+
+            # Boolean columns: muted tint backgrounds
+>>>>>>> chore/foundry-bridge
             if isinstance(value, bool):
                 return QColor("#006400") if value else QColor("darkred")
 
@@ -373,6 +395,10 @@ class CreatureTableModel(QAbstractTableModel):
             "_foundry_combatant_id",
             "_foundry_token_id",
             "_foundry_actor_id",
+            "_temp_hp",
+            "_max_hp_bonus",
+            "_is_lair_action",
+            "_lair_action_notes",
         }
         sample = next(iter(self.manager.creatures.values()))
         self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
@@ -399,6 +425,10 @@ class CreatureTableModel(QAbstractTableModel):
                 "_foundry_combatant_id",
                 "_foundry_token_id",
                 "_foundry_actor_id",
+                "_temp_hp",
+                "_max_hp_bonus",
+                "_is_lair_action",
+                "_lair_action_notes",
             }
             sample = next(iter(self.manager.creatures.values()))
             self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]

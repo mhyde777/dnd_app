@@ -90,10 +90,12 @@ def create_app() -> Flask:
 
     threading.Thread(target=sweep_commands, daemon=True).start()
 
-    allowed_origins = {
-        "https://foundry.masonhyde.com",
-        "http://localhost:30000",
+    _extra_origins = {
+        o.strip()
+        for o in _load_env("BRIDGE_ALLOWED_ORIGINS", "").split(",")
+        if o.strip()
     }
+    allowed_origins = {"http://localhost:30000"} | _extra_origins
 
     @app.after_request
     def cors(resp):
