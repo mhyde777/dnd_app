@@ -1994,6 +1994,7 @@ class Application:
                     self.statblock_widget.set_storage_api(self.storage_api)
                     self.statblock_widget.load_statblock(data)
                     self.statblock_stack.setCurrentIndex(1)
+                    self.statblock_stack.show()
                     return
             except Exception:
                 pass
@@ -2043,13 +2044,14 @@ class Application:
                 QPixmapCache.clear()
 
                 self.statblock.setPixmap(scaled_pixmap)
+                self.statblock_stack.show()
                 break
 
     def _clear_statblock(self):
-        """Clear both statblock widgets and show the JSON placeholder."""
+        """Clear both statblock widgets and hide the panel."""
         self.statblock.clear()
         self.statblock_widget.clear_statblock()
-        self.statblock_stack.setCurrentIndex(1)
+        self.statblock_stack.hide()
 
     def open_import_statblock_dialog(self):
         from ui.statblock_import_dialog import StatblockImportDialog
