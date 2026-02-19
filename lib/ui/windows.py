@@ -67,6 +67,10 @@ class AddCombatantWindow(QDialog):
         self.combatant_rows = []
         self._statblock_lookup = statblock_lookup
 
+        title = QLabel("Add Combatants")
+        title.setStyleSheet("font-size: 16px; font-weight: bold;")
+        self.layout.addWidget(title)
+
         self.add_button = QPushButton("Add Combatant")
         self.add_button.clicked.connect(self.add_row)
         self.layout.addWidget(self.add_button)
@@ -233,6 +237,10 @@ class RemoveCombatantWindow(QDialog):
         self.manager = manager
         self.rmv_layout = QVBoxLayout()
 
+        title = QLabel("Remove Combatants")
+        title.setStyleSheet("font-size: 16px; font-weight: bold;")
+        self.rmv_layout.addWidget(title)
+
         self.rmv_list = QListWidget(self)
         self.rmv_list.setSelectionMode(QListWidget.MultiSelection)
 
@@ -262,6 +270,10 @@ class BuildEncounterWindow(QDialog):
         self.layout = QVBoxLayout(self)
         self.monster_rows = []
         self._statblock_lookup = statblock_lookup
+
+        title = QLabel("Build Encounter")
+        title.setStyleSheet("font-size: 16px; font-weight: bold;")
+        self.layout.addWidget(title)
 
         # Add button
         self.add_button = QPushButton("Add Monster")
@@ -508,6 +520,10 @@ class UpdatePlayerWindow(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Update Player Stats")
         self.update_layout = QVBoxLayout()
+
+        title = QLabel("Update Player Stats")
+        title.setStyleSheet("font-size: 16px; font-weight: bold;")
+        self.update_layout.addWidget(title)
 
         # Custom Table Widget
         self.player_table = QTableWidget()

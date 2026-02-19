@@ -15,8 +15,9 @@ from app.app import Application
 from app.creature import CreatureType
 from app.manager import CreatureManager
 from ui.creature_table_model import CreatureTableModel
+from ui.delegates import CreatureTableDelegate
 from ui.spellcasting_dropdown import SpellcastingDropdown
-from app.config import use_storage_api_only
+from app.config import player_view_enabled, use_storage_api_only
 from ui.conditions_dropdown import ConditionsDropdown, DEFAULT_CONDITIONS
 
 class InitiativeTracker(QMainWindow, Application):
@@ -54,17 +55,17 @@ class InitiativeTracker(QMainWindow, Application):
         self.label_layout.setContentsMargins(0, 0, 0, 0)
 
         self.active_init_label = QLabel("Active: None", self)
-        self.active_init_label.setStyleSheet("font-size: 18px;")
+        self.active_init_label.setObjectName("combatInfoLabel")
         self.active_init_label.setMinimumHeight(24)
         self.label_layout.addWidget(self.active_init_label)
 
         self.round_counter_label = QLabel("Round: 1", self)
-        self.round_counter_label.setStyleSheet("font-size: 18px;")
+        self.round_counter_label.setObjectName("combatInfoLabel")
         self.round_counter_label.setMinimumHeight(24)
         self.label_layout.addWidget(self.round_counter_label)
 
         self.time_counter_label = QLabel("Time: 0 seconds", self)
-        self.time_counter_label.setStyleSheet("font-size: 18px;")
+        self.time_counter_label.setObjectName("combatInfoLabel")
         self.time_counter_label.setMinimumHeight(24)
         self.label_layout.addWidget(self.time_counter_label)
 
@@ -74,16 +75,22 @@ class InitiativeTracker(QMainWindow, Application):
         self.player_view_toggle.setCheckable(True)
         self.player_view_toggle.setChecked(False)
         self.player_view_toggle.clicked.connect(self.toggle_player_view_live)
-        self.label_layout.addWidget(self.player_view_toggle)
+        if player_view_enabled():
+            self.label_layout.addWidget(self.player_view_toggle)
+        else:
+            self.player_view_toggle.hide()
 
         # === TABLE AREA (under labels) ===
         self.table_model = CreatureTableModel(self.manager, parent=self, bridge_owner=self)
         self.table = QTableView(self)
         self.table.setModel(self.table_model)
-        self.table.itemDelegate().commitData.connect(self.on_commit_data)
+        self.table_delegate = CreatureTableDelegate(self.table)
+        self.table.setItemDelegate(self.table_delegate)
+        self.table_delegate.commitData.connect(self.on_commit_data)
         self.table.clicked.connect(self.handle_cell_clicked)
         self.table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self.show_table_context_menu)
+        self.table.setMouseTracking(True)
         self.installEventFilter(self)
         # Ensure that the table's size is fixed and matches its content
         self.table.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
@@ -95,38 +102,57 @@ class InitiativeTracker(QMainWindow, Application):
         self.table_layout.addWidget(self.table)
 
         # === SIDEBAR with buttons ===
-        self.nextprev_layout = QVBoxLayout()
+        self.dam_layout = QVBoxLayout()
+
+        # -- Turn Controls group --
+        turn_group = QGroupBox("Turn Controls")
+        turn_group_layout = QVBoxLayout(turn_group)
         self.prev_button = QPushButton("Prev", self)
+        self.prev_button.setToolTip("Go to previous turn (Ctrl+Shift+N)")
         self.prev_button.clicked.connect(self.prev_turn)
-        self.nextprev_layout.addWidget(self.prev_button)
+        turn_group_layout.addWidget(self.prev_button)
 
         self.next_button = QPushButton("Next", self)
+        self.next_button.setToolTip("Advance to next turn (Ctrl+N)")
         self.next_button.clicked.connect(self.next_turn)
-        self.nextprev_layout.addWidget(self.next_button)
+        turn_group_layout.addWidget(self.next_button)
+        self.dam_layout.addWidget(turn_group)
 
-        self.dam_layout = QVBoxLayout()
+        # -- Combatants group --
+        combatants_group = QGroupBox("Combatants")
+        combatants_group_layout = QVBoxLayout(combatants_group)
+        combatants_group_layout.setContentsMargins(6, 6, 6, 6)
         self.creature_list = QListWidget(self)
         self.creature_list.setSelectionMode(QListWidget.MultiSelection)
+        self.creature_list.setFixedWidth(200)
+        self.creature_list.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum)
+        combatants_group_layout.addWidget(self.creature_list)
+        combatants_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+        self.dam_layout.addWidget(combatants_group)
 
-        self.value_input = QLineEdit(self)
+        # -- HP Controls group --
+        hp_group = QGroupBox("HP Controls")
+        hp_group_layout = QVBoxLayout(hp_group)
 
         self.heal_button = QPushButton("Heal", self)
+        self.heal_button.setObjectName("healButton")
+        self.heal_button.setToolTip("Heal selected creatures by the entered value")
         self.heal_button.clicked.connect(self.heal_selected_creatures)
 
-        self.dam_button = QPushButton("Damage", self)
-        self.dam_button.clicked.connect(self.damage_selected_creatures)
-
-        self.heal_dam_layout = QVBoxLayout()
-        self.heal_dam_layout.addWidget(self.heal_button)
-        self.heal_dam_layout.addWidget(self.value_input)
-        self.heal_dam_layout.addWidget(self.dam_button)
-
-        self.creature_list.setFixedWidth(200)
+        self.value_input = QLineEdit(self)
+        self.value_input.setPlaceholderText("HP value...")
         self.value_input.setFixedWidth(200)
 
-        self.dam_layout.addLayout(self.nextprev_layout)
-        self.dam_layout.addWidget(self.creature_list)
-        self.dam_layout.addLayout(self.heal_dam_layout)
+        self.dam_button = QPushButton("Damage", self)
+        self.dam_button.setObjectName("damageButton")
+        self.dam_button.setToolTip("Damage selected creatures by the entered value")
+        self.dam_button.clicked.connect(self.damage_selected_creatures)
+
+        hp_group_layout.addWidget(self.heal_button)
+        hp_group_layout.addWidget(self.value_input)
+        hp_group_layout.addWidget(self.dam_button)
+        self.dam_layout.addWidget(hp_group)
+
         self.dam_layout.addStretch()
 
         # === RIGHT PANEL: STATBLOCK VIEW ===
@@ -166,7 +192,6 @@ class InitiativeTracker(QMainWindow, Application):
         # Statblock fills available space; buttons pinned at bottom
         self.stat_layout.addWidget(self.statblock_stack, stretch=1)
         self.stat_layout.addLayout(self.list_buttons)
-        self.stat_layout.addStretch()
 
         # === Wrap and attach all to main layout ===
         self.dam_widget = QWidget()
@@ -179,8 +204,7 @@ class InitiativeTracker(QMainWindow, Application):
 
         self.mainlayout.addWidget(self.dam_widget, alignment=Qt.AlignLeft)
         self.mainlayout.addWidget(self.table_widget, alignment=Qt.AlignTop)
-        self.mainlayout.addStretch()
-        self.mainlayout.addWidget(self.stat_widget, alignment=Qt.AlignRight)
+        self.mainlayout.addWidget(self.stat_widget, stretch=1)
 
         self.setup_menu_and_toolbar()
 
@@ -315,37 +339,28 @@ class InitiativeTracker(QMainWindow, Application):
     def update_size_constraints(self):
         # Get the current screen where the app is being displayed
         current_screen = QDesktopWidget().screenNumber(self)
-        screen = QDesktopWidget().screenGeometry(current_screen)
+        screen = QDesktopWidget().availableGeometry(current_screen)
 
         self.screen_width = screen.width()
         self.screen_height = screen.height()
 
-        # Set the maximum size to the screen size to avoid going beyond bounds
-        self.setMaximumSize(self.screen_width, self.screen_height)
-
-        # Optionally set the window size to be full screen on the current screen
-        self.setWindowState(self.windowState() | Qt.WindowMaximized)
-
     def moveEvent(self, event):
         current_screen = QDesktopWidget().screenNumber(self)
-        screen = QDesktopWidget().screenGeometry(current_screen)
+        screen = QDesktopWidget().availableGeometry(current_screen)
         new_width = screen.width()
         new_height = screen.height()
 
-        # Only update if the screen size has changed
+        # Update stored screen dimensions when the screen changes
         if (new_width, new_height) != (self.screen_width, self.screen_height):
             self.screen_width = new_width
             self.screen_height = new_height
-            self.update_size_constraints()  # Update constraints to keep the window within the screen bounds
-
-            # Optionally, center the window on the new screen
-            self.center()
 
         super().moveEvent(event)
 
     def center(self):
         frame_geometry = self.frameGeometry()
-        screen_center = QDesktopWidget().availableGeometry().center()
+        current_screen = QDesktopWidget().screenNumber(self)
+        screen_center = QDesktopWidget().availableGeometry(current_screen).center()
         frame_geometry.moveCenter(screen_center)
         self.move(frame_geometry.topLeft())
 
@@ -400,6 +415,9 @@ class InitiativeTracker(QMainWindow, Application):
             return
         if attr == "_conditions":
             self.show_conditions_dropdown(creature, index)
+            return
+        if attr == "_curr_hp":
+            self.show_hp_dropdown(creature, index)
             return
 
         self.toggle_boolean_cell(index)
@@ -473,6 +491,7 @@ class InitiativeTracker(QMainWindow, Application):
             self._apply_temp_hp_action("set_max_bonus", creature)
         elif chosen == clear_bonus_action:
             self._apply_temp_hp_action("clear", creature)
+
 
     def _show_notes_editor(self, title: str, text: str) -> Optional[str]:
         dialog = QDialog(self)
@@ -685,13 +704,16 @@ class InitiativeTracker(QMainWindow, Application):
                 server.stop()
             except Exception:
                 pass
-        super().closeEvent(event)
-
-    def closeEvent(self, event):
-        server = getattr(self, "player_view_server", None)
-        if server is not None:
+        local_bridge = getattr(self, "local_bridge", None)
+        if local_bridge is not None:
             try:
-                server.stop()
+                local_bridge.stop()
+            except Exception:
+                pass
+        stream_stop = getattr(self, "bridge_stream_stop", None)
+        if stream_stop is not None:
+            try:
+                stream_stop.set()
             except Exception:
                 pass
         super().closeEvent(event)

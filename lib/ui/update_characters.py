@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import (
     QDialog,
     QVBoxLayout,
     QHBoxLayout,
+    QLabel,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -36,6 +37,10 @@ class UpdateCharactersWindow(QDialog):
         self.setWindowTitle("Create/Update Characters")
 
         self.layout = QVBoxLayout(self)
+
+        title = QLabel("Create/Update Characters")
+        title.setStyleSheet("font-size: 16px; font-weight: bold;")
+        self.layout.addWidget(title)
 
         self.table = QTableWidget()
         self.table.setColumnCount(5)

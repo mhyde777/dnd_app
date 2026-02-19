@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 import requests
 
@@ -70,6 +70,53 @@ class BridgeClient:
             print(f"[Bridge] GET /state failed: {response.status_code} {response.text}")
             return None
         return response.json()
+
+    def stream_state(
+        self,
+        on_snapshot: Callable[[Dict[str, Any]], None],
+        stop_event: "threading.Event",
+    ) -> None:
+        if not self.enabled:
+            print("[Bridge] BRIDGE_TOKEN is not set; skipping stream.")
+            return
+        import threading
+        import time
+        import json as jsonlib
+
+        url = f"{self.base_url}/state/stream"
+        headers = _build_headers(self.token)
+        retry_delay = float(_get_env("BRIDGE_STREAM_RETRY_DELAY", "2"))
+        while not stop_event.is_set():
+            try:
+                with requests.get(
+                    url, headers=headers, timeout=self.timeout_s, stream=True
+                ) as response:
+                    if response.status_code != 200:
+                        print(
+                            f"[Bridge] GET /state/stream failed: {response.status_code} {response.text}"
+                        )
+                        time.sleep(retry_delay)
+                        continue
+                    for line in response.iter_lines(decode_unicode=True):
+                        if stop_event.is_set():
+                            return
+                        if not line:
+                            continue
+                        if line.startswith(":"):
+                            continue
+                        if line.startswith("data:"):
+                            raw = line[len("data:") :].strip()
+                            if not raw:
+                                continue
+                            try:
+                                payload = jsonlib.loads(raw)
+                            except jsonlib.JSONDecodeError:
+                                continue
+                            if isinstance(payload, dict):
+                                on_snapshot(payload)
+            except requests.RequestException as exc:
+                print(f"[Bridge] Stream error: {exc}")
+                time.sleep(retry_delay)
 
     def enqueue_set_hp(
         self,
