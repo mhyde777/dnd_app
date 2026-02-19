@@ -1,20 +1,71 @@
 import os
+import re
 
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
     QSpinBox, QLineEdit, QPushButton, QLabel, QCheckBox,
     QTableWidget, QTableWidgetItem, QHeaderView, QGroupBox,
-    QListWidget, QListWidgetItem, QDialogButtonBox, QInputDialog
+    QListWidget, QListWidgetItem, QDialogButtonBox, QInputDialog,
+    QTextEdit,
 )
 
 from app.creature import Monster
 
+
+# ── Shared statblock auto-fill helper ───────────────────────────────
+
+def _apply_statblock_to_row(row: dict, data: dict) -> None:
+    """Populate a dialog row's input fields from a parsed statblock dict.
+
+    Only sets fields that have a non-zero / non-None value in the statblock
+    so blank statblocks don't silently zero out user-entered values.
+    """
+    hp = data.get("hit_points", {})
+    if hp.get("average"):
+        row["hp"].setValue(hp["average"])
+
+    ac_list = data.get("armor_class", [])
+    if ac_list and ac_list[0].get("value"):
+        row["ac"].setValue(ac_list[0]["value"])
+
+    init_bonus = data.get("initiative_bonus")
+    if init_bonus is not None and "init" in row:
+        row["init"].setValue(init_bonus)
+
+    sc = data.get("spellcasting")
+    if sc:
+        row["spellcaster"].setChecked(True)
+
+        for level_str, count in sc.get("slots", {}).items():
+            try:
+                level = int(level_str)
+                if level in row["slots"] and count:
+                    row["slots"][level].setValue(count)
+            except (ValueError, KeyError):
+                pass
+
+        # Populate innate spells table (clear first to avoid duplication)
+        table = row["innate_table"]
+        table.setRowCount(0)
+        for key, spells in sc.get("innate", {}).items():
+            uses = 0 if key == "at_will" else int(
+                m.group(1)) if (m := re.match(r'(\d+)_per_day', key)) else 1
+            for spell in spells:
+                r = table.rowCount()
+                table.insertRow(r)
+                table.setItem(r, 0, QTableWidgetItem(spell.title()))
+                table.setItem(r, 1, QTableWidgetItem(str(uses)))
+
+    if "autofill_label" in row:
+        row["autofill_label"].setVisible(True)
+
 class AddCombatantWindow(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, statblock_lookup=None):
         super().__init__(parent)
         self.setWindowTitle("Add Combatants")
         self.layout = QVBoxLayout(self)
         self.combatant_rows = []
+        self._statblock_lookup = statblock_lookup
 
         self.add_button = QPushButton("Add Combatant")
         self.add_button.clicked.connect(self.add_row)
@@ -40,14 +91,20 @@ class AddCombatantWindow(QDialog):
         init_input.setRange(-99, 99)
 
         hp_input = QSpinBox()
-        hp_input.setRange(0, 1000)  # ✅ Default to 0
+        hp_input.setRange(0, 1000)
         hp_input.setValue(0)
 
         ac_input = QSpinBox()
-        ac_input.setRange(0, 50)    # ✅ Default to 0
+        ac_input.setRange(0, 50)
         ac_input.setValue(0)
 
         spellcaster_checkbox = QCheckBox("Spellcaster")
+
+        autofill_label = QLabel("✓ Auto-filled from statblock")
+        autofill_label.setStyleSheet(
+            "color: #5a8a5a; font-size: 10px; font-style: italic;"
+        )
+        autofill_label.setVisible(False)
 
         top_row.addWidget(QLabel("Name:"))
         top_row.addWidget(name_input)
@@ -58,6 +115,7 @@ class AddCombatantWindow(QDialog):
         top_row.addWidget(QLabel("AC:"))
         top_row.addWidget(ac_input)
         top_row.addWidget(spellcaster_checkbox)
+        top_row.addWidget(autofill_label)
 
         # === Spellcasting Panel (Hidden by Default)
         spell_panel = QGroupBox("Spellcasting")
@@ -99,7 +157,7 @@ class AddCombatantWindow(QDialog):
         row_container.addWidget(spell_panel)
         self.combatant_container.addLayout(row_container)
 
-        self.combatant_rows.append({
+        row_dict = {
             "name": name_input,
             "init": init_input,
             "hp": hp_input,
@@ -107,8 +165,20 @@ class AddCombatantWindow(QDialog):
             "spellcaster": spellcaster_checkbox,
             "spell_panel": spell_panel,
             "slots": slot_inputs,
-            "innate_table": innate_table
-        })
+            "innate_table": innate_table,
+            "autofill_label": autofill_label,
+        }
+        self.combatant_rows.append(row_dict)
+
+        if self._statblock_lookup:
+            def _on_name_done(rd=row_dict):
+                name = rd["name"].text().strip()
+                if not name:
+                    return
+                data = self._statblock_lookup(name)
+                if data:
+                    _apply_statblock_to_row(rd, data)
+            name_input.editingFinished.connect(_on_name_done)
 
     def get_data(self):
         data = []
@@ -186,11 +256,12 @@ class RemoveCombatantWindow(QDialog):
 
 
 class BuildEncounterWindow(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, statblock_lookup=None):
         super().__init__(parent)
         self.setWindowTitle("Build Encounter")
         self.layout = QVBoxLayout(self)
         self.monster_rows = []
+        self._statblock_lookup = statblock_lookup
 
         # Add button
         self.add_button = QPushButton("Add Monster")
@@ -222,7 +293,13 @@ class BuildEncounterWindow(QDialog):
         spellcaster_checkbox = QCheckBox("Spellcaster")
         death_saves_checkbox = QCheckBox("Death Saves")
         visible_checkbox = QCheckBox("Show")
-        visible_checkbox.setchecked(True)
+        visible_checkbox.setChecked(True)
+
+        autofill_label = QLabel("✓ Auto-filled from statblock")
+        autofill_label.setStyleSheet(
+            "color: #5a8a5a; font-size: 10px; font-style: italic;"
+        )
+        autofill_label.setVisible(False)
 
         top_row.addWidget(QLabel("Name:"))
         top_row.addWidget(name_input)
@@ -235,6 +312,7 @@ class BuildEncounterWindow(QDialog):
         top_row.addWidget(spellcaster_checkbox)
         top_row.addWidget(death_saves_checkbox)
         top_row.addWidget(visible_checkbox)
+        top_row.addWidget(autofill_label)
 
         # Spellcasting panel (hidden by default)
         spell_panel = QGroupBox("Spellcasting")
@@ -274,7 +352,7 @@ class BuildEncounterWindow(QDialog):
         row_container.addWidget(spell_panel)
         self.monster_container.addLayout(row_container)
 
-        self.monster_rows.append({
+        row_dict = {
             "name": name_input,
             "init": init_input,
             "hp": hp_input,
@@ -284,8 +362,20 @@ class BuildEncounterWindow(QDialog):
             "visible": visible_checkbox,
             "spell_panel": spell_panel,
             "slots": slot_inputs,
-            "innate_table": innate_table
-        })
+            "innate_table": innate_table,
+            "autofill_label": autofill_label,
+        }
+        self.monster_rows.append(row_dict)
+
+        if self._statblock_lookup:
+            def _on_name_done(rd=row_dict):
+                name = rd["name"].text().strip()
+                if not name:
+                    return
+                data = self._statblock_lookup(name)
+                if data:
+                    _apply_statblock_to_row(rd, data)
+            name_input.editingFinished.connect(_on_name_done)
 
     def get_data(self):
         monsters = []
@@ -443,3 +533,39 @@ class UpdatePlayerWindow(QDialog):
 
         self.player_table.setFixedWidth(total_width + self.player_table.frameWidth() * 2)
         self.player_table.setFixedHeight(total_height + self.player_table.frameWidth() * 2)
+
+
+class LairActionDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Add Lair Action")
+        layout = QVBoxLayout(self)
+
+        form = QFormLayout()
+
+        self.name_input = QLineEdit("Lair Action")
+        form.addRow("Name:", self.name_input)
+
+        self.init_input = QSpinBox()
+        self.init_input.setRange(1, 30)
+        self.init_input.setValue(20)
+        form.addRow("Initiative:", self.init_input)
+
+        self.notes_input = QTextEdit()
+        self.notes_input.setPlaceholderText("Optional notes shown when this turn is reached...")
+        self.notes_input.setFixedHeight(80)
+        form.addRow("Notes:", self.notes_input)
+
+        layout.addLayout(form)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def get_values(self):
+        return (
+            self.name_input.text().strip() or "Lair Action",
+            self.init_input.value(),
+            self.notes_input.toPlainText().strip(),
+        )

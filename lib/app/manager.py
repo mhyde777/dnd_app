@@ -6,7 +6,6 @@ import re
 class CreatureManager:
     def __init__(self):
         self.creatures: Dict[str, I_Creature] = {}
-        self._join_seq = 0  # kept for compatibility; not required for natural-sort tiebreaks
 
     @staticmethod
     def _natural_key(s: str) -> List[Any]:

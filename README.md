@@ -81,6 +81,34 @@ STORAGE_API_BASE=http://127.0.0.1:800
 
 Leave `USE_STORAGE_API_ONLY` unset (or set it to `0`) to kep using the built-in local JSOn files. If you enable `USE_STORAGE_API_ONLY` without providing `STORAGE_API_BASE`, the app will start but show a warning explaining how the to fix the configuration so you are not blocked while the Storage service is offline.
 
+
+## One-time bulk spell import script
+If you want to paste many D&D Beyond spells at once, use the helper script:
+
+```bash
+python import_spells_bulk.py /path/to/spells.txt
+```
+
+By default, this will upload to the Storage API using `STORAGE_API_BASE` from your repo `.env`.
+It also skips `Legacy` entries unless you include `--include-legacy`.
+
+Use `--dry-run` if you want parse + summary only:
+
+```bash
+python import_spells_bulk.py /path/to/spells.txt --dry-run
+```
+
+```bash
+# include legacy blocks and override API URL explicitly
+python import_spells_bulk.py /path/to/spells.txt --include-legacy --base-url https://your-storage-api.example.com
+```
+
+You can also paste directly from clipboard content via stdin:
+
+```bash
+pbpaste | python import_spells_bulk.py --base-url https://your-storage-api.example.com
+```
+
 ## Player View (Foundry-friendly)
 When the app starts, it also launches a lightweight Player View web page that can be embedded in Foundry via Inline Webviewer. The page is designed to be iframe-friendly and shows only player-safe combat data.
 

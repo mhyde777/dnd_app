@@ -54,6 +54,8 @@ class I_Creature:
     _foundry_combatant_id: Optional[str] = field(default=None)
     _foundry_token_id: Optional[str] = field(default=None)
     _foundry_actor_id: Optional[str] = field(default=None)
+    _is_lair_action: bool = field(default=False)
+    _lair_action_notes: str = field(default="")
 
     def __gt__(self, other: I_Creature) -> bool:
         if not isinstance(other, I_Creature):
@@ -100,6 +102,8 @@ class I_Creature:
             "_foundry_combatant_id": self._foundry_combatant_id,
             "_foundry_token_id": self._foundry_token_id,
             "_foundry_actor_id": self._foundry_actor_id,
+            "_is_lair_action": self._is_lair_action,
+            "_lair_action_notes": self._lair_action_notes,
         }
 
     @staticmethod
@@ -120,10 +124,8 @@ class I_Creature:
         foundry_combatant_id = data.get("_foundry_combatant_id")
         foundry_token_id = data.get("_foundry_token_id")
         foundry_actor_id = data.get("_foundry_actor_id")
-        # print("[LOAD CREATURE]", data["_name"])
-        # print("  _innate_slots_used:", data.get("_innate_slots_used"))
-        # print("  _spell_slots_used:", data.get("_spell_slots_used"))
-
+        is_lair_action = data.get("_is_lair_action", False)
+        lair_action_notes = data.get("_lair_action_notes", "")
         if creature_type == CreatureType.PLAYER:
             if player_visible is None:
                 player_visible = True
@@ -182,6 +184,8 @@ class I_Creature:
                 foundry_combatant_id=foundry_combatant_id,
                 foundry_token_id=foundry_token_id,
                 foundry_actor_id=foundry_actor_id,
+                is_lair_action=is_lair_action,
+                lair_action_notes=lair_action_notes,
             )
         else:
             return I_Creature(**data)
@@ -300,7 +304,8 @@ class Monster(I_Creature):
                  notes='', public_notes='', player_visible=True, conditions=None, status_time='',
                  spell_slots=None, innate_slots=None, spell_slots_used=None,
                  innate_slots_used=None, death_saves_prompt=False, active=True,
-                 foundry_combatant_id=None, foundry_token_id=None, foundry_actor_id=None):
+                 foundry_combatant_id=None, foundry_token_id=None, foundry_actor_id=None,
+                 is_lair_action=False, lair_action_notes=""):
         super().__init__(
             _type=CreatureType.MONSTER,
             _name=name,
@@ -326,6 +331,8 @@ class Monster(I_Creature):
             _foundry_combatant_id=foundry_combatant_id,
             _foundry_token_id=foundry_token_id,
             _foundry_actor_id=foundry_actor_id,
+            _is_lair_action=bool(is_lair_action),
+            _lair_action_notes=str(lair_action_notes),
         )
 
 
