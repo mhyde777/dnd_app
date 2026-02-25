@@ -162,4 +162,12 @@ def get_stylesheet() -> str:
     QDialogButtonBox > QPushButton {{
         min-width: 70px;
     }}
+
+    /* ── Tooltips (statblock condition/spell hover) ───── */
+    QToolTip {{
+        background-color: #FEF5E5;
+        color: #1a1a1a;
+        border: 1px solid #C9801A;
+        padding: 4px;
+    }}
     """
