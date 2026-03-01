@@ -245,6 +245,7 @@ class Application:
                 hp_max = hp_data.get("max")
                 hp_temp = hp_data.get("temp")
                 hp_tempmax = hp_data.get("tempmax")
+                print(f"[Bridge][HP] {creature_name!r}: value={hp_value} max={hp_max} temp={hp_temp} tempmax={hp_tempmax}")
                 if hp_value is not None:
                     try:
                         new_hp = int(hp_value)
