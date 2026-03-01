@@ -73,6 +73,8 @@ function buildCombatSnapshot() {
       hp: {
         value: hp.value ?? null,
         max: hp.max ?? null,
+        temp: hp.temp ?? 0,
+        tempmax: hp.tempmax ?? 0,
       },
       ac: acValue,
       effects,
@@ -352,6 +354,44 @@ async function applySetHp(payload) {
   return true;
 }
 
+async function applySetTempHp(payload) {
+  if (!payload) return false;
+  const tempValue = Number(payload.temp);
+  if (!Number.isFinite(tempValue)) {
+    console.warn(`${LOG_PREFIX} set_temp_hp missing temp`);
+    return false;
+  }
+  const actor = resolveActor(payload);
+  if (!actor) {
+    console.warn(`${LOG_PREFIX} set_temp_hp actor not found`, {
+      tokenId: payload.tokenId ?? null,
+      actorId: payload.actorId ?? null,
+    });
+    return false;
+  }
+  await actor.update({ "system.attributes.hp.temp": Math.max(0, tempValue) });
+  return true;
+}
+
+async function applySetMaxHpBonus(payload) {
+  if (!payload) return false;
+  const tempmaxValue = Number(payload.tempmax);
+  if (!Number.isFinite(tempmaxValue)) {
+    console.warn(`${LOG_PREFIX} set_max_hp_bonus missing tempmax`);
+    return false;
+  }
+  const actor = resolveActor(payload);
+  if (!actor) {
+    console.warn(`${LOG_PREFIX} set_max_hp_bonus actor not found`, {
+      tokenId: payload.tokenId ?? null,
+      actorId: payload.actorId ?? null,
+    });
+    return false;
+  }
+  await actor.update({ "system.attributes.hp.tempmax": tempmaxValue });
+  return true;
+}
+
 async function applySetInitiative(payload) {
   const initiativeValue = Number(payload.initiative);
   if (!Number.isFinite(initiativeValue)) {
@@ -507,6 +547,10 @@ async function handleCommand(cmd) {
       applied = true;
     } else if (type === "set_hp") {
       applied = await applySetHp(payload);
+    } else if (type === "set_temp_hp") {
+      applied = await applySetTempHp(payload);
+    } else if (type === "set_max_hp_bonus") {
+      applied = await applySetMaxHpBonus(payload);
     } else if (type === "set_initiative") {
       applied = await applySetInitiative(payload);
     } else if (type === "next_turn") {

@@ -5,8 +5,8 @@ from PyQt5.QtWidgets import (
     QHBoxLayout, QMainWindow, QListWidget,
     QAction, QMenuBar, QDesktopWidget, QTableView,
     QSizePolicy, QMessageBox, QDialog, QDialogButtonBox,
-    QMenu, QTextEdit, QGroupBox, QStatusBar, QShortcut, QInputDialog,
-    QStackedWidget,
+    QMenu, QTextEdit, QGroupBox, QStatusBar, QShortcut,
+    QStackedWidget, QWidgetAction, QFormLayout, QSpinBox,
 )
 from ui.statblock_widget import StatblockWidget
 from PyQt5.QtCore import Qt
@@ -432,65 +432,77 @@ class InitiativeTracker(QMainWindow, Application):
         creature = self.manager.creatures.get(name)
         return name, creature
 
-    def _apply_temp_hp_action(self, action_name: str, creature) -> None:
-        """Shared logic for Temp HP / Max HP Bonus / Clear from any menu."""
-        if action_name == "set_temp":
-            current = int(getattr(creature, "temp_hp", 0) or 0)
-            value, ok = QInputDialog.getInt(
-                self,
-                f"Temp HP: {getattr(creature, 'name', '')}",
-                "Temporary HP:",
-                current,
-                0,
-                9999,
-                1,
-            )
-            if ok:
-                creature.temp_hp = value
-                self.update_table()
+    def _commit_hp_overrides(self, creature, temp_hp: int, max_hp_bonus: int) -> None:
+        """Apply temp HP and max HP bonus, cap curr_hp, and sync to Foundry."""
+        old_temp = int(getattr(creature, "temp_hp", 0) or 0)
+        old_bonus = int(getattr(creature, "max_hp_bonus", 0) or 0)
 
-        elif action_name == "set_max_bonus":
-            current = int(getattr(creature, "max_hp_bonus", 0) or 0)
-            value, ok = QInputDialog.getInt(
-                self,
-                f"Max HP Bonus: {getattr(creature, 'name', '')}",
-                "Bonus Max HP (can be negative):",
-                current,
-                -9999,
-                9999,
-                1,
-            )
-            if ok:
-                creature.max_hp_bonus = value
-                max_total = int(getattr(creature, "effective_max_hp", creature.max_hp) or 0)
-                creature.curr_hp = min(int(getattr(creature, "curr_hp", 0) or 0), max_total)
-                self._enqueue_bridge_set_hp(getattr(creature, "name", ""), creature.curr_hp)
-                self.update_table()
+        creature.temp_hp = temp_hp
+        creature.max_hp_bonus = max_hp_bonus
 
-        elif action_name == "clear":
-            creature.temp_hp = 0
-            creature.max_hp_bonus = 0
-            capped_hp = int(getattr(creature, "max_hp", 0) or 0)
-            creature.curr_hp = min(int(getattr(creature, "curr_hp", 0) or 0), capped_hp)
-            self._enqueue_bridge_set_hp(getattr(creature, "name", ""), creature.curr_hp)
-            self.update_table()
+        max_total = int(getattr(creature, "effective_max_hp", 0) or 0)
+        creature.curr_hp = min(int(getattr(creature, "curr_hp", 0) or 0), max_total)
+
+        name = getattr(creature, "name", "")
+        if temp_hp != old_temp:
+            self._enqueue_bridge_set_temp_hp(name, temp_hp)
+        if max_hp_bonus != old_bonus:
+            self._enqueue_bridge_set_max_hp_bonus(name, max_hp_bonus)
+            self._enqueue_bridge_set_hp(name, creature.curr_hp)
+
+        self.update_table()
+
+    def _make_hp_editor_widget_action(self, menu: QMenu, creature) -> QWidgetAction:
+        """Inline Temp HP / Max HP Bonus editor embedded in a QMenu."""
+        container = QWidget()
+        layout = QFormLayout(container)
+        layout.setContentsMargins(8, 6, 8, 6)
+        layout.setSpacing(4)
+
+        temp_spin = QSpinBox()
+        temp_spin.setRange(0, 9999)
+        temp_spin.setValue(int(getattr(creature, "temp_hp", 0) or 0))
+        temp_spin.setFixedWidth(90)
+
+        bonus_spin = QSpinBox()
+        bonus_spin.setRange(-9999, 9999)
+        bonus_spin.setValue(int(getattr(creature, "max_hp_bonus", 0) or 0))
+        bonus_spin.setFixedWidth(90)
+
+        layout.addRow("Temp HP:", temp_spin)
+        layout.addRow("Max HP Bonus:", bonus_spin)
+
+        btn_row = QWidget()
+        btn_layout = QHBoxLayout(btn_row)
+        btn_layout.setContentsMargins(0, 4, 0, 0)
+        apply_btn = QPushButton("Apply")
+        clear_btn = QPushButton("Clear")
+        btn_layout.addWidget(apply_btn)
+        btn_layout.addWidget(clear_btn)
+        layout.addRow(btn_row)
+
+        def _apply():
+            self._commit_hp_overrides(creature, temp_spin.value(), bonus_spin.value())
+            menu.close()
+
+        def _clear():
+            self._commit_hp_overrides(creature, 0, 0)
+            menu.close()
+
+        apply_btn.clicked.connect(_apply)
+        clear_btn.clicked.connect(_clear)
+        temp_spin.editingFinished.connect(_apply)
+        bonus_spin.editingFinished.connect(_apply)
+
+        action = QWidgetAction(menu)
+        action.setDefaultWidget(container)
+        return action
 
     def show_hp_dropdown(self, creature, index):
         menu = QMenu(self)
-
-        set_temp_action = menu.addAction("Set Temp HP")
-        set_max_bonus_action = menu.addAction("Set Max HP Bonus")
-        clear_bonus_action = menu.addAction("Clear Temp/Bonus HP")
-
+        menu.addAction(self._make_hp_editor_widget_action(menu, creature))
         pos = self.table.viewport().mapToGlobal(self.table.visualRect(index).bottomLeft())
-        chosen = menu.exec_(pos)
-
-        if chosen == set_temp_action:
-            self._apply_temp_hp_action("set_temp", creature)
-        elif chosen == set_max_bonus_action:
-            self._apply_temp_hp_action("set_max_bonus", creature)
-        elif chosen == clear_bonus_action:
-            self._apply_temp_hp_action("clear", creature)
+        menu.exec_(pos)
 
 
     def _show_notes_editor(self, title: str, text: str) -> Optional[str]:
@@ -567,9 +579,7 @@ class InitiativeTracker(QMainWindow, Application):
             visibility_action = None
 
         menu.addSeparator()
-        set_temp_action = menu.addAction("Set Temp HP...")
-        set_max_bonus_action = menu.addAction("Set Max HP Bonus...")
-        clear_bonus_action = menu.addAction("Clear Temp/Bonus HP")
+        menu.addAction(self._make_hp_editor_widget_action(menu, creature))
         menu.addSeparator()
 
         edit_public_action = menu.addAction("Edit Public Notes...")
@@ -588,15 +598,6 @@ class InitiativeTracker(QMainWindow, Application):
             self.table_model.refresh()
             self.update_table()
             self._refresh_player_view()
-            return
-
-        if chosen in (set_temp_action, set_max_bonus_action, clear_bonus_action):
-            action_map = {
-                set_temp_action: "set_temp",
-                set_max_bonus_action: "set_max_bonus",
-                clear_bonus_action: "clear",
-            }
-            self._apply_temp_hp_action(action_map[chosen], creature)
             return
 
         if chosen == edit_public_action:
