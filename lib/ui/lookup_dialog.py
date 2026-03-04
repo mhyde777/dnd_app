@@ -15,7 +15,7 @@ from typing import Optional
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import (
     QDialog, QHBoxLayout, QVBoxLayout, QLineEdit, QListWidget, QListWidgetItem,
-    QTabWidget, QWidget, QTextBrowser, QSplitter, QLabel,
+    QTabWidget, QWidget, QTextBrowser, QSplitter, QLabel, QPushButton, QMessageBox,
 )
 
 from app.conditions import CONDITIONS
@@ -197,12 +197,27 @@ class _LookupTab(QWidget):
 
         self.panel = _SearchListPanel()
         self._splitter.addWidget(self.panel)
-        self._splitter.addWidget(detail_widget)
+
+        # Wrap right side so action buttons can sit below the detail widget
+        right = QWidget()
+        right_layout = QVBoxLayout(right)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(4)
+        right_layout.addWidget(detail_widget, stretch=1)
+
+        self._action_row = QHBoxLayout()
+        self._action_row.setContentsMargins(0, 0, 0, 0)
+        right_layout.addLayout(self._action_row)
+
+        self._splitter.addWidget(right)
         self._splitter.setStretchFactor(0, 0)
         self._splitter.setStretchFactor(1, 1)
         self._splitter.setSizes([200, 480])
 
         layout.addWidget(self._splitter)
+
+    def add_action_button(self, btn: QPushButton):
+        self._action_row.addWidget(btn)
 
     # Convenience passthrough
     @property
@@ -240,6 +255,11 @@ class LookupDialog(QDialog):
         self._all_spell_keys:   list[str] = []
         self._all_monster_keys: list[str] = []
 
+        self._current_spell_key:    str | None  = None
+        self._current_spell_data:   dict | None = None
+        self._current_monster_key:  str | None  = None
+        self._current_monster_data: dict | None = None
+
         self._build_ui()
         self._connect_signals()
         self._start_background_loads()
@@ -257,12 +277,24 @@ class LookupDialog(QDialog):
         self._spell_browser.setOpenLinks(False)
         self._spell_browser.setHtml(_placeholder_html("No spell selected."))
         self._spell_tab = _LookupTab(self._spell_browser)
+        self._spell_edit_btn   = QPushButton("Edit")
+        self._spell_delete_btn = QPushButton("Delete")
+        self._spell_edit_btn.setEnabled(False)
+        self._spell_delete_btn.setEnabled(False)
+        self._spell_tab.add_action_button(self._spell_edit_btn)
+        self._spell_tab.add_action_button(self._spell_delete_btn)
         self._tabs.addTab(self._spell_tab, "Spells")
 
         # ── Monsters tab
         self._monster_widget = StatblockWidget()
         self._monster_widget.set_storage_api(self._api)
         self._monster_tab = _LookupTab(self._monster_widget)
+        self._monster_edit_btn   = QPushButton("Edit")
+        self._monster_delete_btn = QPushButton("Delete")
+        self._monster_edit_btn.setEnabled(False)
+        self._monster_delete_btn.setEnabled(False)
+        self._monster_tab.add_action_button(self._monster_edit_btn)
+        self._monster_tab.add_action_button(self._monster_delete_btn)
         self._tabs.addTab(self._monster_tab, "Monsters")
 
         # ── Conditions tab (local — always available)
@@ -302,6 +334,11 @@ class LookupDialog(QDialog):
         self._spell_tab.list.currentItemChanged.connect(self._select_spell)
         self._monster_tab.list.currentItemChanged.connect(self._select_monster)
         self._condition_tab.list.currentItemChanged.connect(self._select_condition)
+
+        self._spell_edit_btn.clicked.connect(self._edit_spell)
+        self._spell_delete_btn.clicked.connect(self._delete_spell)
+        self._monster_edit_btn.clicked.connect(self._edit_monster)
+        self._monster_delete_btn.clicked.connect(self._delete_monster)
 
     # ── Background key loading ────────────────────────────────────────────────
 
@@ -373,9 +410,15 @@ class LookupDialog(QDialog):
     # ── Item selection ────────────────────────────────────────────────────────
 
     def _select_spell(self, current: Optional[QListWidgetItem], _prev):
+        self._spell_edit_btn.setEnabled(False)
+        self._spell_delete_btn.setEnabled(False)
         if current is None or self._api is None:
+            self._current_spell_key  = None
+            self._current_spell_data = None
             return
         key = current.data(Qt.UserRole)
+        self._current_spell_key  = key
+        self._current_spell_data = None
         self._spell_browser.setHtml(_placeholder_html("Loading\u2026"))
 
         def _load():
@@ -388,9 +431,15 @@ class LookupDialog(QDialog):
         threading.Thread(target=_load, daemon=True).start()
 
     def _select_monster(self, current: Optional[QListWidgetItem], _prev):
+        self._monster_edit_btn.setEnabled(False)
+        self._monster_delete_btn.setEnabled(False)
         if current is None or self._api is None:
+            self._current_monster_key  = None
+            self._current_monster_data = None
             return
         key = current.data(Qt.UserRole)
+        self._current_monster_key  = key
+        self._current_monster_data = None
         self._monster_widget.clear_statblock()
 
         def _load():
@@ -416,15 +465,139 @@ class LookupDialog(QDialog):
 
     def _on_spell_loaded(self, data):
         if data:
+            self._current_spell_data = data
             self._spell_browser.setHtml(_build_spell_html(data))
+            self._spell_edit_btn.setEnabled(True)
+            self._spell_delete_btn.setEnabled(True)
         else:
+            self._current_spell_data = None
             self._spell_browser.setHtml(_placeholder_html("Spell not found in library."))
 
     def _on_monster_loaded(self, data):
         if data:
+            self._current_monster_data = data
             self._monster_widget.load_statblock(data)
+            self._monster_edit_btn.setEnabled(True)
+            self._monster_delete_btn.setEnabled(True)
         else:
+            self._current_monster_data = None
             self._monster_widget.clear_statblock()
+
+    # ── Edit / Delete handlers ────────────────────────────────────────────────
+
+    def _edit_spell(self):
+        if not self._current_spell_key or self._current_spell_data is None:
+            return
+        from ui.spell_edit_dialog import SpellEditDialog
+        dlg = SpellEditDialog(self._api, self._current_spell_key, self._current_spell_data, parent=self)
+        dlg.exec_()
+        if dlg.action == "saved":
+            old_key = self._current_spell_key
+            new_key = dlg.saved_key
+            # Update the list item if the key changed
+            if new_key != old_key:
+                for i in range(self._spell_tab.list.count()):
+                    item = self._spell_tab.list.item(i)
+                    if item and item.data(Qt.UserRole) == old_key:
+                        item.setData(Qt.UserRole, new_key)
+                        item.setText(_key_to_display(new_key))
+                        break
+                # Update master key list
+                if old_key in self._all_spell_keys:
+                    idx = self._all_spell_keys.index(old_key)
+                    self._all_spell_keys[idx] = new_key
+            self._current_spell_key  = new_key
+            self._current_spell_data = dlg.saved_data
+            self._spell_browser.setHtml(_build_spell_html(dlg.saved_data))
+        elif dlg.action == "deleted":
+            self._remove_spell_item(self._current_spell_key)
+
+    def _delete_spell(self):
+        if not self._current_spell_key or self._api is None:
+            return
+        reply = QMessageBox.question(
+            self, "Delete Spell",
+            f"Delete '{self._current_spell_key}'? This cannot be undone.",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
+        )
+        if reply != QMessageBox.Yes:
+            return
+        try:
+            self._api.delete_spell(self._current_spell_key)
+        except Exception as exc:
+            QMessageBox.critical(self, "Delete Failed", str(exc))
+            return
+        self._remove_spell_item(self._current_spell_key)
+
+    def _remove_spell_item(self, key: str):
+        for i in range(self._spell_tab.list.count()):
+            item = self._spell_tab.list.item(i)
+            if item and item.data(Qt.UserRole) == key:
+                self._spell_tab.list.takeItem(i)
+                break
+        if key in self._all_spell_keys:
+            self._all_spell_keys.remove(key)
+        self._current_spell_key  = None
+        self._current_spell_data = None
+        self._spell_browser.setHtml(_placeholder_html("No spell selected."))
+        self._spell_edit_btn.setEnabled(False)
+        self._spell_delete_btn.setEnabled(False)
+
+    def _edit_monster(self):
+        if not self._current_monster_key or self._current_monster_data is None:
+            return
+        from ui.statblock_edit_dialog import StatblockEditDialog
+        dlg = StatblockEditDialog(self._api, self._current_monster_key, self._current_monster_data, parent=self)
+        dlg.exec_()
+        if dlg.action == "saved":
+            old_key = self._current_monster_key
+            new_key = dlg.saved_key
+            if new_key != old_key:
+                for i in range(self._monster_tab.list.count()):
+                    item = self._monster_tab.list.item(i)
+                    if item and item.data(Qt.UserRole) == old_key:
+                        item.setData(Qt.UserRole, new_key)
+                        item.setText(_key_to_display(new_key))
+                        break
+                if old_key in self._all_monster_keys:
+                    idx = self._all_monster_keys.index(old_key)
+                    self._all_monster_keys[idx] = new_key
+            self._current_monster_key  = new_key
+            self._current_monster_data = dlg.saved_data
+            self._monster_widget.load_statblock(dlg.saved_data)
+        elif dlg.action == "deleted":
+            self._remove_monster_item(self._current_monster_key)
+
+    def _delete_monster(self):
+        if not self._current_monster_key or self._api is None:
+            return
+        reply = QMessageBox.question(
+            self, "Delete Monster",
+            f"Delete '{self._current_monster_key}'? This cannot be undone.",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
+        )
+        if reply != QMessageBox.Yes:
+            return
+        try:
+            self._api.delete_statblock(self._current_monster_key)
+        except Exception as exc:
+            QMessageBox.critical(self, "Delete Failed", str(exc))
+            return
+        self._remove_monster_item(self._current_monster_key)
+
+    def _remove_monster_item(self, key: str):
+        for i in range(self._monster_tab.list.count()):
+            item = self._monster_tab.list.item(i)
+            if item and item.data(Qt.UserRole) == key:
+                self._monster_tab.list.takeItem(i)
+                break
+        if key in self._all_monster_keys:
+            self._all_monster_keys.remove(key)
+        self._current_monster_key  = None
+        self._current_monster_data = None
+        self._monster_widget.clear_statblock()
+        self._monster_edit_btn.setEnabled(False)
+        self._monster_delete_btn.setEnabled(False)
 
     # ── Focus helper (called by opener) ──────────────────────────────────────
 
