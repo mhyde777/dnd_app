@@ -17,6 +17,7 @@ from app.manager import CreatureManager
 from ui.creature_table_model import CreatureTableModel
 from ui.delegates import CreatureTableDelegate
 from ui.spellcasting_dropdown import SpellcastingDropdown
+from ui.ability_uses_dropdown import AbilityUsesDropdown
 from app.config import player_view_enabled, use_storage_api_only
 from ui.conditions_dropdown import ConditionsDropdown, DEFAULT_CONDITIONS
 
@@ -390,8 +391,8 @@ class InitiativeTracker(QMainWindow, Application):
 
         attr = self.table_model.fields[col]
 
-        # ❌ Do nothing if it's the virtual spellbook column
-        if attr == "_spellbook":
+        # ❌ Do nothing if it's the virtual spellbook or abilities column
+        if attr in ("_spellbook", "_abilities"):
             return
 
         name = self.table_model.creature_names[row]
@@ -412,6 +413,9 @@ class InitiativeTracker(QMainWindow, Application):
 
         if attr == "_spellbook":
             self.show_spellcasting_dropdown(creature, index)
+            return
+        if attr == "_abilities":
+            self.show_ability_uses_dropdown(creature, index)
             return
         if attr == "_conditions":
             self.show_conditions_dropdown(creature, index)
@@ -648,6 +652,19 @@ class InitiativeTracker(QMainWindow, Application):
 
         dropdown = SpellcastingDropdown(creature, self)
         self._active_spell_dropdown = dropdown
+
+        rect = self.table.visualRect(index)
+        table_pos = self.table.viewport().mapToGlobal(rect.topLeft())
+
+        dropdown.move(table_pos.x(), table_pos.y() + rect.height())
+        dropdown.show()
+
+    def show_ability_uses_dropdown(self, creature, index):
+        if hasattr(self, "_active_ability_dropdown") and self._active_ability_dropdown:
+            self._active_ability_dropdown.close()
+
+        dropdown = AbilityUsesDropdown(creature, self)
+        self._active_ability_dropdown = dropdown
 
         rect = self.table.visualRect(index)
         table_pos = self.table.viewport().mapToGlobal(rect.topLeft())

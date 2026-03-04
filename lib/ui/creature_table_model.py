@@ -12,6 +12,7 @@ from ui.colors import (
 )
 
 SPELL_ICON_COLUMN_NAME = "_spellbook"
+ABILITY_ICON_COLUMN_NAME = "_abilities"
 _COND_ABBR = {
     "Blinded": "Bli",
     "Charmed": "Cha",
@@ -49,6 +50,8 @@ class CreatureTableModel(QAbstractTableModel):
                 "_innate_slots",
                 "_spell_slots_used",
                 "_innate_slots_used",
+                "_ability_uses",
+                "_ability_uses_used",
                 "_death_successes",
                 "_death_failures",
                 "_death_stable",
@@ -67,6 +70,8 @@ class CreatureTableModel(QAbstractTableModel):
 
             if SPELL_ICON_COLUMN_NAME not in self.fields:
                 self.fields.append(SPELL_ICON_COLUMN_NAME)
+            if ABILITY_ICON_COLUMN_NAME not in self.fields:
+                self.fields.append(ABILITY_ICON_COLUMN_NAME)
         else:
             self.fields = fields or []
 
@@ -126,6 +131,26 @@ class CreatureTableModel(QAbstractTableModel):
 
             if role == Qt.DisplayRole and (has_slots or has_innate):
                 return "📖"
+
+            if role == Qt.FontRole:
+                font = QFont("Noto Color Emoji")
+                font.setPointSize(12)
+                return font
+
+            if role == Qt.TextAlignmentRole:
+                return Qt.AlignCenter
+
+            return QVariant()
+
+        # Abilities icon column
+        if attr == ABILITY_ICON_COLUMN_NAME:
+            if creature._type != CreatureType.MONSTER:
+                return QVariant()
+
+            has_abilities = bool(getattr(creature, "_ability_uses", {}))
+
+            if role == Qt.DisplayRole and has_abilities:
+                return "⚔️"
 
             if role == Qt.FontRole:
                 font = QFont("Noto Color Emoji")
@@ -339,7 +364,7 @@ class CreatureTableModel(QAbstractTableModel):
         attr = self.fields[col]
         creature = self.manager.creatures.get(self.creature_names[row])
 
-        if attr == SPELL_ICON_COLUMN_NAME:
+        if attr in (SPELL_ICON_COLUMN_NAME, ABILITY_ICON_COLUMN_NAME):
             if creature is None:
                 return Qt.NoItemFlags
 
@@ -371,7 +396,7 @@ class CreatureTableModel(QAbstractTableModel):
             if role == Qt.DisplayRole:
                 return self.field_to_header(field)
 
-            if role == Qt.FontRole and field == SPELL_ICON_COLUMN_NAME:
+            if role == Qt.FontRole and field in (SPELL_ICON_COLUMN_NAME, ABILITY_ICON_COLUMN_NAME):
                 font = QFont("Noto Color Emoji")
                 font.setPointSize(12)
                 return font
@@ -398,6 +423,7 @@ class CreatureTableModel(QAbstractTableModel):
             "_conditions": "Conditions",
             "_status_time": "Status",
             "_spellbook": "📖",
+            "_abilities": "⚔️",
         }
         return mapping.get(field, field.lstrip("_").replace("_", " ").title())
 
@@ -412,6 +438,8 @@ class CreatureTableModel(QAbstractTableModel):
             "_innate_slots",
             "_spell_slots_used",
             "_innate_slots_used",
+            "_ability_uses",
+            "_ability_uses_used",
             "_death_successes",
             "_death_failures",
             "_death_stable",
@@ -430,6 +458,8 @@ class CreatureTableModel(QAbstractTableModel):
 
         if SPELL_ICON_COLUMN_NAME not in self.fields:
             self.fields.append(SPELL_ICON_COLUMN_NAME)
+        if ABILITY_ICON_COLUMN_NAME not in self.fields:
+            self.fields.append(ABILITY_ICON_COLUMN_NAME)
 
         self.layoutChanged.emit()
 
@@ -445,6 +475,8 @@ class CreatureTableModel(QAbstractTableModel):
                 "_innate_slots",
                 "_spell_slots_used",
                 "_innate_slots_used",
+                "_ability_uses",
+                "_ability_uses_used",
                 "_death_saves_prompt",
                 "_active",
                 "_foundry_combatant_id",
@@ -459,6 +491,8 @@ class CreatureTableModel(QAbstractTableModel):
             self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
             if SPELL_ICON_COLUMN_NAME not in self.fields:
                 self.fields.append(SPELL_ICON_COLUMN_NAME)
+            if ABILITY_ICON_COLUMN_NAME not in self.fields:
+                self.fields.append(ABILITY_ICON_COLUMN_NAME)
 
         self.layoutChanged.emit()
 

@@ -56,6 +56,8 @@ def _apply_statblock_to_row(row: dict, data: dict) -> None:
                 table.setItem(r, 0, QTableWidgetItem(spell.title()))
                 table.setItem(r, 1, QTableWidgetItem(str(uses)))
 
+    row["_statblock_data"] = data
+
     if "autofill_label" in row:
         row["autofill_label"].setVisible(True)
 
@@ -224,6 +226,11 @@ class AddCombatantWindow(QDialog):
                             continue
                 if innate_spells:
                     creature["_innate_slots"] = innate_spells
+
+            from app.statblock_parser import extract_limited_abilities
+            ability_uses = extract_limited_abilities(row.get("_statblock_data") or {})
+            if ability_uses:
+                creature["_ability_uses"] = ability_uses
 
             data.append(creature)
 
@@ -431,6 +438,9 @@ class BuildEncounterWindow(QDialog):
 
                 monster_data._spell_slots = spell_slots
                 monster_data._innate_slots = innate_spells
+
+            from app.statblock_parser import extract_limited_abilities
+            monster_data._ability_uses = extract_limited_abilities(row.get("_statblock_data") or {})
 
             monsters.append(monster_data.to_dict())
 
