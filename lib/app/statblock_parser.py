@@ -763,6 +763,35 @@ def _extract_spellcasting(result: dict) -> None:
                 return
 
 
+# ── Limited-use ability extraction ──────────────────────────────────
+
+_USES_PER_DAY_RE = re.compile(r'\((\d+)/(?:Day|Short Rest|Long Rest)\)', re.IGNORECASE)
+_RECHARGE_RE = re.compile(r'\(Recharge\s+[\d–\-]', re.IGNORECASE)
+
+
+def extract_limited_abilities(data: dict) -> dict[str, int]:
+    """Scan statblock sections for X/Day, Recharge, and Legendary Actions.
+
+    Returns a dict of {ability_name: max_uses}.
+    """
+    result: dict[str, int] = {}
+
+    for section_key in ("special_traits", "actions", "bonus_actions", "reactions"):
+        for entry in data.get(section_key) or []:
+            name = entry.get("name", "")
+            if _USES_PER_DAY_RE.search(name):
+                m = _USES_PER_DAY_RE.search(name)
+                result[name] = int(m.group(1))
+            elif _RECHARGE_RE.search(name):
+                result[name] = 1
+
+    if data.get("legendary_actions") is not None:
+        count = data.get("legendary_action_count") or 3
+        result["Legendary Actions"] = int(count)
+
+    return result
+
+
 # ── Validation ──────────────────────────────────────────────────────
 
 _REQUIRED_FIELDS = ["name", "size", "type", "armor_class", "hit_points", "ability_scores"]

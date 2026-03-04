@@ -1,12 +1,13 @@
 import os
 import re
 
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
     QSpinBox, QLineEdit, QPushButton, QLabel, QCheckBox,
     QTableWidget, QTableWidgetItem, QHeaderView, QGroupBox,
     QListWidget, QListWidgetItem, QDialogButtonBox, QInputDialog,
-    QTextEdit,
+    QTextEdit, QScrollArea, QWidget,
 )
 
 from app.creature import Monster
@@ -55,6 +56,8 @@ def _apply_statblock_to_row(row: dict, data: dict) -> None:
                 table.insertRow(r)
                 table.setItem(r, 0, QTableWidgetItem(spell.title()))
                 table.setItem(r, 1, QTableWidgetItem(str(uses)))
+
+    row["_statblock_data"] = data
 
     if "autofill_label" in row:
         row["autofill_label"].setVisible(True)
@@ -225,6 +228,11 @@ class AddCombatantWindow(QDialog):
                 if innate_spells:
                     creature["_innate_slots"] = innate_spells
 
+            from app.statblock_parser import extract_limited_abilities
+            ability_uses = extract_limited_abilities(row.get("_statblock_data") or {})
+            if ability_uses:
+                creature["_ability_uses"] = ability_uses
+
             data.append(creature)
 
         return data
@@ -264,176 +272,204 @@ class RemoveCombatantWindow(QDialog):
 
 
 class BuildEncounterWindow(QDialog):
-    def __init__(self, parent=None, statblock_lookup=None):
+    def __init__(self, parent=None, storage_api=None):
         super().__init__(parent)
         self.setWindowTitle("Build Encounter")
-        self.layout = QVBoxLayout(self)
-        self.monster_rows = []
-        self._statblock_lookup = statblock_lookup
+        self.setMinimumWidth(620)
+        self._storage_api = storage_api
+        self.roster_rows: list[dict] = []
+        self._display_key_map: dict[str, str] = {}
 
-        title = QLabel("Build Encounter")
-        title.setStyleSheet("font-size: 16px; font-weight: bold;")
-        self.layout.addWidget(title)
+        root = QVBoxLayout(self)
 
-        # Add button
-        self.add_button = QPushButton("Add Monster")
-        self.add_button.clicked.connect(self.add_monster_row)
-        self.layout.addWidget(self.add_button)
+        # ── Available Statblocks ──────────────────────────────────────
+        browser_group = QGroupBox("Available Statblocks")
+        browser_layout = QVBoxLayout(browser_group)
 
-        # Main container
-        self.monster_container = QVBoxLayout()
-        self.layout.addLayout(self.monster_container)
+        self._search = QLineEdit()
+        self._search.setPlaceholderText("Filter…")
+        self._search.textChanged.connect(self._filter_list)
+        browser_layout.addWidget(self._search)
 
-        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        self.button_box.accepted.connect(self.accept)
-        self.button_box.rejected.connect(self.reject)
-        self.layout.addWidget(self.button_box)
-        self.add_monster_row()
+        self._list = QListWidget()
+        self._list.setMaximumHeight(200)
+        self._list.itemDoubleClicked.connect(lambda _: self._add_selected(self._qty.value()))
+        browser_layout.addWidget(self._list)
 
-    def add_monster_row(self):
-        row_container = QVBoxLayout()
-        top_row = QHBoxLayout()
+        add_row = QHBoxLayout()
+        add_row.addWidget(QLabel("Qty:"))
+        self._qty = QSpinBox()
+        self._qty.setRange(1, 20)
+        self._qty.setValue(1)
+        add_row.addWidget(self._qty)
+        add_btn = QPushButton("Add to Encounter")
+        add_btn.clicked.connect(lambda: self._add_selected(self._qty.value()))
+        add_row.addWidget(add_btn)
+        add_row.addStretch()
+        browser_layout.addLayout(add_row)
 
-        name_input = QLineEdit()
-        name_input.setPlaceholderText("Name")
-        init_input = QSpinBox()
-        init_input.setMaximum(100)
-        hp_input = QSpinBox()
-        hp_input.setMaximum(1000)
-        ac_input = QSpinBox()
-        ac_input.setMaximum(30)
-        spellcaster_checkbox = QCheckBox("Spellcaster")
-        death_saves_checkbox = QCheckBox("Death Saves")
-        visible_checkbox = QCheckBox("Show")
-        visible_checkbox.setChecked(True)
+        root.addWidget(browser_group)
 
-        autofill_label = QLabel("✓ Auto-filled from statblock")
-        autofill_label.setStyleSheet(
-            "color: #5a8a5a; font-size: 10px; font-style: italic;"
-        )
-        autofill_label.setVisible(False)
+        # ── Encounter Roster ──────────────────────────────────────────
+        roster_group = QGroupBox("Encounter Roster")
+        roster_outer = QVBoxLayout(roster_group)
 
-        top_row.addWidget(QLabel("Name:"))
-        top_row.addWidget(name_input)
-        top_row.addWidget(QLabel("Init:"))
-        top_row.addWidget(init_input)
-        top_row.addWidget(QLabel("HP:"))
-        top_row.addWidget(hp_input)
-        top_row.addWidget(QLabel("AC:"))
-        top_row.addWidget(ac_input)
-        top_row.addWidget(spellcaster_checkbox)
-        top_row.addWidget(death_saves_checkbox)
-        top_row.addWidget(visible_checkbox)
-        top_row.addWidget(autofill_label)
+        header_row = QHBoxLayout()
+        name_hdr = QLabel("Name")
+        name_hdr.setStyleSheet("font-weight: bold;")
+        header_row.addWidget(name_hdr, 3)
+        for hdr_text in ("Init", "Max HP", "AC", ""):
+            lbl = QLabel(hdr_text)
+            lbl.setStyleSheet("font-weight: bold;")
+            header_row.addWidget(lbl)
+        roster_outer.addLayout(header_row)
 
-        # Spellcasting panel (hidden by default)
-        spell_panel = QGroupBox("Spellcasting")
-        spell_panel_layout = QVBoxLayout()
-        spell_panel.setLayout(spell_panel_layout)
-        spell_panel.setVisible(False)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setMinimumHeight(200)
+        self._roster_widget = QWidget()
+        self._roster_layout = QVBoxLayout(self._roster_widget)
+        self._roster_layout.setAlignment(Qt.AlignTop)
+        scroll.setWidget(self._roster_widget)
+        roster_outer.addWidget(scroll)
 
-        # Spell slots
-        slot_inputs = {}
-        slot_form = QFormLayout()
-        for level in range(1, 10):
-            box = QSpinBox()
-            box.setMaximum(10)
-            slot_inputs[level] = box
-            slot_form.addRow(f"Level {level} Slots:", box)
-        spell_panel_layout.addLayout(slot_form)
+        root.addWidget(roster_group)
 
-        # Innate spells table
-        innate_table = QTableWidget(0, 2)
-        innate_table.setHorizontalHeaderLabels(["Spell Name", "Uses"])
-        innate_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        spell_panel_layout.addWidget(QLabel("Innate Spells:"))
-        spell_panel_layout.addWidget(innate_table)
+        # ── Buttons ───────────────────────────────────────────────────
+        btn_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        btn_box.accepted.connect(self.accept)
+        btn_box.rejected.connect(self.reject)
+        root.addWidget(btn_box)
 
-        add_innate_button = QPushButton("+ Add Innate Spell")
-        def add_innate_row():
-            row = innate_table.rowCount()
-            innate_table.insertRow(row)
-            innate_table.setItem(row, 0, QTableWidgetItem(""))
-            innate_table.setItem(row, 1, QTableWidgetItem("1"))
-        add_innate_button.clicked.connect(add_innate_row)
-        spell_panel_layout.addWidget(add_innate_button)
+        self._populate_list()
 
-        spellcaster_checkbox.toggled.connect(spell_panel.setVisible)
+    def _populate_list(self):
+        if not self._storage_api:
+            placeholder = QListWidgetItem("(No storage API configured)")
+            placeholder.setFlags(placeholder.flags() & ~Qt.ItemIsEnabled)
+            self._list.addItem(placeholder)
+            return
+        try:
+            keys = self._storage_api.list_statblock_keys()
+        except Exception:
+            keys = []
+        if not keys:
+            placeholder = QListWidgetItem("(No statblocks found)")
+            placeholder.setFlags(placeholder.flags() & ~Qt.ItemIsEnabled)
+            self._list.addItem(placeholder)
+            return
+        for key in sorted(keys):
+            display = key.removesuffix(".json").replace("_", " ").title()
+            self._display_key_map[display] = key
+            self._list.addItem(display)
 
-        row_container.addLayout(top_row)
-        row_container.addWidget(spell_panel)
-        self.monster_container.addLayout(row_container)
+    def _filter_list(self, text: str):
+        text = text.lower()
+        for i in range(self._list.count()):
+            item = self._list.item(i)
+            item.setHidden(text not in item.text().lower())
+
+    def _add_selected(self, qty: int):
+        selected = self._list.selectedItems()
+        if not selected:
+            return
+        display_name = selected[0].text()
+        key = self._display_key_map.get(display_name)
+        if not key:
+            return
+        try:
+            data = self._storage_api.get_statblock(key) or {}
+        except Exception:
+            data = {}
+
+        default_hp = data.get("hit_points", {}).get("average", 0)
+        ac_list = data.get("armor_class") or [{}]
+        default_ac = ac_list[0].get("value", 0)
+
+        if qty > 1:
+            for i in range(1, qty + 1):
+                self._add_roster_row(f"{display_name} {i}", data, default_hp, default_ac)
+        else:
+            self._add_roster_row(display_name, data, default_hp, default_ac)
+
+    def _add_roster_row(self, name: str, statblock_data: dict, default_hp: int, default_ac: int):
+        row_widget = QWidget()
+        row_layout = QHBoxLayout(row_widget)
+        row_layout.setContentsMargins(0, 2, 0, 2)
+
+        name_lbl = QLabel(name)
+        name_lbl.setWordWrap(True)
+        row_layout.addWidget(name_lbl, 3)
+
+        init_spin = QSpinBox()
+        init_spin.setRange(-20, 30)
+        init_spin.setValue(0)
+        init_spin.setFixedWidth(55)
+        row_layout.addWidget(init_spin)
+
+        hp_spin = QSpinBox()
+        hp_spin.setRange(0, 9999)
+        hp_spin.setValue(default_hp)
+        hp_spin.setFixedWidth(70)
+        row_layout.addWidget(hp_spin)
+
+        ac_spin = QSpinBox()
+        ac_spin.setRange(0, 30)
+        ac_spin.setValue(default_ac)
+        ac_spin.setFixedWidth(55)
+        row_layout.addWidget(ac_spin)
+
+        remove_btn = QPushButton("×")
+        remove_btn.setFixedWidth(28)
+        row_layout.addWidget(remove_btn)
 
         row_dict = {
-            "name": name_input,
-            "init": init_input,
-            "hp": hp_input,
-            "ac": ac_input,
-            "spellcaster": spellcaster_checkbox,
-            "death_saves": death_saves_checkbox,
-            "visible": visible_checkbox,
-            "spell_panel": spell_panel,
-            "slots": slot_inputs,
-            "innate_table": innate_table,
-            "autofill_label": autofill_label,
+            "widget": row_widget,
+            "name": name,
+            "statblock_data": statblock_data,
+            "init": init_spin,
+            "hp": hp_spin,
+            "ac": ac_spin,
         }
-        self.monster_rows.append(row_dict)
+        self.roster_rows.append(row_dict)
+        self._roster_layout.addWidget(row_widget)
 
-        if self._statblock_lookup:
-            def _on_name_done(rd=row_dict):
-                name = rd["name"].text().strip()
-                if not name:
-                    return
-                data = self._statblock_lookup(name)
-                if data:
-                    _apply_statblock_to_row(rd, data)
-            name_input.editingFinished.connect(_on_name_done)
+        def _remove(rd=row_dict):
+            rd["widget"].setParent(None)
+            rd["widget"].deleteLater()
+            self.roster_rows.remove(rd)
+        remove_btn.clicked.connect(_remove)
 
-    def get_data(self):
+    def get_data(self) -> list:
+        from app.statblock_parser import extract_limited_abilities
         monsters = []
-        for row in self.monster_rows:
-            name = row["name"].text().strip()
-            if not name:
-                continue
-
-            monster_data = Monster(
-                name=name,
+        for row in self.roster_rows:
+            data = row["statblock_data"] or {}
+            monster = Monster(
+                name=row["name"],
                 init=row["init"].value(),
                 max_hp=row["hp"].value(),
                 curr_hp=row["hp"].value(),
                 armor_class=row["ac"].value(),
-                death_saves_prompt=row["death_saves"].isChecked(),
-                player_visible=row["visible"].isChecked(),
             )
-
-            if row["spellcaster"].isChecked():
-                # Gather spell slots
-                spell_slots = {
-                    level: box.value()
-                    for level, box in row["slots"].items()
-                    if box.value() > 0
+            sc = data.get("spellcasting")
+            if sc:
+                monster._spell_slots = {
+                    int(k): v for k, v in sc.get("slots", {}).items() if v
                 }
-
-                # Gather innate spells
-                innate_spells = {}
-                table = row["innate_table"]
-                for r in range(table.rowCount()):
-                    spell = table.item(r, 0)
-                    uses = table.item(r, 1)
-                    if spell and uses:
-                        spell_name = spell.text().strip()
-                        try:
-                            uses_value = int(uses.text())
-                            if spell_name:
-                                innate_spells[spell_name] = uses_value
-                        except ValueError:
-                            continue
-
-                monster_data._spell_slots = spell_slots
-                monster_data._innate_slots = innate_spells
-
-            monsters.append(monster_data.to_dict())
-
+                innate: dict[str, int] = {}
+                for key, spells in sc.get("innate", {}).items():
+                    if key == "at_will":
+                        uses = -1
+                    elif m := re.match(r'(\d+)_per_day', key):
+                        uses = int(m.group(1))
+                    else:
+                        uses = 1
+                    for spell in spells:
+                        innate[spell.title()] = uses
+                monster._innate_slots = innate
+            monster._ability_uses = extract_limited_abilities(data)
+            monsters.append(monster.to_dict())
         return monsters
 
     def get_metadata(self) -> dict:
