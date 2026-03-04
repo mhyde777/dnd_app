@@ -464,6 +464,7 @@ def _parse_spellcasting_block(description: str) -> dict:
         "ability": None,
         "save_dc": None,
         "attack_bonus": None,
+        "cantrip_damage_bonus": None,
         "slots": {},
         "spells_by_level": {},
         "innate": {},
@@ -747,6 +748,11 @@ def parse_statblock(text: str) -> dict:
     return result
 
 
+_SPELLCASTING_NAME_RE = re.compile(
+    r'^(innate\s+)?spellcasting(\s+\([^)]+\))?$', re.IGNORECASE
+)
+
+
 def _extract_spellcasting(result: dict) -> None:
     """Find spellcasting traits and convert to structured block.
 
@@ -756,11 +762,20 @@ def _extract_spellcasting(result: dict) -> None:
     for trait_list_key in ("special_traits", "actions"):
         trait_list = result.get(trait_list_key, [])
         for i, trait in enumerate(trait_list):
-            name_lower = trait["name"].lower()
-            if "spellcasting" in name_lower:
+            if _SPELLCASTING_NAME_RE.match(trait["name"].strip()):
                 result["spellcasting"] = _parse_spellcasting_block(trait["description"])
                 trait_list.pop(i)
-                return
+                break
+
+    # Potent Spellcasting — extract cantrip damage bonus from traits
+    if result.get("spellcasting") is not None:
+        trait_list = result.get("special_traits", [])
+        for i, trait in enumerate(trait_list):
+            if "potent spellcasting" in trait["name"].lower():
+                m = re.search(r'\+(\d+)', trait["description"])
+                if m:
+                    result["spellcasting"]["cantrip_damage_bonus"] = int(m.group(1))
+                break
 
 
 # ── Limited-use ability extraction ──────────────────────────────────

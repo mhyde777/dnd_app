@@ -18,7 +18,7 @@ from ui.creature_table_model import CreatureTableModel
 from ui.delegates import CreatureTableDelegate
 from ui.spellcasting_dropdown import SpellcastingDropdown
 from ui.ability_uses_dropdown import AbilityUsesDropdown
-from app.config import player_view_enabled, use_storage_api_only
+from app.config import use_storage_api_only
 from ui.conditions_dropdown import ConditionsDropdown, DEFAULT_CONDITIONS
 
 class InitiativeTracker(QMainWindow, Application):
@@ -72,14 +72,14 @@ class InitiativeTracker(QMainWindow, Application):
 
         self.label_layout.addStretch()
 
-        self.player_view_toggle = QPushButton("Live Updates: Pause", self)
-        self.player_view_toggle.setCheckable(True)
-        self.player_view_toggle.setChecked(False)
-        self.player_view_toggle.clicked.connect(self.toggle_player_view_live)
-        if player_view_enabled():
-            self.label_layout.addWidget(self.player_view_toggle)
+        self.bridge_toggle = QPushButton("Foundry Bridge: Pause", self)
+        self.bridge_toggle.setCheckable(True)
+        self.bridge_toggle.setChecked(False)
+        self.bridge_toggle.clicked.connect(self.toggle_bridge_sync)
+        if getattr(self, "bridge_client", None) and self.bridge_client.enabled:
+            self.label_layout.addWidget(self.bridge_toggle)
         else:
-            self.player_view_toggle.hide()
+            self.bridge_toggle.hide()
 
         # === TABLE AREA (under labels) ===
         self.table_model = CreatureTableModel(self.manager, parent=self, bridge_owner=self)
@@ -528,13 +528,6 @@ class InitiativeTracker(QMainWindow, Application):
             return editor.toPlainText()
         return None
 
-    def _refresh_player_view(self):
-        if hasattr(self, "player_view_live") and not self.player_view_live:
-            try:
-                self.player_view_snapshot = self._build_player_view_payload()
-            except Exception:
-                pass
-
     def _remove_combatant_by_name(self, name: str):
         if not name:
             return
@@ -600,7 +593,6 @@ class InitiativeTracker(QMainWindow, Application):
             creature.player_visible = not bool(getattr(creature, "player_visible", True))
             self.table_model.refresh()
             self.update_table()
-            self._refresh_player_view()
             return
 
         if chosen == edit_public_action:
@@ -609,7 +601,6 @@ class InitiativeTracker(QMainWindow, Application):
                 creature.public_notes = updated
                 self.table_model.refresh()
                 self.update_table()
-                self._refresh_player_view()
             return
 
         if chosen == edit_private_action:
@@ -636,12 +627,16 @@ class InitiativeTracker(QMainWindow, Application):
             self._remove_combatant_by_name(name)
             return
 
-    def toggle_player_view_live(self, checked):
+    def toggle_bridge_sync(self, checked):
         paused = bool(checked)
-        if hasattr(self, "set_player_view_paused"):
-            self.set_player_view_paused(paused)
-        self.player_view_toggle.setText(
-            "Live Updates: Resume" if paused else "Live Updates: Pause"
+        if paused:
+            if hasattr(self, "stop_bridge_sync"):
+                self.stop_bridge_sync()
+        else:
+            if hasattr(self, "start_bridge_sync"):
+                self.start_bridge_sync()
+        self.bridge_toggle.setText(
+            "Foundry Bridge: Resume" if paused else "Foundry Bridge: Pause"
         )
 
     def show_spellcasting_dropdown(self, creature, index):
@@ -715,12 +710,6 @@ class InitiativeTracker(QMainWindow, Application):
         super().keyPressEvent(event)
     
     def closeEvent(self, event):
-        server = getattr(self, "player_view_server", None)
-        if server is not None:
-            try:
-                server.stop()
-            except Exception:
-                pass
         local_bridge = getattr(self, "local_bridge", None)
         if local_bridge is not None:
             try:

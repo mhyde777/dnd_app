@@ -21,10 +21,8 @@ from app.config import (
     get_storage_api_base,
     get_config_path,
     local_bridge_enabled,
-    player_view_enabled,
     use_storage_api_only,
 )
-from app.player_view_server import PlayerViewServer
 from app.bridge_client import BridgeClient
 from app.local_bridge_server import LocalBridgeServer
 from ui.windows import (
@@ -79,14 +77,8 @@ class Application:
         self.bridge_stream_thread: Optional[threading.Thread] = None
         self.bridge_stream_stop: Optional[threading.Event] = None
         self.bridge_combatants_by_name: Dict[str, List[Dict[str, Any]]] = {}
+        self.bridge_paused = False
         self._initiative_reset_pending = False
-
-        self.player_view_live = True
-        self.player_view_snapshot: Optional[Dict[str, Any]] = None
-        self.player_view_server: Optional[PlayerViewServer] = None
-        if player_view_enabled():
-            self.player_view_server = PlayerViewServer(self.get_player_view_payload)
-            self.player_view_server.start()
 
         # --- Storage API only mode ---
         self.storage_api: Optional[StorageAPI] = None
@@ -135,6 +127,20 @@ class Application:
         )
         self.bridge_stream_thread.start()
         print("[Bridge] Using SSE stream for snapshots.")
+
+    def stop_bridge_sync(self) -> None:
+        self.bridge_paused = True
+        if self.bridge_stream_stop is not None:
+            self.bridge_stream_stop.set()
+        if self.bridge_timer is not None:
+            self.bridge_timer.stop()
+        print("[Bridge] Sync paused.")
+
+    def start_bridge_sync(self) -> None:
+        self.bridge_paused = False
+        self.bridge_stream_stop = threading.Event()
+        self.start_bridge_polling()
+        print("[Bridge] Sync resumed.")
 
     def refresh_bridge_state(self) -> None:
         try:
@@ -753,7 +759,7 @@ class Application:
         return None
 
     def _enqueue_bridge_set_hp(self, creature_name: str, hp: int) -> None:
-        if not self.bridge_client.enabled:
+        if not self.bridge_client.enabled or self.bridge_paused:
             return
         creature = None
         if getattr(self, "manager", None):
@@ -784,7 +790,7 @@ class Application:
         )
 
     def _enqueue_bridge_set_temp_hp(self, creature_name: str, temp_hp: int) -> None:
-        if not self.bridge_client.enabled:
+        if not self.bridge_client.enabled or self.bridge_paused:
             return
         creature = None
         if getattr(self, "manager", None):
@@ -815,7 +821,7 @@ class Application:
         )
 
     def _enqueue_bridge_set_max_hp_bonus(self, creature_name: str, max_hp_bonus: int) -> None:
-        if not self.bridge_client.enabled:
+        if not self.bridge_client.enabled or self.bridge_paused:
             return
         creature = None
         if getattr(self, "manager", None):
@@ -850,7 +856,7 @@ class Application:
             print("[Bridge][DBG] bridge_client missing; cannot send set_initiative")
             return
 
-        if not self.bridge_client.enabled:
+        if not self.bridge_client.enabled or self.bridge_paused:
             print("[Bridge][DBG] bridge_client disabled; skipping set_initiative")
             return
 
@@ -922,7 +928,7 @@ class Application:
         added: List[str],
         removed: List[str],
     ) -> None:
-        if not self.bridge_client.enabled:
+        if not self.bridge_client.enabled or self.bridge_paused:
             return
         if not added and not removed:
             return
@@ -978,7 +984,7 @@ class Application:
     def _enqueue_bridge_turn_command(self, direction: str) -> None:
         if not getattr(self, "bridge_client", None):
             return
-        if not self.bridge_client.enabled:
+        if not self.bridge_client.enabled or self.bridge_paused:
             return
         if direction == "next":
             self.bridge_client.send_next_turn()
@@ -1022,107 +1028,6 @@ class Application:
             return None
         self.current_idx = max(0, min(getattr(self, "current_idx", 0), len(self.turn_order) - 1))
         return self.turn_order[self.current_idx]
-
-    def get_player_view_payload(self) -> Dict[str, Any]:
-        if not self.player_view_live and self.player_view_snapshot is not None:
-            return self.player_view_snapshot
-
-        try:
-            payload = self._build_player_view_payload()
-        except Exception as exc:
-            print(f"[PlayerView] Failed to build payload: {exc}")
-            payload = {
-                "round": self.round_counter,
-                "time": self.time_counter,
-                "current_name": None,
-                "current_hidden": False,
-                "combatants": [],
-                "live": self.player_view_live,
-            }
-        if not self.player_view_live:
-            self.player_view_snapshot = payload
-        return payload
-
-    def set_player_view_paused(self, paused: bool) -> None:
-        if paused and self.player_view_live:
-            self.player_view_live = False
-            self.player_view_snapshot = self.get_player_view_payload()
-            return
-        if not paused and not self.player_view_live:
-            self.player_view_live = True
-            self.player_view_snapshot = None
-
-    def _build_player_view_payload(self) -> Dict[str, Any]:
-        if not getattr(self, "manager", None) or not getattr(self.manager, "creatures", None):
-            return {
-                "round": self.round_counter,
-                "time": self.time_counter,
-                "current_name": None,
-                "current_hidden": False,
-                "combatants": [],
-                "live": self.player_view_live,
-            }
-        hide_downed = os.getenv("PLAYER_VIEW_HIDE_DOWNED", "0").strip().lower() not in (
-            "",
-            "0",
-            "false",
-            "no",
-        )
-        active_name = self.active_name()
-        active_creature = self.manager.creatures.get(active_name) if active_name else None
-        active_visible = bool(getattr(active_creature, "player_visible", False)) if active_creature else False
-        active_is_monster = isinstance(active_creature, Monster) if active_creature else False
-        active_curr_hp = getattr(active_creature, "curr_hp", None) if active_creature else None
-        try:
-            active_curr_hp_value = int(active_curr_hp)
-        except (TypeError, ValueError):
-            active_curr_hp_value = None
-        active_downed = (
-            active_curr_hp_value is not None and active_curr_hp_value >= 0 and active_curr_hp_value <= 0
-        )
-        active_hidden_by_downed = hide_downed and active_is_monster and active_downed
-        current_hidden = bool(active_creature) and (not active_visible or active_hidden_by_downed)
-
-        if hasattr(self.manager, "ordered_items"):
-            ordered = self.manager.ordered_items()
-        else:
-            ordered = sorted(
-                self.manager.creatures.items(),
-                key=lambda item: getattr(item[1], "initiative", 0),
-                reverse=True,
-            )
-
-        combatants = []
-        for _, creature in ordered:
-            if not bool(getattr(creature, "player_visible", False)):
-                continue
-            is_monster = isinstance(creature, Monster)
-            curr_hp = getattr(creature, "curr_hp", None)
-            try:
-                curr_hp_value = int(curr_hp)
-            except (TypeError, ValueError):
-                curr_hp_value = None
-            downed = curr_hp_value is not None and curr_hp_value >= 0 and curr_hp_value <= 0 
-            if hide_downed and is_monster and downed:
-                continue
-            combatants.append(
-                {
-                    "name": getattr(creature, "name", ""),
-                    "initiative": getattr(creature, "initiative", ""),
-                    "conditions": ", ".join(getattr(creature, "conditions", []) or []),
-                    "public_notes": getattr(creature, "public_notes", "") or "",
-                    "downed": downed,
-                }
-            )
-
-        return {
-            "round": self.round_counter,
-            "time": self.time_counter,
-            "current_name": active_name if active_visible and not active_hidden_by_downed else None,
-            "current_hidden": current_hidden,
-            "combatants": combatants,
-            "live": self.player_view_live,
-        }
 
     # ----------------
     # JSON Manipulation
