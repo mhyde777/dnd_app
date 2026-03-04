@@ -1706,7 +1706,8 @@ class Application:
                     curr_hp=creature_data['HP'],
                     armor_class=creature_data['AC'],
                     spell_slots=creature_data.get("_spell_slots", {}),
-                    innate_slots=creature_data.get("_innate_slots", {})
+                    innate_slots=creature_data.get("_innate_slots", {}),
+                    ability_uses=creature_data.get("_ability_uses", {}),
                 )
                 self.manager.add_creature(creature)
 
@@ -2285,7 +2286,8 @@ class Application:
                 armor_class=creature_data["_armor_class"],
                 death_saves_prompt=creature_data.get("_death_saves_prompt", False),
                 spell_slots=creature_data.get("_spell_slots", {}),
-                innate_slots=creature_data.get("_innate_slots", {})
+                innate_slots=creature_data.get("_innate_slots", {}),
+                ability_uses=creature_data.get("_ability_uses", {}),
             )
             encounter_manager.add_creature(creature)
 
