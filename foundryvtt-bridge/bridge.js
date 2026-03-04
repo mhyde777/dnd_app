@@ -1,5 +1,6 @@
 // foundryvtt-bridge/bridge.js
 const MODULE_ID = "foundryvtt-bridge";
+const BRIDGE_JS_VERSION = "0.2.0";
 const DEFAULT_BRIDGE_URL = "http://127.0.0.1:8787";
 const LOG_PREFIX = "[bridge]";
 const COMMAND_POLL_INTERVAL_MS = 1500;
@@ -73,6 +74,8 @@ function buildCombatSnapshot() {
       hp: {
         value: hp.value ?? null,
         max: hp.max ?? null,
+        temp: hp.temp ?? 0,
+        tempmax: hp.tempmax ?? 0,
       },
       ac: acValue,
       effects,
@@ -352,6 +355,54 @@ async function applySetHp(payload) {
   return true;
 }
 
+async function applySetTempHp(payload) {
+  if (!payload) return false;
+  const tempValue = Number(payload.temp);
+  console.log(`${LOG_PREFIX} set_temp_hp payload=`, payload, `tempValue=${tempValue}`);
+  if (!Number.isFinite(tempValue)) {
+    console.warn(`${LOG_PREFIX} set_temp_hp missing/invalid temp`);
+    return false;
+  }
+  const actor = resolveActor(payload);
+  if (!actor) {
+    console.warn(`${LOG_PREFIX} set_temp_hp actor not found`, {
+      tokenId: payload.tokenId ?? null,
+      actorId: payload.actorId ?? null,
+    });
+    return false;
+  }
+  console.log(`${LOG_PREFIX} set_temp_hp applying to actor=${actor.name} value=${Math.max(0, tempValue)}`);
+  const updateData = { "system.attributes.hp.temp": Math.max(0, tempValue) };
+  console.log(`${LOG_PREFIX} set_temp_hp update data=`, JSON.stringify(updateData));
+  await actor.update(updateData);
+  console.log(`${LOG_PREFIX} set_temp_hp done, actor hp now=`, actor.system?.attributes?.hp);
+  return true;
+}
+
+async function applySetMaxHpBonus(payload) {
+  if (!payload) return false;
+  const tempmaxValue = Number(payload.tempmax);
+  console.log(`${LOG_PREFIX} set_max_hp_bonus payload=`, payload, `tempmaxValue=${tempmaxValue}`);
+  if (!Number.isFinite(tempmaxValue)) {
+    console.warn(`${LOG_PREFIX} set_max_hp_bonus missing/invalid tempmax`);
+    return false;
+  }
+  const actor = resolveActor(payload);
+  if (!actor) {
+    console.warn(`${LOG_PREFIX} set_max_hp_bonus actor not found`, {
+      tokenId: payload.tokenId ?? null,
+      actorId: payload.actorId ?? null,
+    });
+    return false;
+  }
+  console.log(`${LOG_PREFIX} set_max_hp_bonus applying to actor=${actor.name} value=${tempmaxValue}`);
+  const updateData = { "system.attributes.hp.tempmax": tempmaxValue };
+  console.log(`${LOG_PREFIX} set_max_hp_bonus update data=`, JSON.stringify(updateData));
+  await actor.update(updateData);
+  console.log(`${LOG_PREFIX} set_max_hp_bonus done, actor hp now=`, actor.system?.attributes?.hp);
+  return true;
+}
+
 async function applySetInitiative(payload) {
   const initiativeValue = Number(payload.initiative);
   if (!Number.isFinite(initiativeValue)) {
@@ -507,6 +558,10 @@ async function handleCommand(cmd) {
       applied = true;
     } else if (type === "set_hp") {
       applied = await applySetHp(payload);
+    } else if (type === "set_temp_hp") {
+      applied = await applySetTempHp(payload);
+    } else if (type === "set_max_hp_bonus") {
+      applied = await applySetMaxHpBonus(payload);
     } else if (type === "set_initiative") {
       applied = await applySetInitiative(payload);
     } else if (type === "next_turn") {
@@ -697,6 +752,7 @@ Hooks.once("init", () => {
 });
 
 Hooks.once("ready", () => {
+  console.log(`${LOG_PREFIX} bridge.js loaded version=${BRIDGE_JS_VERSION}`);
   // Only the GM client should send snapshots and process commands.
   // Player clients don't have permission to modify other actors or advance
   // combat, and their attempts to do so cause errors visible to players.

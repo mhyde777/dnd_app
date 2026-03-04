@@ -243,6 +243,9 @@ class Application:
             if isinstance(hp_data, dict):
                 hp_value = hp_data.get("value")
                 hp_max = hp_data.get("max")
+                hp_temp = hp_data.get("temp")
+                hp_tempmax = hp_data.get("tempmax")
+                print(f"[Bridge][HP] {creature_name!r}: value={hp_value} max={hp_max} temp={hp_temp} tempmax={hp_tempmax}")
                 if hp_value is not None:
                     try:
                         new_hp = int(hp_value)
@@ -255,6 +258,20 @@ class Application:
                         new_max = int(hp_max)
                         if new_max != getattr(creature, "max_hp", None):
                             creature.max_hp = new_max
+                    except (TypeError, ValueError):
+                        pass
+                if hp_temp is not None:
+                    try:
+                        new_temp = max(0, int(hp_temp))
+                        if new_temp != creature.temp_hp:
+                            creature.temp_hp = new_temp
+                    except (TypeError, ValueError):
+                        pass
+                if hp_tempmax is not None:
+                    try:
+                        new_bonus = int(hp_tempmax)
+                        if new_bonus != creature.max_hp_bonus:
+                            creature.max_hp_bonus = new_bonus
                     except (TypeError, ValueError):
                         pass
 
@@ -764,6 +781,68 @@ class Application:
         print(f"[Bridge] enqueue set_hp name={creature_name!r} hp={hp}")
         self.bridge_client.enqueue_set_hp(
             token_id=str(token_id), hp=int(hp), actor_id=str(actor_id) if actor_id else None
+        )
+
+    def _enqueue_bridge_set_temp_hp(self, creature_name: str, temp_hp: int) -> None:
+        if not self.bridge_client.enabled:
+            return
+        creature = None
+        if getattr(self, "manager", None):
+            creature = self.manager.creatures.get(creature_name)
+        if creature and getattr(creature, "_is_lair_action", False):
+            return
+        token_id = (
+            getattr(creature, "token_id", None)
+            or getattr(creature, "foundry_token_id", None)
+        )
+        actor_id = (
+            getattr(creature, "actor_id", None)
+            or getattr(creature, "foundry_actor_id", None)
+        )
+        if not token_id:
+            combatant = self._resolve_bridge_combatant(creature_name)
+            if not combatant:
+                return
+            token_id = combatant.get("tokenId")
+            actor_id = combatant.get("actorId")
+        if not token_id:
+            return
+        print(f"[Bridge] enqueue set_temp_hp name={creature_name!r} temp={temp_hp}")
+        self.bridge_client.enqueue_set_temp_hp(
+            token_id=str(token_id),
+            temp_hp=int(temp_hp),
+            actor_id=str(actor_id) if actor_id else None,
+        )
+
+    def _enqueue_bridge_set_max_hp_bonus(self, creature_name: str, max_hp_bonus: int) -> None:
+        if not self.bridge_client.enabled:
+            return
+        creature = None
+        if getattr(self, "manager", None):
+            creature = self.manager.creatures.get(creature_name)
+        if creature and getattr(creature, "_is_lair_action", False):
+            return
+        token_id = (
+            getattr(creature, "token_id", None)
+            or getattr(creature, "foundry_token_id", None)
+        )
+        actor_id = (
+            getattr(creature, "actor_id", None)
+            or getattr(creature, "foundry_actor_id", None)
+        )
+        if not token_id:
+            combatant = self._resolve_bridge_combatant(creature_name)
+            if not combatant:
+                return
+            token_id = combatant.get("tokenId")
+            actor_id = combatant.get("actorId")
+        if not token_id:
+            return
+        print(f"[Bridge] enqueue set_max_hp_bonus name={creature_name!r} bonus={max_hp_bonus}")
+        self.bridge_client.enqueue_set_max_hp_bonus(
+            token_id=str(token_id),
+            max_hp_bonus=int(max_hp_bonus),
+            actor_id=str(actor_id) if actor_id else None,
         )
 
     def _enqueue_bridge_set_initiative(self, creature_name: str, initiative: int) -> None:
@@ -1627,7 +1706,8 @@ class Application:
                     curr_hp=creature_data['HP'],
                     armor_class=creature_data['AC'],
                     spell_slots=creature_data.get("_spell_slots", {}),
-                    innate_slots=creature_data.get("_innate_slots", {})
+                    innate_slots=creature_data.get("_innate_slots", {}),
+                    ability_uses=creature_data.get("_ability_uses", {}),
                 )
                 self.manager.add_creature(creature)
 
@@ -2181,7 +2261,7 @@ class Application:
 
     # ================= Encounter Builder =====================
     def save_encounter(self):
-        dialog = BuildEncounterWindow(self, statblock_lookup=self.fetch_statblock_for_creature)
+        dialog = BuildEncounterWindow(self, storage_api=self.storage_api)
         if dialog.exec_() != QDialog.Accepted:
             return
 
@@ -2206,7 +2286,8 @@ class Application:
                 armor_class=creature_data["_armor_class"],
                 death_saves_prompt=creature_data.get("_death_saves_prompt", False),
                 spell_slots=creature_data.get("_spell_slots", {}),
-                innate_slots=creature_data.get("_innate_slots", {})
+                innate_slots=creature_data.get("_innate_slots", {}),
+                ability_uses=creature_data.get("_ability_uses", {}),
             )
             encounter_manager.add_creature(creature)
 

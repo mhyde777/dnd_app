@@ -136,6 +136,42 @@ class BridgeClient:
             redact_fields=("tokenId", "actorId"),
         )
 
+    def enqueue_set_temp_hp(
+        self,
+        token_id: str,
+        temp_hp: int,
+        actor_id: Optional[str] = None,
+        command_id: Optional[str] = None,
+    ) -> bool:
+        payload = {"tokenId": token_id, "temp": int(temp_hp)}
+        if actor_id:
+            payload["actorId"] = actor_id
+        return self._post_command(
+            command_type="set_temp_hp",
+            payload=payload,
+            command_id=command_id,
+            log_label="set_temp_hp",
+            redact_fields=("tokenId", "actorId"),
+        )
+
+    def enqueue_set_max_hp_bonus(
+        self,
+        token_id: str,
+        max_hp_bonus: int,
+        actor_id: Optional[str] = None,
+        command_id: Optional[str] = None,
+    ) -> bool:
+        payload = {"tokenId": token_id, "tempmax": int(max_hp_bonus)}
+        if actor_id:
+            payload["actorId"] = actor_id
+        return self._post_command(
+            command_type="set_max_hp_bonus",
+            payload=payload,
+            command_id=command_id,
+            log_label="set_max_hp_bonus",
+            redact_fields=("tokenId", "actorId"),
+        )
+
     def send_set_initiative(
         self,
         initiative: int,
