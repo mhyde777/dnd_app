@@ -254,7 +254,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.load_enc_button = QAction("Load Encounter", self)
         self.load_enc_button.triggered.connect(self.load_encounter)
         self.encounter_menu.addAction(self.load_enc_button)
-        # self.filetool_bar.addAction(self.load_enc_button)
+        self.filetool_bar.addAction(self.load_enc_button)
 
         self.add_button = QAction("Add Combatant", self)
         self.add_button.triggered.connect(self.add_combatant)
@@ -262,7 +262,7 @@ class InitiativeTracker(QMainWindow, Application):
 
         self.rmv_button = QAction("Remove Combatants", self)
         self.rmv_button.triggered.connect(self.remove_combatant)
-        self.filetool_bar.addAction(self.rmv_button)
+        # self.filetool_bar.addAction(self.rmv_button)
 
         self.build_encounter = QAction("Build Encounter", self)
         self.build_encounter.triggered.connect(self.save_encounter)
@@ -281,7 +281,6 @@ class InitiativeTracker(QMainWindow, Application):
         # self.edit_menu.addAction(self.load_enc_button)
         self.edit_menu.addAction(self.add_button)
         self.edit_menu.addAction(self.rmv_button)
-
 
         self.active_encounters = QAction("Activate/Deactivate Encounters", self)
         self.active_encounters.triggered.connect(self.manage_encounter_statuses)
