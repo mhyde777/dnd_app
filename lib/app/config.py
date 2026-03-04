@@ -31,13 +31,6 @@ def use_storage_api_only() -> bool:
     return os.getenv("USE_STORAGE_API_ONLY", "0").strip() not in ("", "0", "false", "False")
 
 
-def player_view_enabled() -> bool:
-    """
-    If set, start the Player View HTTP server.
-    """
-    return os.getenv("PLAYER_VIEW_ENABLED", "0").strip() not in ("", "0", "false", "False")
-
-
 def local_bridge_enabled() -> bool:
     """
     If set, start a local bridge server inside the app process.

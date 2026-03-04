@@ -367,9 +367,9 @@ class StatblockWidget(QTextBrowser):
                 f'&nbsp;&nbsp;<b>Proficiency Bonus</b> +{pb}</p>'
             )
 
-        # Traits (skip spellcasting — rendered separately)
+        # Traits (skip bare "Spellcasting" — rendered separately; keep "Potent Spellcasting" etc.)
         traits = [t for t in data.get("special_traits", [])
-                  if "spellcasting" not in t["name"].lower()]
+                  if not re.match(r'^(innate\s+)?spellcasting(\s*\(|$)', t["name"].strip(), re.IGNORECASE)]
         if traits:
             p.append(_divider())
             for trait in traits:
@@ -387,7 +387,7 @@ class StatblockWidget(QTextBrowser):
             ("reactions",     "Reactions"),
         ]:
             entries = [e for e in data.get(key, [])
-                       if "spellcasting" not in e["name"].lower()]
+                       if not re.match(r'^(innate\s+)?spellcasting(\s*\(|$)', e["name"].strip(), re.IGNORECASE)]
             if entries:
                 p.append(_section_header(label))
                 for entry in entries:
@@ -498,6 +498,9 @@ class StatblockWidget(QTextBrowser):
         if atk is not None:
             sign = "+" if atk >= 0 else ""
             meta.append(f"Spell Attack {sign}{atk}")
+        cantrip_bonus = sc.get("cantrip_damage_bonus")
+        if cantrip_bonus is not None:
+            meta.append(f"Cantrip Damage +{cantrip_bonus}")
 
         p.append(
             f'<p style="margin:3px 0;">'
