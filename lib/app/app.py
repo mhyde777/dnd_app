@@ -2261,7 +2261,7 @@ class Application:
 
     # ================= Encounter Builder =====================
     def save_encounter(self):
-        dialog = BuildEncounterWindow(self, statblock_lookup=self.fetch_statblock_for_creature)
+        dialog = BuildEncounterWindow(self, storage_api=self.storage_api)
         if dialog.exec_() != QDialog.Accepted:
             return
 
