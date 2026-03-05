@@ -8,26 +8,23 @@ from PyQt5.QtWidgets import (
     QPushButton, QMessageBox, QHBoxLayout
 )
 
-from app.config import get_storage_api_base, use_storage_api_only, get_config_path
-from app.storage_api import StorageAPI
+from app.config import get_config_path
 
 STATUS_PATH = get_config_path("encounter_status.json")
 
 class LoadEncounterWindow(QDialog):
     """
     Storage-backed 'Load/Merge Encounter' picker.
+
+    Accepts a storage object (StorageAPI or LocalStorage) from the caller
+    so it uses the same backend as the rest of the app.
     """
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, storage=None):
         super().__init__(parent)
         self.setWindowTitle("Load/Merge Encounter")
         self.selected_file = None
-
-        self.storage_api = None
-        if use_storage_api_only():
-            base = get_storage_api_base()
-            if base:
-                self.storage_api = StorageAPI(base)
+        self.storage_api = storage
 
         layout = QVBoxLayout(self)
 
@@ -38,7 +35,6 @@ class LoadEncounterWindow(QDialog):
         self.encounter_list.setSelectionMode(QListWidget.SingleSelection)
         layout.addWidget(self.encounter_list)
 
-        # Buttons
         row = QHBoxLayout()
         self.load_btn = QPushButton("Load")
         self.cancel_btn = QPushButton("Cancel")
@@ -54,9 +50,10 @@ class LoadEncounterWindow(QDialog):
     def _populate(self):
         try:
             if not self.storage_api:
-                raise RuntimeError("Storage API not configured.")
+                raise RuntimeError(
+                    "Storage is not configured.\n\nGo to File → Settings to configure storage."
+                )
 
-            # reuse existing status file for active/inactive toggles
             encounter_status = {}
             if os.path.exists(STATUS_PATH):
                 with open(STATUS_PATH, "r") as f:
@@ -68,15 +65,15 @@ class LoadEncounterWindow(QDialog):
                     isinstance(filename, str)
                     and filename.endswith(".json")
                     and filename not in ("players.json", "last_state.json")
-                    and encounter_status.get(filename, True)  # default active
+                    and encounter_status.get(filename, True)
                 ):
                     display = filename.replace("_", " ").replace(".json", "")
                     item = QListWidgetItem(display)
-                    item.setData(Qt.UserRole, filename)  # store Storage key
+                    item.setData(Qt.UserRole, filename)
                     self.encounter_list.addItem(item)
 
             if self.encounter_list.count() == 0:
-                self.info_label.setText("No encounters found in Storage.")
+                self.info_label.setText("No encounters found.")
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to load encounters: {e}")
             self.reject()
@@ -86,5 +83,5 @@ class LoadEncounterWindow(QDialog):
         if not item:
             QMessageBox.information(self, "No Selection", "Please select an Encounter.")
             return
-        self.selected_file = item.data(Qt.UserRole)  # Storage key
+        self.selected_file = item.data(Qt.UserRole)
         self.accept()

@@ -1,6 +1,5 @@
 # app/storage_api.py
 from __future__ import annotations
-import base64
 import json
 from typing import Optional, Any, Dict, Iterable, List
 import os
@@ -52,15 +51,6 @@ class StorageAPI:
 
     def _statblock_item_url(self, key: str) -> str:
         return f"{self._statblocks_url()}/{key}"
-
-    def _images_url(self) -> str:
-        return f"{self.base_url}/v1/images"
-
-    def _images_items_url(self) -> str:
-        return f"{self._images_url()}/items"
-
-    def _image_item_url(self, key: str) -> str:
-        return f"{self._images_url()}/{key}"
 
     def _headers(self) -> dict:
         if getattr(self, "api_key", ""):
@@ -160,16 +150,6 @@ class StorageAPI:
         ]
         return self._list_from_candidates(candidates)
 
-    def list_images(self) -> List[str]:
-        """
-        Return a list of image keys (e.g., ["Gbolin.png", ...]).
-        """
-        candidates = [
-            self._images_items_url(),
-            self._images_url(),
-        ]
-        return self._list_from_candidates(candidates)
-
     def get(self, key: str) -> Optional[dict]:
         """
         GET the JSON object for a given key. Returns dict or None if 404.
@@ -215,14 +195,6 @@ class StorageAPI:
                 r.raise_for_status()
         except Exception as e:
             raise RuntimeError(f"StorageAPI.delete({key}) failed: {e}") from e
-
-    def delete_image(self, key: str) -> None:
-        try:
-            r: Response = self.session.delete(self._image_item_url(key), timeout=8)
-            if r.status_code not in (200, 204, 404):
-                r.raise_for_status()
-        except Exception as e:
-            raise RuntimeError(f"StorageAPI.delete_image({key}) failed: {e}") from e
 
     # ----- Helpers tailored to your app’s JSON encoding -----
 
@@ -328,76 +300,4 @@ class StorageAPI:
         except Exception as e:
             raise RuntimeError(f"StorageAPI.delete_spell({key}) failed: {e}") from e
 
-    # ----- Image helpers -----
-
-    @staticmethod
-    def _decode_image_payload(payload: Any) -> Optional[bytes]:
-        if isinstance(payload, dict):
-            for key in ("data", "content", "base64", "image"):
-                if key in payload:
-                    payload = payload[key]
-                    break
-        if isinstance(payload, str):
-            text = payload.strip()
-            if text.startswith("data:") and "," in text:
-                text = text.split(",", 1)[1]
-            try:
-                return base64.b64decode(text, validate=False)
-            except Exception:
-                return None
-        return None
-
-    def get_image_bytes(self, key: str) -> Optional[bytes]:
-        try:
-            r: Response = self.session.get(self._image_item_url(key), timeout=8)
-            if r.status_code == 404:
-                return None
-            r.raise_for_status()
-            content_type = r.headers.get("Content-Type", "")
-            if "application/json" in content_type or "text/json" in content_type:
-                payload = r.json()
-                payload = self._unwrap_data(payload)
-                decoded = self._decode_image_payload(payload)
-                if decoded:
-                    return decoded
-                return None
-            return r.content
-        except Exception as e:
-            raise RuntimeError(f"StorageAPI.get_image_bytes({key}) failed: {e}") from e
-
-    def put_image_bytes(self, key: str, data: bytes, content_type: Optional[str] = None) -> None:
-        """
-        Upload image bytes to Storage API.
-
-        Server expects:
-          POST /v1/images/upload
-          multipart/form-data: file=<uploaded file>, optional folder=<subdir>
-          Header: X-Api-Key
-        """
-        try:
-            # Parse optional folder from key (supports "folder/name.png" or just "name.png")
-            folder = ""
-            filename = key.replace("\\", "/").strip("/")
-            if "/" in filename:
-                folder, filename = filename.rsplit("/", 1)
-
-            headers = self._headers()
-            # IMPORTANT: do NOT set Content-Type here; requests will set multipart boundary.
-            files = {
-                "file": (filename, data, content_type or "application/octet-stream"),
-            }
-            form = {}
-            if folder:
-                form["folder"] = folder
-
-            r: Response = self.session.post(
-                f"{self.base_url}/v1/images/upload",
-                headers=headers,
-                files=files,
-                data=form,
-                timeout=20,
-            )
-            r.raise_for_status()
-        except Exception as e:
-            raise RuntimeError(f"StorageAPI.put_image_bytes({key}) failed: {e}") from e
 
