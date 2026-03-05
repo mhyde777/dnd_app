@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import(
     QApplication, QInputDialog, QLineEdit
 ) 
 from PyQt5.QtGui import (
-        QPixmap, QFont, QPixmapCache
+        QPixmap, QFont
 )
 from PyQt5.QtCore import Qt, QTimer
 from app.creature import (
@@ -20,6 +20,7 @@ from app.config import (
     bridge_stream_enabled,
     get_storage_api_base,
     get_config_path,
+    get_local_data_dir,
     local_bridge_enabled,
     player_view_enabled,
     use_storage_api_only,
@@ -53,7 +54,6 @@ class Application:
         self.current_idx: int = 0         # pointer into turn_order
         self.current_creature_name: Optional[str] = None
 
-        self.image_cache: Dict[str, bytes] = {}
 
         self.boolean_fields = {
             '_action': 'set_creature_action',
@@ -88,20 +88,22 @@ class Application:
             self.player_view_server = PlayerViewServer(self.get_player_view_payload)
             self.player_view_server.start()
 
-        # --- Storage API only mode ---
+        # --- Storage backend ---
         self.storage_api: Optional[StorageAPI] = None
         self.storage_api_warning: Optional[str] = None
         if use_storage_api_only():
             base = get_storage_api_base()
             if not base:
                 self.storage_api_warning = (
-                    "USE_STORAGE_API_ONLY is enabled, but STORAGE_API_BASE is missing.\n\n"
-                    "Either set STORAGE_API_BASE (e.g., http://127.0.0.1:8000) or remove "
-                    "USE_STORAGE_API_ONLY to use local files"
+                    "Remote API mode is enabled, but no API URL is configured.\n\n"
+                    "Go to File → Settings to set your API URL, or switch to Local Files mode."
                 )
             else:
-                # self._log(f"[INFO] Using Storage API at {base}.")
                 self.storage_api = StorageAPI(base)
+        else:
+            from app.local_storage import LocalStorage
+            data_dir = get_local_data_dir() or get_config_path("data")
+            self.storage_api = LocalStorage(data_dir)
 
     def start_bridge_polling(self) -> None:
         if not self.bridge_client.enabled:
@@ -1149,7 +1151,7 @@ class Application:
 
     def save_encounter_to_storage(self, filename: str, description: str = ""):
         if not self.storage_api:
-            raise RuntimeError("Storage API not configured.")
+            raise RuntimeError("Storage is not configured. Go to File → Settings.")
         # Prepare state
         state = GameState()
         state.players = [c for c in self.manager.creatures.values() if isinstance(c, Player)]
@@ -1171,7 +1173,7 @@ class Application:
             QMessageBox.critical(
                 self,
                 "Storage Not Configured",
-                "Storage API is not configured.\n\nSet USE_STORAGE_API_ONLY=1 and STORAGE_API_BASE in your .env."
+                "Storage is not configured.\n\nGo to File → Settings to configure storage."
             )
             return
 
@@ -1228,22 +1230,16 @@ class Application:
         description = "Auto-saved state from initiative tracker"
 
         try:
-            # --- Preferred: save to Storage API ---
             if getattr(self, "storage_api", None):
-                # Optional metadata block
-                # save_data["_meta"] = {"description": description}
                 self.storage_api.put_json(filename, save_data)
-                print("[INFO] Saved state to Storage API as last_state.json")
                 if hasattr(self, "show_status_message"):
-                    self.show_status_message("State saved to Storage API")
+                    self.show_status_message("State saved")
             else:
-                # --- Fallback: save to local file ---
                 file_path = self.get_data_path(filename)
                 with open(file_path, "w", encoding="utf-8") as f:
                     json.dump(save_data, f, ensure_ascii=False, indent=2)
-                print("[INFO] Saved state locally as last_state.json")
                 if hasattr(self, "show_status_message"):
-                    self.show_status_message("State saved locally")
+                    self.show_status_message("State saved")
         except Exception as e:
             print(f"[ERROR] Failed to save state: {e}")
 
@@ -1955,14 +1951,14 @@ class Application:
     # ----------------
     # Path Functions
     # ----------------
-    def get_image_path(self, filename):
-        return os.path.join(self.get_parent_dir(), 'images', filename)
-
     def get_data_path(self, filename):
         return os.path.join(self.get_data_dir(), filename)
 
     def get_data_dir(self):
-        if getattr(sys, "frozen", False):
+        custom = get_local_data_dir()
+        if custom:
+            data_dir = custom
+        elif getattr(sys, "frozen", False):
             data_dir = get_config_path("data")
         else:
             data_dir = os.path.join(self.get_parent_dir(), 'data')
@@ -1973,23 +1969,6 @@ class Application:
         if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
             return sys._MEIPASS
         return os.path.abspath(os.path.join(self.base_dir, '../../'))
-
-    def get_extensions(self):
-        return ('png', 'jpg', 'jpeg', 'gif')
-
-    def get_image_bytes(self, filename: str) -> Optional[bytes]:
-        if filename in self.image_cache:
-            return self.image_cache[filename]
-        if not getattr(self, "storage_api", None):
-            return None
-        try:
-            data = self.storage_api.get_image_bytes(filename)
-        except Exception as e:
-            self._log(f"[WARN] Failed to fetch image '{filename}' from storage: {e}")
-            return None
-        if data:
-            self.image_cache[filename] = data
-            return data
 
     # -------------------------------
     # Change Manager with Table Edits
@@ -2069,7 +2048,6 @@ class Application:
         self.resize_to_fit_screen(base_name)
 
     def resize_to_fit_screen(self, base_name):
-        # 1) Try JSON statblock first
         if self.storage_api:
             try:
                 from app.statblock_parser import statblock_key
@@ -2077,65 +2055,15 @@ class Application:
                 if data:
                     self.statblock_widget.set_storage_api(self.storage_api)
                     self.statblock_widget.load_statblock(data)
-                    self.statblock_stack.setCurrentIndex(1)
-                    self.statblock_stack.show()
+                    self.statblock_widget.show()
                     return
             except Exception:
                 pass
-
-        # 2) Fall back to image
-        self.statblock_stack.setCurrentIndex(0)
-
-        screen_geometry = QApplication.primaryScreen().availableGeometry()
-        screen_width = screen_geometry.width()
-        screen_height = screen_geometry.height()
-
-        max_width = int(screen_width * 0.35)
-        max_height = int(screen_height * 0.7)
-
-        extensions = self.get_extensions()
-        for ext in extensions:
-            filename = f"{base_name}.{ext}"
-            image_path = self.get_image_path(filename)
-            pixmap = None
-
-            # 2a) Prefer server (prevents stale local cache)
-            data = self.get_image_bytes(filename)
-            if data:
-                pixmap = QPixmap()
-                pixmap.loadFromData(data)
-
-                # Optional local cache for remote images (disabled by default)
-                if os.getenv("CACHE_REMOTE_IMAGES", "0") == "1":
-                    try:
-                        os.makedirs(os.path.dirname(image_path), exist_ok=True)
-                        with open(image_path, "wb") as f:
-                            f.write(data)
-                    except Exception:
-                        pass
-
-            # 2b) Fallback to local file if server didn't return anything
-            if (pixmap is None or pixmap.isNull()) and os.path.exists(image_path):
-                pixmap = QPixmap(image_path)
-
-            if pixmap and not pixmap.isNull():
-                self.pixmap = pixmap
-                scaled_pixmap = self.pixmap.scaled(
-                    max_width, max_height, Qt.KeepAspectRatio, Qt.SmoothTransformation
-                )
-
-                # Clear Qt pixmap cache before updating display
-                QPixmapCache.clear()
-
-                self.statblock.setPixmap(scaled_pixmap)
-                self.statblock_stack.show()
-                break
+        self._clear_statblock()
 
     def _clear_statblock(self):
-        """Clear both statblock widgets and hide the panel."""
-        self.statblock.clear()
         self.statblock_widget.clear_statblock()
-        self.statblock_stack.hide()
+        self.statblock_widget.hide()
 
     def open_import_statblock_dialog(self):
         from ui.statblock_import_dialog import StatblockImportDialog
@@ -2157,10 +2085,10 @@ class Application:
         self._lookup_dialog.focus_search()
 
     def hide_statblock(self):
-        self.statblock_stack.hide()
+        self.statblock_widget.hide()
 
     def show_statblock(self):
-        self.statblock_stack.show()
+        self.statblock_widget.show()
 
 # ================= Damage/Healing ======================
     def heal_selected_creatures(self):
@@ -2316,7 +2244,7 @@ class Application:
 
     # ================== Secondary Windows ======================
     def load_encounter(self):
-        dialog = LoadEncounterWindow(self)
+        dialog = LoadEncounterWindow(self, storage=self.storage_api)
         if dialog.exec_() == QDialog.Accepted and dialog.selected_file:
             self.load_file_to_manager(dialog.selected_file, self.manager, prompt_for_initiatives=True)
             # After load, use the active creature from stable order
@@ -2329,7 +2257,7 @@ class Application:
                 self.show_status_message(f"Loaded encounter: {dialog.selected_file}")
 
     def merge_encounter(self):
-        dialog = LoadEncounterWindow(self)
+        dialog = LoadEncounterWindow(self, storage=self.storage_api)
         if dialog.exec_() == QDialog.Accepted and dialog.selected_file:
             self.load_file_to_manager(dialog.selected_file, self.manager, merge=True, prompt_for_initiatives=False)
 
@@ -2360,14 +2288,35 @@ class Application:
             # Optional: refresh any open pickers or cached lists here
             pass
     
-    def manage_images(self):
-        from ui.manage_images import ManageImagesWindow
-        if not getattr(self, "storage_api", None):
-            QMessageBox.information(self, "Unavailable", "Storage API not configured.")
-            return
-        dlg = ManageImagesWindow(self.storage_api, self)
-        if dlg.exec_() == QDialog.Accepted and getattr(dlg, "updated", False):
-            self.image_cache.clear()
+    def open_settings(self):
+        from ui.setup_wizard import SetupWizard
+        dlg = SetupWizard(self)
+        if dlg.exec_() == QDialog.Accepted:
+            QMessageBox.information(
+                self,
+                "Settings Saved",
+                "Settings saved. Restart the app for storage changes to take effect."
+            )
+
+    def open_customize_toolbar(self):
+        from ui.toolbar_customize_dialog import ToolbarCustomizeDialog
+        from PyQt5.QtWidgets import QDialog
+        dlg = ToolbarCustomizeDialog(self)
+        if dlg.exec_() == QDialog.Accepted:
+            self._apply_toolbar_config()
+
+    def _apply_toolbar_config(self):
+        from ui.toolbar_customize_dialog import load_toolbar_items
+        self.filetool_bar.clear()
+        for action_id in load_toolbar_items():
+            action = self._toolbar_action_map.get(action_id)
+            if action:
+                self.filetool_bar.addAction(action)
+
+    def _toolbar_context_menu(self, pos):
+        menu = __import__('PyQt5.QtWidgets', fromlist=['QMenu']).QMenu(self)
+        menu.addAction("Customize Toolbar…", self.open_customize_toolbar)
+        menu.exec_(self.filetool_bar.mapToGlobal(pos))
 
     def create_or_update_characters(self):
         dialog = UpdateCharactersWindow(self)
