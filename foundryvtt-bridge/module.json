@@ -1,8 +1,8 @@
 {
   "id": "foundryvtt-bridge",
   "title": "Foundry Bridge Sync",
-  "description": "Posts combat snapshots to the local bridge service for read-only sync.",
-  "version": "0.2.0",
+  "description": "Posts combat snapshots to the local bridge service and enables direct socket.io sync with the D&D Combat Tracker app.",
+  "version": "0.3.0",
   "authors": [
     {
       "name": "DND App" 
@@ -10,8 +10,9 @@
   ],
   "compatibility": {
     "minimum": "10",
-    "verified": "12"
+    "verified": "13"
   },
+  "socket": true,
   "scripts": [
     "bridge.js"
   ]
