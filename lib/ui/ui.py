@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import (
     QAction, QMenuBar, QDesktopWidget, QTableView,
     QSizePolicy, QMessageBox, QDialog, QDialogButtonBox,
     QMenu, QTextEdit, QGroupBox, QStatusBar, QShortcut,
-    QStackedWidget, QWidgetAction, QFormLayout, QSpinBox,
+    QWidgetAction, QFormLayout, QSpinBox,
 )
 from ui.statblock_widget import StatblockWidget
 from PyQt5.QtCore import Qt
@@ -18,7 +18,7 @@ from ui.creature_table_model import CreatureTableModel
 from ui.delegates import CreatureTableDelegate
 from ui.spellcasting_dropdown import SpellcastingDropdown
 from ui.ability_uses_dropdown import AbilityUsesDropdown
-from app.config import use_storage_api_only
+from app.config import player_view_enabled, use_storage_api_only
 from ui.conditions_dropdown import ConditionsDropdown, DEFAULT_CONDITIONS
 
 class InitiativeTracker(QMainWindow, Application):
@@ -72,14 +72,14 @@ class InitiativeTracker(QMainWindow, Application):
 
         self.label_layout.addStretch()
 
-        self.bridge_toggle = QPushButton("Foundry Bridge: Pause", self)
-        self.bridge_toggle.setCheckable(True)
-        self.bridge_toggle.setChecked(False)
-        self.bridge_toggle.clicked.connect(self.toggle_bridge_sync)
-        if getattr(self, "bridge_client", None) and self.bridge_client.enabled:
-            self.label_layout.addWidget(self.bridge_toggle)
+        self.player_view_toggle = QPushButton("Live Updates: Pause", self)
+        self.player_view_toggle.setCheckable(True)
+        self.player_view_toggle.setChecked(False)
+        self.player_view_toggle.clicked.connect(self.toggle_player_view_live)
+        if player_view_enabled():
+            self.label_layout.addWidget(self.player_view_toggle)
         else:
-            self.bridge_toggle.hide()
+            self.player_view_toggle.hide()
 
         # === TABLE AREA (under labels) ===
         self.table_model = CreatureTableModel(self.manager, parent=self, bridge_owner=self)
@@ -159,14 +159,7 @@ class InitiativeTracker(QMainWindow, Application):
         # === RIGHT PANEL: STATBLOCK VIEW ===
         self.stat_layout = QVBoxLayout()
 
-        # Stacked widget: index 0 = image fallback (QLabel), index 1 = JSON renderer
-        self.statblock = QLabel(self)
-        self.statblock.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
         self.statblock_widget = StatblockWidget(self)
-        self.statblock_stack = QStackedWidget(self)
-        self.statblock_stack.addWidget(self.statblock)         # 0 — image
-        self.statblock_stack.addWidget(self.statblock_widget)  # 1 — JSON
-        self.statblock_stack.setCurrentIndex(1)
 
         self.monster_list = QListWidget(self)
         self.monster_list.setSelectionMode(QListWidget.SingleSelection)
@@ -191,7 +184,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.list_buttons.addStretch()
 
         # Statblock fills available space; buttons pinned at bottom
-        self.stat_layout.addWidget(self.statblock_stack, stretch=1)
+        self.stat_layout.addWidget(self.statblock_widget, stretch=1)
         self.stat_layout.addLayout(self.list_buttons)
 
         # === Wrap and attach all to main layout ===
@@ -233,7 +226,6 @@ class InitiativeTracker(QMainWindow, Application):
 
         self.edit_menu = self.menu_bar.addMenu("&Edit")
         self.encounter_menu = self.menu_bar.addMenu("&Encounters")
-        self.images_menu = self.menu_bar.addMenu("&Images")
         self.monsters_menu = self.menu_bar.addMenu("&Parsers")
 
         self.filetool_bar = QToolBar("File", self)
@@ -241,11 +233,23 @@ class InitiativeTracker(QMainWindow, Application):
 
         self.save_action = QAction("Save", self)
         self.save_action.triggered.connect(self.save_state)
+        self.save_action.setShortcut(QKeySequence("Ctrl+S"))
+        self.save_action.setToolTip("Save current state (Ctrl+S)")
         self.file_menu.addAction(self.save_action)
 
         self.save_as_action = QAction('Save As', self)
         self.save_as_action.triggered.connect(self.save_as_encounter)
+        self.save_as_action.setToolTip("Save current encounter as a new file")
         self.file_menu.addAction(self.save_as_action)
+
+        self.file_menu.addSeparator()
+        self.settings_action = QAction("Settings…", self)
+        self.settings_action.triggered.connect(self.open_settings)
+        self.file_menu.addAction(self.settings_action)
+
+        self.customize_toolbar_action = QAction("Customize Toolbar…", self)
+        self.customize_toolbar_action.triggered.connect(self.open_customize_toolbar)
+        self.file_menu.addAction(self.customize_toolbar_action)
 
         self.initialize_players_action = QAction("Initialize", self)
         self.initialize_players_action.triggered.connect(self.init_players)
@@ -253,16 +257,18 @@ class InitiativeTracker(QMainWindow, Application):
 
         self.load_enc_button = QAction("Load Encounter", self)
         self.load_enc_button.triggered.connect(self.load_encounter)
+        self.load_enc_button.setToolTip("Load a saved encounter")
         self.encounter_menu.addAction(self.load_enc_button)
-        self.filetool_bar.addAction(self.load_enc_button)
 
         self.add_button = QAction("Add Combatant", self)
         self.add_button.triggered.connect(self.add_combatant)
-        self.filetool_bar.addAction(self.add_button)
+        self.add_button.setToolTip("Add new combatants to the encounter")
+        self.edit_menu.addAction(self.add_button)
 
         self.rmv_button = QAction("Remove Combatants", self)
         self.rmv_button.triggered.connect(self.remove_combatant)
-        # self.filetool_bar.addAction(self.rmv_button)
+        self.rmv_button.setToolTip("Remove combatants from the encounter")
+        self.edit_menu.addAction(self.rmv_button)
 
         self.build_encounter = QAction("Build Encounter", self)
         self.build_encounter.triggered.connect(self.save_encounter)
@@ -270,17 +276,12 @@ class InitiativeTracker(QMainWindow, Application):
 
         self.merge_encounters = QAction('Merge Encounters', self)
         self.merge_encounters.triggered.connect(self.merge_encounter)
+        self.merge_encounters.setToolTip("Merge another encounter into the current one")
         self.encounter_menu.addAction(self.merge_encounters)
-        self.filetool_bar.addAction(self.merge_encounters)
 
         self.add_lair_action_button = QAction("Add Lair Action", self)
         self.add_lair_action_button.triggered.connect(self.add_lair_action_combatant)
         self.encounter_menu.addAction(self.add_lair_action_button)
-        self.filetool_bar.addAction(self.add_lair_action_button)
-
-        # self.edit_menu.addAction(self.load_enc_button)
-        self.edit_menu.addAction(self.add_button)
-        self.edit_menu.addAction(self.rmv_button)
 
         self.active_encounters = QAction("Activate/Deactivate Encounters", self)
         self.active_encounters.triggered.connect(self.manage_encounter_statuses)
@@ -293,10 +294,6 @@ class InitiativeTracker(QMainWindow, Application):
         self.update_characters_action = QAction("Create/Update Characters", self)
         self.update_characters_action.triggered.connect(self.create_or_update_characters)
         self.characters_menu.addAction(self.update_characters_action)
-
-        self.manage_images_action = QAction("Mange Images", self)
-        self.manage_images_action.triggered.connect(self.manage_images)
-        self.images_menu.addAction(self.manage_images_action)
 
         self.import_statblock_action = QAction("Import Statblock...", self)
         self.import_statblock_action.triggered.connect(self.open_import_statblock_dialog)
@@ -312,11 +309,6 @@ class InitiativeTracker(QMainWindow, Application):
         self.lookup_action.setToolTip("Look up spells, monsters, and conditions (Ctrl+L)")
         self.lookup_action.triggered.connect(self.open_lookup_dialog)
         self.monsters_menu.addAction(self.lookup_action)
-        self.filetool_bar.addSeparator()
-        self.filetool_bar.addAction(self.lookup_action)
-
-        # -- Keyboard shortcuts --
-        self.save_action.setShortcut(QKeySequence("Ctrl+S"))
 
         self.next_turn_action = QAction("Next Turn", self)
         self.next_turn_action.setShortcut(QKeySequence("Ctrl+N"))
@@ -328,13 +320,33 @@ class InitiativeTracker(QMainWindow, Application):
         self.prev_turn_action.triggered.connect(self.prev_turn)
         self.edit_menu.addAction(self.prev_turn_action)
 
-        # -- Toolbar tooltips --
-        self.load_enc_button.setToolTip("Load a saved encounter")
-        self.add_button.setToolTip("Add new combatants to the encounter")
-        self.rmv_button.setToolTip("Remove combatants from the encounter")
-        self.merge_encounters.setToolTip("Merge another encounter into the current one")
-        self.save_action.setToolTip("Save current state (Ctrl+S)")
-        self.save_as_action.setToolTip("Save current encounter as a new file")
+        # Build the id → QAction map used by _apply_toolbar_config
+        self._toolbar_action_map: dict[str, QAction] = {
+            "save":                 self.save_action,
+            "save_as":              self.save_as_action,
+            "add_combatant":        self.add_button,
+            "remove_combatants":    self.rmv_button,
+            "load_encounter":       self.load_enc_button,
+            "build_encounter":      self.build_encounter,
+            "merge_encounters":     self.merge_encounters,
+            "add_lair_action":      self.add_lair_action_button,
+            "reference_lookup":     self.lookup_action,
+            "initialize":           self.initialize_players_action,
+            "next_turn":            self.next_turn_action,
+            "prev_turn":            self.prev_turn_action,
+            "activate_encounters":  self.active_encounters,
+            "delete_encounter":     self.delete_encounters_button,
+            "update_characters":    self.update_characters_action,
+            "import_statblock":     self.import_statblock_action,
+            "import_spell":         self.import_spell_action,
+        }
+
+        # Populate toolbar from saved config (or defaults)
+        self._apply_toolbar_config()
+
+        # Right-click on toolbar opens customize dialog
+        self.filetool_bar.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.filetool_bar.customContextMenuRequested.connect(self._toolbar_context_menu)
 
     def update_size_constraints(self):
         # Get the current screen where the app is being displayed
@@ -528,6 +540,13 @@ class InitiativeTracker(QMainWindow, Application):
             return editor.toPlainText()
         return None
 
+    def _refresh_player_view(self):
+        if hasattr(self, "player_view_live") and not self.player_view_live:
+            try:
+                self.player_view_snapshot = self._build_player_view_payload()
+            except Exception:
+                pass
+
     def _remove_combatant_by_name(self, name: str):
         if not name:
             return
@@ -543,9 +562,9 @@ class InitiativeTracker(QMainWindow, Application):
             if creature and getattr(creature, "_type", None) == CreatureType.MONSTER:
                 self.active_statblock_image(creature)
             else:
-                self.statblock.clear()
+                self._clear_statblock()
         else:
-            self.statblock.clear()
+            self._clear_statblock()
 
     def _set_active_turn_by_name(self, name: str):
         if not name:
@@ -593,6 +612,7 @@ class InitiativeTracker(QMainWindow, Application):
             creature.player_visible = not bool(getattr(creature, "player_visible", True))
             self.table_model.refresh()
             self.update_table()
+            self._refresh_player_view()
             return
 
         if chosen == edit_public_action:
@@ -601,6 +621,7 @@ class InitiativeTracker(QMainWindow, Application):
                 creature.public_notes = updated
                 self.table_model.refresh()
                 self.update_table()
+                self._refresh_player_view()
             return
 
         if chosen == edit_private_action:
@@ -627,16 +648,12 @@ class InitiativeTracker(QMainWindow, Application):
             self._remove_combatant_by_name(name)
             return
 
-    def toggle_bridge_sync(self, checked):
+    def toggle_player_view_live(self, checked):
         paused = bool(checked)
-        if paused:
-            if hasattr(self, "stop_bridge_sync"):
-                self.stop_bridge_sync()
-        else:
-            if hasattr(self, "start_bridge_sync"):
-                self.start_bridge_sync()
-        self.bridge_toggle.setText(
-            "Foundry Bridge: Resume" if paused else "Foundry Bridge: Pause"
+        if hasattr(self, "set_player_view_paused"):
+            self.set_player_view_paused(paused)
+        self.player_view_toggle.setText(
+            "Live Updates: Resume" if paused else "Live Updates: Pause"
         )
 
     def show_spellcasting_dropdown(self, creature, index):
@@ -710,6 +727,12 @@ class InitiativeTracker(QMainWindow, Application):
         super().keyPressEvent(event)
     
     def closeEvent(self, event):
+        server = getattr(self, "player_view_server", None)
+        if server is not None:
+            try:
+                server.stop()
+            except Exception:
+                pass
         local_bridge = getattr(self, "local_bridge", None)
         if local_bridge is not None:
             try:
