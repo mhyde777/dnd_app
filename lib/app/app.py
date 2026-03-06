@@ -18,6 +18,10 @@ from app.manager import CreatureManager
 from app.storage_api import StorageAPI
 from app.config import (
     bridge_stream_enabled,
+    get_bridge_mode,
+    get_foundry_url,
+    get_foundry_username,
+    get_foundry_password,
     get_storage_api_base,
     get_config_path,
     get_local_data_dir,
@@ -27,6 +31,7 @@ from app.config import (
 )
 from app.player_view_server import PlayerViewServer
 from app.bridge_client import BridgeClient
+from app.foundry_socket_client import FoundrySocketClient
 from app.local_bridge_server import LocalBridgeServer
 from ui.windows import (
     AddCombatantWindow, RemoveCombatantWindow, BuildEncounterWindow
@@ -63,7 +68,8 @@ class Application:
         }
         
         self.local_bridge: Optional[LocalBridgeServer] = None
-        if local_bridge_enabled():
+        _bridge_mode = get_bridge_mode()
+        if _bridge_mode == "local":
             if not os.getenv("BRIDGE_TOKEN"):
                 os.environ["BRIDGE_TOKEN"] = "local-dev"
                 print("[Bridge] BRIDGE_TOKEN not set; defaulting to 'local-dev'.")
@@ -73,7 +79,16 @@ class Application:
             self.local_bridge = LocalBridgeServer.from_env()
             self.local_bridge.start()
 
-        self.bridge_client = BridgeClient.from_env()
+        if _bridge_mode == "foundry_socket":
+            self.bridge_client: Any = FoundrySocketClient(
+                foundry_url=get_foundry_url(),
+                username=get_foundry_username(),
+                password=get_foundry_password(),
+            )
+        elif _bridge_mode == "disabled":
+            self.bridge_client = BridgeClient(base_url="", token="")
+        else:
+            self.bridge_client = BridgeClient.from_env()
         self.bridge_snapshot: Optional[Dict[str, Any]] = None
         self.bridge_timer: Optional[QTimer] = None
         self.bridge_stream_thread: Optional[threading.Thread] = None

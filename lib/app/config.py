@@ -46,3 +46,30 @@ def local_bridge_enabled() -> bool:
 
 def bridge_stream_enabled() -> bool:
     return os.getenv("BRIDGE_STREAM_ENABLED", "1").strip() not in ("", "0", "false", "False")
+
+# ---- Foundry Direct (socket.io) config ----
+
+def get_bridge_mode() -> str:
+    """
+    Returns the active bridge mode:
+      "disabled"       - no Foundry sync
+      "local"          - local bridge server (Foundry on same machine)
+      "http_bridge"    - remote HTTP bridge service (requires tunnel)
+      "foundry_socket" - direct socket.io connection to remote Foundry
+    """
+    mode = _settings.get("bridge_mode")
+    if mode in ("disabled", "local", "http_bridge", "foundry_socket"):
+        return mode
+    # Legacy: if BRIDGE_TOKEN is set in env, treat as http_bridge
+    if os.getenv("BRIDGE_TOKEN", "").strip():
+        return "http_bridge"
+    return "local"
+
+def get_foundry_url() -> str:
+    return (_settings.get("foundry_url") or os.getenv("FOUNDRY_URL", "")).rstrip("/")
+
+def get_foundry_username() -> str:
+    return _settings.get("foundry_username") or os.getenv("FOUNDRY_USERNAME", "Gamemaster")
+
+def get_foundry_password() -> str:
+    return _settings.get("foundry_password") or os.getenv("FOUNDRY_PASSWORD", "")
