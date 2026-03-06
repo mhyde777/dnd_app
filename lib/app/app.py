@@ -126,7 +126,8 @@ class Application:
         if not self.bridge_client.enabled:
             print("[Bridge] BRIDGE_TOKEN is not set; bridge sync is disabled.")
             return
-        if bridge_stream_enabled():
+        from app.foundry_socket_client import FoundrySocketClient
+        if bridge_stream_enabled() or isinstance(self.bridge_client, FoundrySocketClient):
             self.start_bridge_stream()
             return
         if self.bridge_timer is None:

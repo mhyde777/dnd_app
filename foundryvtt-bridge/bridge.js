@@ -1,14 +1,15 @@
 // foundryvtt-bridge/bridge.js
 const MODULE_ID = "foundryvtt-bridge";
 const BRIDGE_JS_VERSION = "0.2.0";
-const DEFAULT_BRIDGE_URL = "http://127.0.0.1:8787";
+const DEFAULT_BRIDGE_URL = "";
 const LOG_PREFIX = "[bridge]";
 const COMMAND_POLL_INTERVAL_MS = 1500;
 const DEFAULT_USE_COMMAND_STREAM = true;
 
 function getBridgeUrl() {
-  const raw = game.settings.get(MODULE_ID, "bridgeUrl") || DEFAULT_BRIDGE_URL;
-  return raw.replace(/\/$/, "");
+  const raw = game.settings.get(MODULE_ID, "bridgeUrl");
+  if (raw === undefined || raw === null) return DEFAULT_BRIDGE_URL;
+  return String(raw).trim().replace(/\/$/, "");
 }
 
 function getBridgeSecret() {
@@ -650,6 +651,10 @@ async function pollCommands() {
 }
 
 function startCommandPolling() {
+  if (!getBridgeUrl()) {
+    console.log(`${LOG_PREFIX} Bridge URL not set; command polling disabled (using socket.io mode).`);
+    return;
+  }
   if (commandStream) return;
   if (commandPollTimer) return;
 
@@ -691,6 +696,10 @@ function buildCommandStreamUrl() {
 }
 
 function startCommandStream() {
+  if (!getBridgeUrl()) {
+    console.log(`${LOG_PREFIX} Bridge URL not set; command stream disabled (using socket.io mode).`);
+    return;
+  }
   if (commandStream) return;
   if (typeof EventSource === "undefined") {
     console.warn(`${LOG_PREFIX} EventSource not available; falling back to polling`);
@@ -738,11 +747,11 @@ function startCommandStream() {
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "bridgeUrl", {
     name: "Bridge URL",
-    hint: "Local bridge service URL (default http://127.0.0.1:8787).",
+    hint: "HTTP bridge service URL. Leave blank to use Foundry Direct (socket.io) mode.",
     scope: "world",
     config: true,
     type: String,
-    default: DEFAULT_BRIDGE_URL,
+    default: "",
   });
 
   game.settings.register(MODULE_ID, "bridgeSecret", {
