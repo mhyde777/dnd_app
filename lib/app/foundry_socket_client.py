@@ -485,6 +485,22 @@ class FoundrySocketClient:
                 print(f"[FoundrySocket] POST /join -> {resp.status_code} {resp.url}  cookies={cookies}  body={resp.text[:120]!r}")
                 is_error = any(e in resp.text for e in ("ErrorUser", "ErrorPassword"))
                 if resp.status_code in (200, 302) and not is_error:
+                    # Foundry v13 returns JSON with a redirect URL.
+                    # We must GET that URL (/game) to move the session from
+                    # the lobby into the world context — otherwise the socket.io
+                    # server treats us as unauthenticated (session event = null).
+                    redirect_path = "/game"
+                    try:
+                        body = resp.json()
+                        redirect_path = body.get("redirect", redirect_path)
+                    except Exception:
+                        pass
+                    game_url = f"{self.foundry_url}{redirect_path}"
+                    try:
+                        gr = self._http.get(game_url, timeout=self.timeout)
+                        print(f"[FoundrySocket] GET {redirect_path} -> {gr.status_code}  cookies={list(self._http.cookies.keys())}")
+                    except Exception as exc:
+                        print(f"[FoundrySocket] Warning: GET {redirect_path} failed: {exc}")
                     print(f"[FoundrySocket] Logged in as '{self.username}' (id={user_id})")
                     return True, ""
                 if is_error:
@@ -527,9 +543,9 @@ class FoundrySocketClient:
             print("[FoundrySocket] Received 'world' event (Foundry world loaded)")
 
         @client.on("*")
-        def _catch_all(event, data):
+        def _catch_all(event, *args):
             if event not in ("connect", "disconnect", "session", "world", self.EVENT_NAME):
-                print(f"[FoundrySocket] Unknown event {event!r}: {str(data)[:200]}")
+                print(f"[FoundrySocket] Unknown event {event!r}: {str(args)[:300]}")
 
         @client.on(self.EVENT_NAME)
         def _on_module_event(data):
