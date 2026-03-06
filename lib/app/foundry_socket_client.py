@@ -285,7 +285,8 @@ class FoundrySocketClient:
         ]:
             try:
                 resp = http.post(join_url, timeout=self.timeout, allow_redirects=True, **post_kwargs)
-                if resp.status_code in (200, 302) and "ErrorUser" not in resp.text and "/join" not in resp.url:
+                is_error = any(e in resp.text for e in ("ErrorUser", "ErrorPassword", "Error"))
+                if resp.status_code in (200, 302) and not is_error:
                     login_ok = True
                     break
                 if "ErrorPassword" in resp.text:
