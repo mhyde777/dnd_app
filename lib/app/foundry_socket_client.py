@@ -518,9 +518,18 @@ class FoundrySocketClient:
         def _on_connect_error(data):
             print(f"[FoundrySocket] Socket connect_error: {data}")
 
+        @client.on("session")
+        def _on_session(data):
+            print(f"[FoundrySocket] Session event: {str(data)[:300]}")
+
         @client.on("world")
         def _on_world(data):
             print("[FoundrySocket] Received 'world' event (Foundry world loaded)")
+
+        @client.on("*")
+        def _catch_all(event, data):
+            if event not in ("connect", "disconnect", "session", "world", self.EVENT_NAME):
+                print(f"[FoundrySocket] Unknown event {event!r}: {str(data)[:200]}")
 
         @client.on(self.EVENT_NAME)
         def _on_module_event(data):
