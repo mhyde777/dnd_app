@@ -22,6 +22,7 @@ from app.config import (
     get_foundry_url,
     get_foundry_username,
     get_foundry_password,
+    get_foundry_user_id,
     get_storage_api_base,
     get_config_path,
     get_local_data_dir,
@@ -84,6 +85,7 @@ class Application:
                 foundry_url=get_foundry_url(),
                 username=get_foundry_username(),
                 password=get_foundry_password(),
+                user_id=get_foundry_user_id(),
             )
         elif _bridge_mode == "disabled":
             self.bridge_client = BridgeClient(base_url="", token="")

@@ -73,3 +73,7 @@ def get_foundry_username() -> str:
 
 def get_foundry_password() -> str:
     return _settings.get("foundry_password") or os.getenv("FOUNDRY_PASSWORD", "")
+
+def get_foundry_user_id() -> str:
+    """Foundry user UUID — required for Foundry v13+, optional for older versions."""
+    return _settings.get("foundry_user_id") or os.getenv("FOUNDRY_USER_ID", "")
