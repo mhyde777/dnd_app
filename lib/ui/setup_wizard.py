@@ -177,6 +177,15 @@ class SetupWizard(QDialog):
         row_fpw.addWidget(self.foundry_pw_edit)
         foundry_layout.addLayout(row_fpw)
 
+        row_fuid = QHBoxLayout()
+        lbl_fuid = QLabel("User ID:")
+        lbl_fuid.setFixedWidth(110)
+        self.foundry_uid_edit = QLineEdit()
+        self.foundry_uid_edit.setPlaceholderText("(Foundry v13+ — type game.userId in browser console)")
+        row_fuid.addWidget(lbl_fuid)
+        row_fuid.addWidget(self.foundry_uid_edit)
+        foundry_layout.addLayout(row_fuid)
+
         hint = QLabel(
             "The app connects directly to your Foundry server — no tunnel needed.\n"
             "The foundryvtt-bridge module must be installed and enabled in your world."
@@ -253,6 +262,7 @@ class SetupWizard(QDialog):
             settings.get("foundry_username") or os.getenv("FOUNDRY_USERNAME", "Gamemaster")
         )
         self.foundry_pw_edit.setText(settings.get("foundry_password") or os.getenv("FOUNDRY_PASSWORD", ""))
+        self.foundry_uid_edit.setText(settings.get("foundry_user_id") or os.getenv("FOUNDRY_USER_ID", ""))
 
     def _test_connection(self) -> None:
         from app.foundry_socket_client import FoundrySocketClient
@@ -332,6 +342,7 @@ class SetupWizard(QDialog):
             update["foundry_url"] = self.foundry_url_edit.text().strip()
             update["foundry_username"] = self.foundry_user_edit.text().strip()
             update["foundry_password"] = self.foundry_pw_edit.text().strip()
+            update["foundry_user_id"] = self.foundry_uid_edit.text().strip()
         else:
             update["bridge_mode"] = "local"
 

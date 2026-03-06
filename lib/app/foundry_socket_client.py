@@ -160,11 +160,13 @@ class FoundrySocketClient:
         foundry_url: str,
         username: str,
         password: str = "",
+        user_id: str = "",
         timeout: float = 10.0,
     ) -> None:
         self.foundry_url = foundry_url.rstrip("/")
         self.username = username
         self.password = password
+        self.user_id = user_id.strip()
         self.timeout = timeout
 
         self._http = requests.Session()
@@ -247,48 +249,61 @@ class FoundrySocketClient:
             return result
 
         # Step 2: find user
-        user_id, all_users = _find_user_id(resp.text, self.username)
-        result.users_found = [label for _, label in all_users]
-        if not user_id:
-            # Show a snippet of the HTML to help diagnose parsing issues
-            html = resp.text
-            snippet = ""
-            idx = html.lower().find("userid")
-            if idx == -1:
-                idx = html.lower().find("user")
-            if idx != -1:
-                snippet = "\n\nHTML near 'user':\n" + html[max(0, idx-100):idx+300].strip()
-            else:
-                snippet = "\n\nFirst 400 chars of /join page:\n" + html[:400].strip()
-            result.error = (
-                f"Username '{self.username}' not found on /join page. "
-                f"Available: {result.users_found or ['(none)']}"
-                + snippet
-            )
-            return result
-        result.user_id_found = True
-
-        # Step 3: login
-        try:
-            resp = http.post(
-                join_url,
-                data={"userid": user_id, "password": self.password},
-                timeout=self.timeout,
-                allow_redirects=True,
-            )
-            if "/join" in resp.url and "password" in resp.text.lower():
-                result.error = "Login rejected -- wrong password."
-                return result
-            if not http.cookies:
+        if self.user_id:
+            user_id = self.user_id
+            result.user_id_found = True
+            result.users_found = [f"(provided directly: {user_id})"]
+        else:
+            user_id_found, all_users = _find_user_id(resp.text, self.username)
+            result.users_found = [label for _, label in all_users]
+            if not user_id_found:
+                html = resp.text
+                idx = html.lower().find("userid")
+                if idx == -1:
+                    idx = html.lower().find("user")
+                snippet = ""
+                if idx != -1:
+                    snippet = "\n\nHTML near 'user':\n" + html[max(0, idx-100):idx+300].strip()
+                else:
+                    snippet = "\n\nFirst 400 chars of /join page:\n" + html[:400].strip()
                 result.error = (
-                    "Login seemed to succeed but no session cookie was set. "
-                    "This may indicate an unexpected Foundry version or auth flow."
+                    f"Username '{self.username}' not found on /join page "
+                    f"(found: {result.users_found or ['none']}).\n"
+                    "For Foundry v13+, open the Foundry browser console (F12) and "
+                    "type game.userId — paste that value into the User ID field in Settings."
+                    + snippet
                 )
                 return result
-            result.login_ok = True
-        except Exception as exc:
-            result.error = f"POST /join failed: {exc}"
+            user_id = user_id_found
+            result.user_id_found = True
+
+        # Step 3: login
+        login_ok = False
+        for post_kwargs in [
+            dict(json={"action": "join", "userid": user_id, "password": self.password}),
+            dict(data={"userid": user_id, "password": self.password}),
+        ]:
+            try:
+                resp = http.post(join_url, timeout=self.timeout, allow_redirects=True, **post_kwargs)
+                if resp.status_code in (200, 302) and "ErrorUser" not in resp.text and "/join" not in resp.url:
+                    login_ok = True
+                    break
+                if "ErrorPassword" in resp.text:
+                    result.error = "Login rejected — wrong password."
+                    return result
+                if "ErrorUser" in resp.text:
+                    result.error = f"Login rejected — user ID not found: {resp.text.strip()}"
+                    return result
+            except Exception as exc:
+                result.error = f"POST /join failed: {exc}"
+                return result
+        if not login_ok:
+            result.error = f"Login did not succeed (last response: {resp.status_code} {resp.text[:120]!r})"
             return result
+        if not http.cookies:
+            result.error = "Login seemed to succeed but no session cookie was set."
+            return result
+        result.login_ok = True
 
         # Step 4: socket.io connection
         cookie_header = "; ".join(f"{c.name}={c.value}" for c in http.cookies)
@@ -427,36 +442,55 @@ class FoundrySocketClient:
     def _login_verbose(self) -> Tuple[bool, str]:
         """Login and return (success, error_message)."""
         join_url = f"{self.foundry_url}/join"
-        try:
-            resp = self._http.get(join_url, timeout=self.timeout)
-            resp.raise_for_status()
-        except Exception as exc:
-            return False, f"GET /join failed: {exc}"
 
-        user_id, all_users = _find_user_id(resp.text, self.username)
-        labels = [label for _, label in all_users]
-        print(f"[FoundrySocket] /join users found: {labels}")
-        if not user_id:
-            return False, (
-                f"User '{self.username}' not found. "
-                f"Available: {labels or ['(none -- is the world running?)']}"
-            )
+        # --- Resolve user ID ---
+        if self.user_id:
+            # User provided UUID directly (required for Foundry v13+)
+            user_id = self.user_id
+            print(f"[FoundrySocket] Using provided user ID: {user_id}")
+        else:
+            # Older Foundry: parse HTML /join page for the user list
+            try:
+                resp = self._http.get(join_url, timeout=self.timeout)
+                resp.raise_for_status()
+            except Exception as exc:
+                return False, f"GET /join failed: {exc}"
+            user_id_found, all_users = _find_user_id(resp.text, self.username)
+            labels = [label for _, label in all_users]
+            print(f"[FoundrySocket] /join users found: {labels}")
+            if not user_id_found:
+                return False, (
+                    f"User '{self.username}' not found on /join page "
+                    f"(found: {labels or ['none']}). "
+                    "For Foundry v13+, open the browser console in Foundry and "
+                    "type game.userId to get your User ID, then enter it in Settings."
+                )
+            user_id = user_id_found
 
-        try:
-            resp = self._http.post(
-                join_url,
-                data={"userid": user_id, "password": self.password},
-                timeout=self.timeout,
-                allow_redirects=True,
-            )
-            cookies = list(self._http.cookies.keys())
-            print(f"[FoundrySocket] POST /join -> {resp.url}  cookies={cookies}")
-            if "/join" in resp.url and "password" in resp.text.lower():
-                return False, "Wrong password"
-            print(f"[FoundrySocket] Logged in as '{self.username}' (id={user_id})")
-            return True, ""
-        except Exception as exc:
-            return False, f"POST /join failed: {exc}"
+        # --- POST login (Foundry v13: JSON body; older: form data) ---
+        # Try JSON first (v13+), fall back to form data
+        for post_kwargs in [
+            dict(json={"action": "join", "userid": user_id, "password": self.password}),
+            dict(data={"userid": user_id, "password": self.password}),
+        ]:
+            try:
+                resp = self._http.post(
+                    join_url,
+                    timeout=self.timeout,
+                    allow_redirects=True,
+                    **post_kwargs,
+                )
+                cookies = list(self._http.cookies.keys())
+                print(f"[FoundrySocket] POST /join -> {resp.status_code} {resp.url}  cookies={cookies}  body={resp.text[:120]!r}")
+                if resp.status_code in (200, 302) and "ErrorUser" not in resp.text and "/join" not in resp.url:
+                    print(f"[FoundrySocket] Logged in as '{self.username}' (id={user_id})")
+                    return True, ""
+                if "ErrorPassword" in resp.text or "ErrorUser" in resp.text:
+                    return False, f"Login rejected: {resp.text.strip()}"
+            except Exception as exc:
+                return False, f"POST /join failed: {exc}"
+
+        return False, "Login did not succeed with any format."
 
     def _connect_socket(self, on_snapshot: Callable[[Dict[str, Any]], None]) -> None:
         """Create and connect a socket.io client."""
