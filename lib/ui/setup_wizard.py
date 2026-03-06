@@ -9,6 +9,7 @@ Contains two sections:
 from __future__ import annotations
 
 import os
+import threading
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
@@ -23,6 +24,7 @@ from PyQt5.QtWidgets import (
     QMessageBox,
     QPushButton,
     QRadioButton,
+    QTextEdit,
     QVBoxLayout,
 )
 
@@ -183,6 +185,10 @@ class SetupWizard(QDialog):
         hint.setStyleSheet("color: gray; font-size: 11px;")
         foundry_layout.addWidget(hint)
 
+        test_btn = QPushButton("Test Connection")
+        test_btn.clicked.connect(self._test_connection)
+        foundry_layout.addWidget(test_btn)
+
         self.foundry_box.setVisible(False)
         root.addWidget(self.foundry_box)
 
@@ -247,6 +253,49 @@ class SetupWizard(QDialog):
             settings.get("foundry_username") or os.getenv("FOUNDRY_USERNAME", "Gamemaster")
         )
         self.foundry_pw_edit.setText(settings.get("foundry_password") or os.getenv("FOUNDRY_PASSWORD", ""))
+
+    def _test_connection(self) -> None:
+        from app.foundry_socket_client import FoundrySocketClient
+        url = self.foundry_url_edit.text().strip()
+        username = self.foundry_user_edit.text().strip()
+        password = self.foundry_pw_edit.text().strip()
+        if not url or not username:
+            QMessageBox.warning(self, "Missing Fields", "Enter Foundry URL and username first.")
+            return
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Connection Test")
+        dlg.setMinimumWidth(420)
+        layout = QVBoxLayout(dlg)
+        layout.addWidget(QLabel("Testing connection to Foundry..."))
+        output = QTextEdit()
+        output.setReadOnly(True)
+        output.setMinimumHeight(160)
+        layout.addWidget(output)
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(dlg.accept)
+        close_btn.setEnabled(False)
+        layout.addWidget(close_btn)
+        dlg.show()
+
+        def run_test():
+            client = FoundrySocketClient(url, username, password)
+            result = client.test_connection()
+            summary = result.summary()
+            from PyQt5.QtCore import QMetaObject, Qt, Q_ARG
+            QMetaObject.invokeMethod(
+                output, "setPlainText",
+                Qt.QueuedConnection,
+                Q_ARG(str, summary),
+            )
+            QMetaObject.invokeMethod(
+                close_btn, "setEnabled",
+                Qt.QueuedConnection,
+                Q_ARG(bool, True),
+            )
+
+        threading.Thread(target=run_test, daemon=True).start()
+        dlg.exec_()
 
     def _on_save(self) -> None:
         # Validate storage
