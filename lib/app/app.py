@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import(
     QApplication, QInputDialog, QLineEdit
 ) 
 from PyQt5.QtGui import (
-        QPixmap, QFont, QPixmapCache
+        QPixmap, QFont
 )
 from PyQt5.QtCore import Qt, QTimer
 from app.creature import (
@@ -20,9 +20,12 @@ from app.config import (
     bridge_stream_enabled,
     get_storage_api_base,
     get_config_path,
+    get_local_data_dir,
     local_bridge_enabled,
+    player_view_enabled,
     use_storage_api_only,
 )
+from app.player_view_server import PlayerViewServer
 from app.bridge_client import BridgeClient
 from app.local_bridge_server import LocalBridgeServer
 from ui.windows import (
@@ -51,7 +54,6 @@ class Application:
         self.current_idx: int = 0         # pointer into turn_order
         self.current_creature_name: Optional[str] = None
 
-        self.image_cache: Dict[str, bytes] = {}
 
         self.boolean_fields = {
             '_action': 'set_creature_action',
@@ -77,23 +79,31 @@ class Application:
         self.bridge_stream_thread: Optional[threading.Thread] = None
         self.bridge_stream_stop: Optional[threading.Event] = None
         self.bridge_combatants_by_name: Dict[str, List[Dict[str, Any]]] = {}
-        self.bridge_paused = False
         self._initiative_reset_pending = False
 
-        # --- Storage API only mode ---
+        self.player_view_live = True
+        self.player_view_snapshot: Optional[Dict[str, Any]] = None
+        self.player_view_server: Optional[PlayerViewServer] = None
+        if player_view_enabled():
+            self.player_view_server = PlayerViewServer(self.get_player_view_payload)
+            self.player_view_server.start()
+
+        # --- Storage backend ---
         self.storage_api: Optional[StorageAPI] = None
         self.storage_api_warning: Optional[str] = None
         if use_storage_api_only():
             base = get_storage_api_base()
             if not base:
                 self.storage_api_warning = (
-                    "USE_STORAGE_API_ONLY is enabled, but STORAGE_API_BASE is missing.\n\n"
-                    "Either set STORAGE_API_BASE (e.g., http://127.0.0.1:8000) or remove "
-                    "USE_STORAGE_API_ONLY to use local files"
+                    "Remote API mode is enabled, but no API URL is configured.\n\n"
+                    "Go to File → Settings to set your API URL, or switch to Local Files mode."
                 )
             else:
-                # self._log(f"[INFO] Using Storage API at {base}.")
                 self.storage_api = StorageAPI(base)
+        else:
+            from app.local_storage import LocalStorage
+            data_dir = get_local_data_dir() or get_config_path("data")
+            self.storage_api = LocalStorage(data_dir)
 
     def start_bridge_polling(self) -> None:
         if not self.bridge_client.enabled:
@@ -127,20 +137,6 @@ class Application:
         )
         self.bridge_stream_thread.start()
         print("[Bridge] Using SSE stream for snapshots.")
-
-    def stop_bridge_sync(self) -> None:
-        self.bridge_paused = True
-        if self.bridge_stream_stop is not None:
-            self.bridge_stream_stop.set()
-        if self.bridge_timer is not None:
-            self.bridge_timer.stop()
-        print("[Bridge] Sync paused.")
-
-    def start_bridge_sync(self) -> None:
-        self.bridge_paused = False
-        self.bridge_stream_stop = threading.Event()
-        self.start_bridge_polling()
-        print("[Bridge] Sync resumed.")
 
     def refresh_bridge_state(self) -> None:
         try:
@@ -759,7 +755,7 @@ class Application:
         return None
 
     def _enqueue_bridge_set_hp(self, creature_name: str, hp: int) -> None:
-        if not self.bridge_client.enabled or self.bridge_paused:
+        if not self.bridge_client.enabled:
             return
         creature = None
         if getattr(self, "manager", None):
@@ -790,7 +786,7 @@ class Application:
         )
 
     def _enqueue_bridge_set_temp_hp(self, creature_name: str, temp_hp: int) -> None:
-        if not self.bridge_client.enabled or self.bridge_paused:
+        if not self.bridge_client.enabled:
             return
         creature = None
         if getattr(self, "manager", None):
@@ -821,7 +817,7 @@ class Application:
         )
 
     def _enqueue_bridge_set_max_hp_bonus(self, creature_name: str, max_hp_bonus: int) -> None:
-        if not self.bridge_client.enabled or self.bridge_paused:
+        if not self.bridge_client.enabled:
             return
         creature = None
         if getattr(self, "manager", None):
@@ -856,7 +852,7 @@ class Application:
             print("[Bridge][DBG] bridge_client missing; cannot send set_initiative")
             return
 
-        if not self.bridge_client.enabled or self.bridge_paused:
+        if not self.bridge_client.enabled:
             print("[Bridge][DBG] bridge_client disabled; skipping set_initiative")
             return
 
@@ -928,7 +924,7 @@ class Application:
         added: List[str],
         removed: List[str],
     ) -> None:
-        if not self.bridge_client.enabled or self.bridge_paused:
+        if not self.bridge_client.enabled:
             return
         if not added and not removed:
             return
@@ -984,7 +980,7 @@ class Application:
     def _enqueue_bridge_turn_command(self, direction: str) -> None:
         if not getattr(self, "bridge_client", None):
             return
-        if not self.bridge_client.enabled or self.bridge_paused:
+        if not self.bridge_client.enabled:
             return
         if direction == "next":
             self.bridge_client.send_next_turn()
@@ -1029,6 +1025,107 @@ class Application:
         self.current_idx = max(0, min(getattr(self, "current_idx", 0), len(self.turn_order) - 1))
         return self.turn_order[self.current_idx]
 
+    def get_player_view_payload(self) -> Dict[str, Any]:
+        if not self.player_view_live and self.player_view_snapshot is not None:
+            return self.player_view_snapshot
+
+        try:
+            payload = self._build_player_view_payload()
+        except Exception as exc:
+            print(f"[PlayerView] Failed to build payload: {exc}")
+            payload = {
+                "round": self.round_counter,
+                "time": self.time_counter,
+                "current_name": None,
+                "current_hidden": False,
+                "combatants": [],
+                "live": self.player_view_live,
+            }
+        if not self.player_view_live:
+            self.player_view_snapshot = payload
+        return payload
+
+    def set_player_view_paused(self, paused: bool) -> None:
+        if paused and self.player_view_live:
+            self.player_view_live = False
+            self.player_view_snapshot = self.get_player_view_payload()
+            return
+        if not paused and not self.player_view_live:
+            self.player_view_live = True
+            self.player_view_snapshot = None
+
+    def _build_player_view_payload(self) -> Dict[str, Any]:
+        if not getattr(self, "manager", None) or not getattr(self.manager, "creatures", None):
+            return {
+                "round": self.round_counter,
+                "time": self.time_counter,
+                "current_name": None,
+                "current_hidden": False,
+                "combatants": [],
+                "live": self.player_view_live,
+            }
+        hide_downed = os.getenv("PLAYER_VIEW_HIDE_DOWNED", "0").strip().lower() not in (
+            "",
+            "0",
+            "false",
+            "no",
+        )
+        active_name = self.active_name()
+        active_creature = self.manager.creatures.get(active_name) if active_name else None
+        active_visible = bool(getattr(active_creature, "player_visible", False)) if active_creature else False
+        active_is_monster = isinstance(active_creature, Monster) if active_creature else False
+        active_curr_hp = getattr(active_creature, "curr_hp", None) if active_creature else None
+        try:
+            active_curr_hp_value = int(active_curr_hp)
+        except (TypeError, ValueError):
+            active_curr_hp_value = None
+        active_downed = (
+            active_curr_hp_value is not None and active_curr_hp_value >= 0 and active_curr_hp_value <= 0
+        )
+        active_hidden_by_downed = hide_downed and active_is_monster and active_downed
+        current_hidden = bool(active_creature) and (not active_visible or active_hidden_by_downed)
+
+        if hasattr(self.manager, "ordered_items"):
+            ordered = self.manager.ordered_items()
+        else:
+            ordered = sorted(
+                self.manager.creatures.items(),
+                key=lambda item: getattr(item[1], "initiative", 0),
+                reverse=True,
+            )
+
+        combatants = []
+        for _, creature in ordered:
+            if not bool(getattr(creature, "player_visible", False)):
+                continue
+            is_monster = isinstance(creature, Monster)
+            curr_hp = getattr(creature, "curr_hp", None)
+            try:
+                curr_hp_value = int(curr_hp)
+            except (TypeError, ValueError):
+                curr_hp_value = None
+            downed = curr_hp_value is not None and curr_hp_value >= 0 and curr_hp_value <= 0 
+            if hide_downed and is_monster and downed:
+                continue
+            combatants.append(
+                {
+                    "name": getattr(creature, "name", ""),
+                    "initiative": getattr(creature, "initiative", ""),
+                    "conditions": ", ".join(getattr(creature, "conditions", []) or []),
+                    "public_notes": getattr(creature, "public_notes", "") or "",
+                    "downed": downed,
+                }
+            )
+
+        return {
+            "round": self.round_counter,
+            "time": self.time_counter,
+            "current_name": active_name if active_visible and not active_hidden_by_downed else None,
+            "current_hidden": current_hidden,
+            "combatants": combatants,
+            "live": self.player_view_live,
+        }
+
     # ----------------
     # JSON Manipulation
     # ----------------
@@ -1054,7 +1151,7 @@ class Application:
 
     def save_encounter_to_storage(self, filename: str, description: str = ""):
         if not self.storage_api:
-            raise RuntimeError("Storage API not configured.")
+            raise RuntimeError("Storage is not configured. Go to File → Settings.")
         # Prepare state
         state = GameState()
         state.players = [c for c in self.manager.creatures.values() if isinstance(c, Player)]
@@ -1076,7 +1173,7 @@ class Application:
             QMessageBox.critical(
                 self,
                 "Storage Not Configured",
-                "Storage API is not configured.\n\nSet USE_STORAGE_API_ONLY=1 and STORAGE_API_BASE in your .env."
+                "Storage is not configured.\n\nGo to File → Settings to configure storage."
             )
             return
 
@@ -1133,22 +1230,16 @@ class Application:
         description = "Auto-saved state from initiative tracker"
 
         try:
-            # --- Preferred: save to Storage API ---
             if getattr(self, "storage_api", None):
-                # Optional metadata block
-                # save_data["_meta"] = {"description": description}
                 self.storage_api.put_json(filename, save_data)
-                print("[INFO] Saved state to Storage API as last_state.json")
                 if hasattr(self, "show_status_message"):
-                    self.show_status_message("State saved to Storage API")
+                    self.show_status_message("State saved")
             else:
-                # --- Fallback: save to local file ---
                 file_path = self.get_data_path(filename)
                 with open(file_path, "w", encoding="utf-8") as f:
                     json.dump(save_data, f, ensure_ascii=False, indent=2)
-                print("[INFO] Saved state locally as last_state.json")
                 if hasattr(self, "show_status_message"):
-                    self.show_status_message("State saved locally")
+                    self.show_status_message("State saved")
         except Exception as e:
             print(f"[ERROR] Failed to save state: {e}")
 
@@ -1860,14 +1951,14 @@ class Application:
     # ----------------
     # Path Functions
     # ----------------
-    def get_image_path(self, filename):
-        return os.path.join(self.get_parent_dir(), 'images', filename)
-
     def get_data_path(self, filename):
         return os.path.join(self.get_data_dir(), filename)
 
     def get_data_dir(self):
-        if getattr(sys, "frozen", False):
+        custom = get_local_data_dir()
+        if custom:
+            data_dir = custom
+        elif getattr(sys, "frozen", False):
             data_dir = get_config_path("data")
         else:
             data_dir = os.path.join(self.get_parent_dir(), 'data')
@@ -1878,23 +1969,6 @@ class Application:
         if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
             return sys._MEIPASS
         return os.path.abspath(os.path.join(self.base_dir, '../../'))
-
-    def get_extensions(self):
-        return ('png', 'jpg', 'jpeg', 'gif')
-
-    def get_image_bytes(self, filename: str) -> Optional[bytes]:
-        if filename in self.image_cache:
-            return self.image_cache[filename]
-        if not getattr(self, "storage_api", None):
-            return None
-        try:
-            data = self.storage_api.get_image_bytes(filename)
-        except Exception as e:
-            self._log(f"[WARN] Failed to fetch image '{filename}' from storage: {e}")
-            return None
-        if data:
-            self.image_cache[filename] = data
-            return data
 
     # -------------------------------
     # Change Manager with Table Edits
@@ -1974,7 +2048,6 @@ class Application:
         self.resize_to_fit_screen(base_name)
 
     def resize_to_fit_screen(self, base_name):
-        # 1) Try JSON statblock first
         if self.storage_api:
             try:
                 from app.statblock_parser import statblock_key
@@ -1982,65 +2055,15 @@ class Application:
                 if data:
                     self.statblock_widget.set_storage_api(self.storage_api)
                     self.statblock_widget.load_statblock(data)
-                    self.statblock_stack.setCurrentIndex(1)
-                    self.statblock_stack.show()
+                    self.statblock_widget.show()
                     return
             except Exception:
                 pass
-
-        # 2) Fall back to image
-        self.statblock_stack.setCurrentIndex(0)
-
-        screen_geometry = QApplication.primaryScreen().availableGeometry()
-        screen_width = screen_geometry.width()
-        screen_height = screen_geometry.height()
-
-        max_width = int(screen_width * 0.35)
-        max_height = int(screen_height * 0.7)
-
-        extensions = self.get_extensions()
-        for ext in extensions:
-            filename = f"{base_name}.{ext}"
-            image_path = self.get_image_path(filename)
-            pixmap = None
-
-            # 2a) Prefer server (prevents stale local cache)
-            data = self.get_image_bytes(filename)
-            if data:
-                pixmap = QPixmap()
-                pixmap.loadFromData(data)
-
-                # Optional local cache for remote images (disabled by default)
-                if os.getenv("CACHE_REMOTE_IMAGES", "0") == "1":
-                    try:
-                        os.makedirs(os.path.dirname(image_path), exist_ok=True)
-                        with open(image_path, "wb") as f:
-                            f.write(data)
-                    except Exception:
-                        pass
-
-            # 2b) Fallback to local file if server didn't return anything
-            if (pixmap is None or pixmap.isNull()) and os.path.exists(image_path):
-                pixmap = QPixmap(image_path)
-
-            if pixmap and not pixmap.isNull():
-                self.pixmap = pixmap
-                scaled_pixmap = self.pixmap.scaled(
-                    max_width, max_height, Qt.KeepAspectRatio, Qt.SmoothTransformation
-                )
-
-                # Clear Qt pixmap cache before updating display
-                QPixmapCache.clear()
-
-                self.statblock.setPixmap(scaled_pixmap)
-                self.statblock_stack.show()
-                break
+        self._clear_statblock()
 
     def _clear_statblock(self):
-        """Clear both statblock widgets and hide the panel."""
-        self.statblock.clear()
         self.statblock_widget.clear_statblock()
-        self.statblock_stack.hide()
+        self.statblock_widget.hide()
 
     def open_import_statblock_dialog(self):
         from ui.statblock_import_dialog import StatblockImportDialog
@@ -2062,10 +2085,10 @@ class Application:
         self._lookup_dialog.focus_search()
 
     def hide_statblock(self):
-        self.statblock_stack.hide()
+        self.statblock_widget.hide()
 
     def show_statblock(self):
-        self.statblock_stack.show()
+        self.statblock_widget.show()
 
 # ================= Damage/Healing ======================
     def heal_selected_creatures(self):
@@ -2221,7 +2244,7 @@ class Application:
 
     # ================== Secondary Windows ======================
     def load_encounter(self):
-        dialog = LoadEncounterWindow(self)
+        dialog = LoadEncounterWindow(self, storage=self.storage_api)
         if dialog.exec_() == QDialog.Accepted and dialog.selected_file:
             self.load_file_to_manager(dialog.selected_file, self.manager, prompt_for_initiatives=True)
             # After load, use the active creature from stable order
@@ -2234,7 +2257,7 @@ class Application:
                 self.show_status_message(f"Loaded encounter: {dialog.selected_file}")
 
     def merge_encounter(self):
-        dialog = LoadEncounterWindow(self)
+        dialog = LoadEncounterWindow(self, storage=self.storage_api)
         if dialog.exec_() == QDialog.Accepted and dialog.selected_file:
             self.load_file_to_manager(dialog.selected_file, self.manager, merge=True, prompt_for_initiatives=False)
 
@@ -2265,14 +2288,35 @@ class Application:
             # Optional: refresh any open pickers or cached lists here
             pass
     
-    def manage_images(self):
-        from ui.manage_images import ManageImagesWindow
-        if not getattr(self, "storage_api", None):
-            QMessageBox.information(self, "Unavailable", "Storage API not configured.")
-            return
-        dlg = ManageImagesWindow(self.storage_api, self)
-        if dlg.exec_() == QDialog.Accepted and getattr(dlg, "updated", False):
-            self.image_cache.clear()
+    def open_settings(self):
+        from ui.setup_wizard import SetupWizard
+        dlg = SetupWizard(self)
+        if dlg.exec_() == QDialog.Accepted:
+            QMessageBox.information(
+                self,
+                "Settings Saved",
+                "Settings saved. Restart the app for storage changes to take effect."
+            )
+
+    def open_customize_toolbar(self):
+        from ui.toolbar_customize_dialog import ToolbarCustomizeDialog
+        from PyQt5.QtWidgets import QDialog
+        dlg = ToolbarCustomizeDialog(self)
+        if dlg.exec_() == QDialog.Accepted:
+            self._apply_toolbar_config()
+
+    def _apply_toolbar_config(self):
+        from ui.toolbar_customize_dialog import load_toolbar_items
+        self.filetool_bar.clear()
+        for action_id in load_toolbar_items():
+            action = self._toolbar_action_map.get(action_id)
+            if action:
+                self.filetool_bar.addAction(action)
+
+    def _toolbar_context_menu(self, pos):
+        menu = __import__('PyQt5.QtWidgets', fromlist=['QMenu']).QMenu(self)
+        menu.addAction("Customize Toolbar…", self.open_customize_toolbar)
+        menu.exec_(self.filetool_bar.mapToGlobal(pos))
 
     def create_or_update_characters(self):
         dialog = UpdateCharactersWindow(self)
