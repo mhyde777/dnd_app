@@ -269,6 +269,7 @@ class SetupWizard(QDialog):
         url = self.foundry_url_edit.text().strip()
         username = self.foundry_user_edit.text().strip()
         password = self.foundry_pw_edit.text().strip()
+        user_id = self.foundry_uid_edit.text().strip()
         if not url or not username:
             QMessageBox.warning(self, "Missing Fields", "Enter Foundry URL and username first.")
             return
@@ -289,7 +290,7 @@ class SetupWizard(QDialog):
         dlg.show()
 
         def run_test():
-            client = FoundrySocketClient(url, username, password)
+            client = FoundrySocketClient(url, username, password, user_id=user_id)
             result = client.test_connection()
             summary = result.summary()
             from PyQt5.QtCore import QMetaObject, Qt, Q_ARG
