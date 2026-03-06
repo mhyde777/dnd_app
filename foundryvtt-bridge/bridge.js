@@ -146,6 +146,7 @@ async function postSnapshot(reason) {
   try {
     if (game.socket) {
       game.socket.emit(`module.${MODULE_ID}`, { type: "snapshot", data: snapshot });
+      console.log(`${LOG_PREFIX} game.socket snapshot emitted (${reason}), combatants=${snapshot.combatants?.length ?? 0}`);
     }
   } catch (err) {
     console.warn(`${LOG_PREFIX} game.socket emit error`, err);
@@ -776,9 +777,11 @@ Hooks.once("ready", () => {
   // --- socket.io direct mode: listen for commands from the Python app ---
   if (game.socket) {
     game.socket.on(`module.${MODULE_ID}`, async (data) => {
+      console.log(`${LOG_PREFIX} game.socket received type=${data?.type}`);
       if (!data || typeof data !== "object") return;
       if (data.type === "get_snapshot") {
         // Python app requesting an immediate snapshot on connect
+        console.log(`${LOG_PREFIX} Responding to get_snapshot request`);
         const snapshot = buildCombatSnapshot();
         game.socket.emit(`module.${MODULE_ID}`, { type: "snapshot", data: snapshot });
       } else if (data.type === "command" && data.command) {
