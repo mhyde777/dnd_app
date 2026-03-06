@@ -13,6 +13,8 @@ Protocol (module event name: "module.foundryvtt-bridge"):
 """
 from __future__ import annotations
 
+import json
+import re
 import threading
 import uuid
 from dataclasses import dataclass, field
@@ -77,20 +79,41 @@ def _find_user_id(html: str, username: str) -> Tuple[Optional[str], List[Tuple[s
     """
     Return (user_id, all_users) where user_id matches *username* (or None).
     Returns all_users so callers can show a helpful error.
+    Handles both HTML select/radio forms and JSON-embedded user data.
     """
+    # Strategy 1: standard HTML select/radio parser
     parser = _JoinPageParser()
     parser.feed(html)
+    users = parser.users
+
+    # Strategy 2: JSON embedded in a <script> tag
+    # Foundry v12 embeds users as: users: [{"_id":..., "name":...}, ...]
+    if not users:
+        for m in re.finditer(r'"users"\s*:\s*(\[.*?\])', html, re.DOTALL):
+            try:
+                parsed = json.loads(m.group(1))
+                users = [(u["_id"], u.get("name", u.get("_id", "")))
+                         for u in parsed if "_id" in u]
+                if users:
+                    break
+            except Exception:
+                pass
+
+    # Strategy 3: data-user-id attributes (some Foundry themes)
+    if not users:
+        for m in re.finditer(r'data-user-id=(["\'])(.*?)\1[^>]*>([^<]+)<', html):
+            users.append((m.group(1), m.group(2).strip()))
+
     lower = username.strip().lower()
-    for uid, label in parser.users:
+    for uid, label in users:
         if label.lower() == lower:
-            return uid, parser.users
-    # Fallback: prefer Gamemaster
-    for uid, label in parser.users:
+            return uid, users
+    for uid, label in users:
         if "gamemaster" in label.lower() or "game master" in label.lower():
-            return uid, parser.users
-    if parser.users:
-        return parser.users[0][0], parser.users
-    return None, parser.users
+            return uid, users
+    if users:
+        return users[0][0], users
+    return None, users
 
 
 # ---------------------------------------------------------------------------
@@ -227,9 +250,20 @@ class FoundrySocketClient:
         user_id, all_users = _find_user_id(resp.text, self.username)
         result.users_found = [label for _, label in all_users]
         if not user_id:
+            # Show a snippet of the HTML to help diagnose parsing issues
+            html = resp.text
+            snippet = ""
+            idx = html.lower().find("userid")
+            if idx == -1:
+                idx = html.lower().find("user")
+            if idx != -1:
+                snippet = "\n\nHTML near 'user':\n" + html[max(0, idx-100):idx+300].strip()
+            else:
+                snippet = "\n\nFirst 400 chars of /join page:\n" + html[:400].strip()
             result.error = (
                 f"Username '{self.username}' not found on /join page. "
-                f"Available users: {result.users_found or ['(none — is the world running?)']}"
+                f"Available: {result.users_found or ['(none)']}"
+                + snippet
             )
             return result
         result.user_id_found = True
