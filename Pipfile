@@ -13,6 +13,8 @@ dnd-app-lib = {file = "lib/", editable = true}
 python-dotenv = "*"
 pyinstaller = "*"
 flask = "*"
+python-socketio = "*"
+websocket-client = "*"
 
 [dev-packages]
 pyinstaller = "*"

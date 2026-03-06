@@ -45,3 +45,14 @@ def save(data: dict) -> None:
 
 def get(key: str, default: Any = None) -> Any:
     return load().get(key, default)
+
+
+def merge(data: dict) -> None:
+    """Update specific keys without overwriting unrelated settings."""
+    global _cache
+    existing = load()
+    existing.update(data)
+    os.makedirs(_CONFIG_DIR, exist_ok=True)
+    with open(_SETTINGS_PATH, "w", encoding="utf-8") as f:
+        json.dump(existing, f, indent=2)
+    _cache = existing

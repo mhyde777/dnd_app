@@ -141,7 +141,19 @@ function scheduleSnapshot(reason) {
 
 async function postSnapshot(reason) {
   const snapshot = buildCombatSnapshot();
+
+  // --- socket.io path: emit directly to any connected Python client ---
+  try {
+    if (game.socket) {
+      game.socket.emit(`module.${MODULE_ID}`, { type: "snapshot", data: snapshot });
+    }
+  } catch (err) {
+    console.warn(`${LOG_PREFIX} game.socket emit error`, err);
+  }
+
+  // --- HTTP bridge path (legacy / local / tunnel setups) ---
   const bridgeUrl = getBridgeUrl();
+  if (!bridgeUrl) return;
   console.log(`[${MODULE_ID}] bridgeUrl=${bridgeUrl}`);
   const endpoint = `${bridgeUrl}/foundry/snapshot`;
   const secret = getBridgeSecret();
@@ -759,6 +771,22 @@ Hooks.once("ready", () => {
   if (!game.user?.isGM) {
     console.log(`${LOG_PREFIX} Non-GM user; bridge sync disabled for this client.`);
     return;
+  }
+
+  // --- socket.io direct mode: listen for commands from the Python app ---
+  if (game.socket) {
+    game.socket.on(`module.${MODULE_ID}`, async (data) => {
+      if (!data || typeof data !== "object") return;
+      if (data.type === "get_snapshot") {
+        // Python app requesting an immediate snapshot on connect
+        const snapshot = buildCombatSnapshot();
+        game.socket.emit(`module.${MODULE_ID}`, { type: "snapshot", data: snapshot });
+      } else if (data.type === "command" && data.command) {
+        await handleCommand(data.command);
+        scheduleSnapshot("socket_command");
+      }
+    });
+    console.log(`${LOG_PREFIX} game.socket listener registered for module.${MODULE_ID}`);
   }
 
   scheduleSnapshot("ready");
