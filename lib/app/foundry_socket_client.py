@@ -3,7 +3,7 @@
 Direct Foundry VTT socket.io client.
 
 Connects to a remote Foundry server as an authenticated user (outbound
-connection — no tunnel or bridge service required).  Implements the same
+connection -- no tunnel or bridge service required).  Implements the same
 public interface as BridgeClient so app.py can swap the two transparently.
 
 Protocol (module event name: "module.foundryvtt-bridge"):
@@ -14,8 +14,8 @@ Protocol (module event name: "module.foundryvtt-bridge"):
 from __future__ import annotations
 
 import threading
-import time
 import uuid
+from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -73,21 +73,50 @@ class _JoinPageParser(HTMLParser):
             self._current_text += data
 
 
-def _find_user_id(html: str, username: str) -> Optional[str]:
-    """Return the Foundry user ID whose display name matches *username*."""
+def _find_user_id(html: str, username: str) -> Tuple[Optional[str], List[Tuple[str, str]]]:
+    """
+    Return (user_id, all_users) where user_id matches *username* (or None).
+    Returns all_users so callers can show a helpful error.
+    """
     parser = _JoinPageParser()
     parser.feed(html)
     lower = username.strip().lower()
     for uid, label in parser.users:
         if label.lower() == lower:
-            return uid
-    # Fallback: single-user worlds often have only one entry
+            return uid, parser.users
+    # Fallback: prefer Gamemaster
     for uid, label in parser.users:
         if "gamemaster" in label.lower() or "game master" in label.lower():
-            return uid
+            return uid, parser.users
     if parser.users:
-        return parser.users[0][0]
-    return None
+        return parser.users[0][0], parser.users
+    return None, parser.users
+
+
+# ---------------------------------------------------------------------------
+# Diagnostic result
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ConnectionTestResult:
+    reachable: bool = False
+    users_found: List[str] = field(default_factory=list)
+    user_id_found: bool = False
+    login_ok: bool = False
+    socket_connected: bool = False
+    error: str = ""
+
+    def summary(self) -> str:
+        lines = []
+        lines.append(f"{'OK' if self.reachable else 'FAIL'}  Reach Foundry /join page")
+        if self.users_found:
+            lines.append(f"      Users found: {', '.join(self.users_found)}")
+        lines.append(f"{'OK' if self.user_id_found else 'FAIL'}  Find configured username in user list")
+        lines.append(f"{'OK' if self.login_ok else 'FAIL'}  Login (POST /join)")
+        lines.append(f"{'OK' if self.socket_connected else 'FAIL'}  Socket.io connection")
+        if self.error:
+            lines.append(f"\nError: {self.error}")
+        return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
@@ -146,8 +175,9 @@ class FoundrySocketClient:
         retry_delay = 5.0
         while not stop_event.is_set():
             try:
-                if not self._login():
-                    print(f"[FoundrySocket] Login failed -- retrying in {retry_delay}s")
+                ok, result = self._login_verbose()
+                if not ok:
+                    print(f"[FoundrySocket] Login failed ({result}) -- retrying in {retry_delay}s")
                     stop_event.wait(retry_delay)
                     continue
 
@@ -157,10 +187,9 @@ class FoundrySocketClient:
                     stop_event.wait(retry_delay)
                     continue
 
-                # Request an immediate snapshot so we don't wait for the next event
+                # Request an immediate snapshot
                 self._emit_raw({"type": "get_snapshot"})
 
-                # Block until stop requested or socket drops
                 while not stop_event.is_set() and self._connected:
                     stop_event.wait(1.0)
 
@@ -175,6 +204,88 @@ class FoundrySocketClient:
                 stop_event.wait(retry_delay)
 
         self._disconnect()
+
+    def test_connection(self) -> ConnectionTestResult:
+        """
+        Run a step-by-step connection test and return a structured result.
+        Safe to call from any thread; uses a fresh HTTP session.
+        """
+        result = ConnectionTestResult()
+        http = requests.Session()
+        join_url = f"{self.foundry_url}/join"
+
+        # Step 1: reach /join
+        try:
+            resp = http.get(join_url, timeout=self.timeout)
+            resp.raise_for_status()
+            result.reachable = True
+        except Exception as exc:
+            result.error = f"Cannot reach {join_url}: {exc}"
+            return result
+
+        # Step 2: find user
+        user_id, all_users = _find_user_id(resp.text, self.username)
+        result.users_found = [label for _, label in all_users]
+        if not user_id:
+            result.error = (
+                f"Username '{self.username}' not found on /join page. "
+                f"Available users: {result.users_found or ['(none — is the world running?)']}"
+            )
+            return result
+        result.user_id_found = True
+
+        # Step 3: login
+        try:
+            resp = http.post(
+                join_url,
+                data={"userid": user_id, "password": self.password},
+                timeout=self.timeout,
+                allow_redirects=True,
+            )
+            if "/join" in resp.url and "password" in resp.text.lower():
+                result.error = "Login rejected -- wrong password."
+                return result
+            if not http.cookies:
+                result.error = (
+                    "Login seemed to succeed but no session cookie was set. "
+                    "This may indicate an unexpected Foundry version or auth flow."
+                )
+                return result
+            result.login_ok = True
+        except Exception as exc:
+            result.error = f"POST /join failed: {exc}"
+            return result
+
+        # Step 4: socket.io connection
+        cookie_header = "; ".join(f"{c.name}={c.value}" for c in http.cookies)
+        headers = {"Cookie": cookie_header} if cookie_header else {}
+        connected_event = threading.Event()
+
+        client = sio_lib.Client(logger=False, engineio_logger=False, reconnection=False)
+
+        @client.on("connect")
+        def _on_connect():
+            connected_event.set()
+
+        try:
+            client.connect(
+                self.foundry_url,
+                headers=headers,
+                wait_timeout=self.timeout,
+            )
+            connected_event.wait(timeout=self.timeout)
+            result.socket_connected = client.connected
+            if not result.socket_connected:
+                result.error = "Socket.io connected but immediately dropped."
+        except Exception as exc:
+            result.error = f"Socket.io connection failed: {exc}"
+        finally:
+            try:
+                client.disconnect()
+            except Exception:
+                pass
+
+        return result
 
     # Command senders -- same signatures as BridgeClient
 
@@ -279,23 +390,23 @@ class FoundrySocketClient:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _login(self) -> bool:
-        """Fetch /join, find the user ID, POST credentials, get session cookie."""
+    def _login_verbose(self) -> Tuple[bool, str]:
+        """Login and return (success, error_message)."""
         join_url = f"{self.foundry_url}/join"
         try:
             resp = self._http.get(join_url, timeout=self.timeout)
             resp.raise_for_status()
         except Exception as exc:
-            print(f"[FoundrySocket] GET /join failed: {exc}")
-            return False
+            return False, f"GET /join failed: {exc}"
 
-        user_id = _find_user_id(resp.text, self.username)
+        user_id, all_users = _find_user_id(resp.text, self.username)
+        labels = [label for _, label in all_users]
+        print(f"[FoundrySocket] /join users found: {labels}")
         if not user_id:
-            print(
-                f"[FoundrySocket] Could not find user '{self.username}' on /join page. "
-                "Check that the username is correct and the world is running."
+            return False, (
+                f"User '{self.username}' not found. "
+                f"Available: {labels or ['(none -- is the world running?)']}"
             )
-            return False
 
         try:
             resp = self._http.post(
@@ -304,22 +415,21 @@ class FoundrySocketClient:
                 timeout=self.timeout,
                 allow_redirects=True,
             )
-            # Foundry redirects to /game on success; landing back on /join
-            # with a password field usually means wrong credentials.
+            cookies = list(self._http.cookies.keys())
+            print(f"[FoundrySocket] POST /join -> {resp.url}  cookies={cookies}")
             if "/join" in resp.url and "password" in resp.text.lower():
-                print("[FoundrySocket] Login rejected -- check username/password.")
-                return False
+                return False, "Wrong password"
             print(f"[FoundrySocket] Logged in as '{self.username}' (id={user_id})")
-            return True
+            return True, ""
         except Exception as exc:
-            print(f"[FoundrySocket] POST /join failed: {exc}")
-            return False
+            return False, f"POST /join failed: {exc}"
 
     def _connect_socket(self, on_snapshot: Callable[[Dict[str, Any]], None]) -> None:
         """Create and connect a socket.io client."""
         cookie_header = "; ".join(
             f"{c.name}={c.value}" for c in self._http.cookies
         )
+        print(f"[FoundrySocket] Connecting socket.io to {self.foundry_url} ...")
 
         client = sio_lib.Client(logger=False, engineio_logger=False, reconnection=False)
         self._sio = client
@@ -327,16 +437,20 @@ class FoundrySocketClient:
         @client.on("connect")
         def _on_connect():
             self._connected = True
-            print(f"[FoundrySocket] Socket connected to {self.foundry_url}")
+            print(f"[FoundrySocket] Socket connected")
 
         @client.on("disconnect")
         def _on_disconnect():
             self._connected = False
             print("[FoundrySocket] Socket disconnected")
 
+        @client.on("connect_error")
+        def _on_connect_error(data):
+            print(f"[FoundrySocket] Socket connect_error: {data}")
+
         @client.on("world")
         def _on_world(data):
-            print("[FoundrySocket] World event received (world is ready)")
+            print("[FoundrySocket] Received 'world' event (Foundry world loaded)")
 
         @client.on(self.EVENT_NAME)
         def _on_module_event(data):
@@ -345,16 +459,18 @@ class FoundrySocketClient:
             if data.get("type") == "snapshot":
                 snapshot = data.get("data")
                 if isinstance(snapshot, dict):
+                    print(f"[FoundrySocket] Snapshot received ({len(snapshot.get('combatants', []))} combatants)")
                     with self._snapshot_lock:
                         self._last_snapshot = snapshot
                     on_snapshot(snapshot)
 
         headers = {"Cookie": cookie_header} if cookie_header else {}
         try:
+            # Let python-socketio negotiate transport (polling -> websocket upgrade)
+            # rather than forcing websocket-only, which can fail behind proxies.
             client.connect(
                 self.foundry_url,
                 headers=headers,
-                transports=["websocket"],
                 wait_timeout=self.timeout,
             )
         except Exception as exc:
