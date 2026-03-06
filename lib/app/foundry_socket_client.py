@@ -483,10 +483,11 @@ class FoundrySocketClient:
                 )
                 cookies = list(self._http.cookies.keys())
                 print(f"[FoundrySocket] POST /join -> {resp.status_code} {resp.url}  cookies={cookies}  body={resp.text[:120]!r}")
-                if resp.status_code in (200, 302) and "ErrorUser" not in resp.text and "/join" not in resp.url:
+                is_error = any(e in resp.text for e in ("ErrorUser", "ErrorPassword"))
+                if resp.status_code in (200, 302) and not is_error:
                     print(f"[FoundrySocket] Logged in as '{self.username}' (id={user_id})")
                     return True, ""
-                if "ErrorPassword" in resp.text or "ErrorUser" in resp.text:
+                if is_error:
                     return False, f"Login rejected: {resp.text.strip()}"
             except Exception as exc:
                 return False, f"POST /join failed: {exc}"
