@@ -170,6 +170,15 @@ class FoundrySocketClient:
         self.timeout = timeout
 
         self._http = requests.Session()
+        # Mimic a real browser so Foundry's session middleware treats us the same way
+        self._http.headers.update({
+            "User-Agent": (
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+            ),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+        })
         self._sio: Optional[sio_lib.Client] = None
         self._connected = False
         self._last_snapshot: Optional[Dict[str, Any]] = None
@@ -468,11 +477,12 @@ class FoundrySocketClient:
                 )
             user_id = user_id_found
 
-        # --- POST login (Foundry v13: JSON body; older: form data) ---
-        # Try JSON first (v13+), fall back to form data
+        # --- POST login ---
+        # Try form POST first (what browsers actually send — sets session.userId properly
+        # in Express-session). Fall back to JSON API if form POST doesn't work.
         for post_kwargs in [
-            dict(json={"action": "join", "userid": user_id, "password": self.password}),
             dict(data={"userid": user_id, "password": self.password}),
+            dict(json={"action": "join", "userid": user_id, "password": self.password}),
         ]:
             try:
                 resp = self._http.post(
@@ -497,8 +507,12 @@ class FoundrySocketClient:
                         pass
                     game_url = f"{self.foundry_url}{redirect_path}"
                     try:
-                        gr = self._http.get(game_url, timeout=self.timeout)
-                        print(f"[FoundrySocket] GET {redirect_path} -> {gr.status_code}  cookies={list(self._http.cookies.keys())}")
+                        gr = self._http.get(game_url, timeout=self.timeout, allow_redirects=True)
+                        print(
+                            f"[FoundrySocket] GET {redirect_path} -> {gr.status_code} {gr.url}"
+                            f"  cookies={list(self._http.cookies.keys())}"
+                            f"  body={gr.text[:80]!r}"
+                        )
                     except Exception as exc:
                         print(f"[FoundrySocket] Warning: GET {redirect_path} failed: {exc}")
                     print(f"[FoundrySocket] Logged in as '{self.username}' (id={user_id})")
@@ -526,9 +540,9 @@ class FoundrySocketClient:
             print(f"[FoundrySocket] Socket connected")
 
         @client.on("disconnect")
-        def _on_disconnect():
+        def _on_disconnect(reason=None):
             self._connected = False
-            print("[FoundrySocket] Socket disconnected")
+            print(f"[FoundrySocket] Socket disconnected (reason={reason!r})")
 
         @client.on("connect_error")
         def _on_connect_error(data):
