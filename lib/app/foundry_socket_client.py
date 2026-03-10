@@ -330,11 +330,14 @@ class FoundrySocketClient:
         result.login_ok = True
 
         # Step 4: socket.io connection
-        cookie_header = "; ".join(f"{c.name}={c.value}" for c in http.cookies)
-        headers = {"Cookie": cookie_header} if cookie_header else {}
         connected_event = threading.Event()
 
-        client = sio_lib.Client(logger=False, engineio_logger=False, reconnection=False)
+        client = sio_lib.Client(
+            logger=False,
+            engineio_logger=False,
+            reconnection=False,
+            http_session=http,
+        )
 
         @client.on("connect")
         def _on_connect():
@@ -343,7 +346,6 @@ class FoundrySocketClient:
         try:
             client.connect(
                 self.foundry_url,
-                headers=headers,
                 wait_timeout=self.timeout,
             )
             connected_event.wait(timeout=self.timeout)
@@ -546,12 +548,19 @@ class FoundrySocketClient:
 
     def _connect_socket(self, on_snapshot: Callable[[Dict[str, Any]], None]) -> None:
         """Create and connect a socket.io client."""
-        cookie_header = "; ".join(
-            f"{c.name}={c.value}" for c in self._http.cookies
-        )
         print(f"[FoundrySocket] Connecting socket.io to {self.foundry_url} ...")
 
-        client = sio_lib.Client(logger=False, engineio_logger=False, reconnection=False)
+        # Pass the authenticated requests.Session as http_session so that
+        # python-engineio uses it for its polling requests (where Foundry
+        # establishes the socket session from the cookie).  Passing a raw
+        # Cookie header via connect() headers is insufficient because engine.io
+        # may not carry it through all transport phases.
+        client = sio_lib.Client(
+            logger=False,
+            engineio_logger=False,
+            reconnection=False,
+            http_session=self._http,
+        )
         self._sio = client
 
         @client.on("connect")
@@ -593,13 +602,11 @@ class FoundrySocketClient:
                         self._last_snapshot = snapshot
                     on_snapshot(snapshot)
 
-        headers = {"Cookie": cookie_header} if cookie_header else {}
         try:
             # Let python-socketio negotiate transport (polling -> websocket upgrade)
             # rather than forcing websocket-only, which can fail behind proxies.
             client.connect(
                 self.foundry_url,
-                headers=headers,
                 wait_timeout=self.timeout,
             )
         except Exception as exc:
