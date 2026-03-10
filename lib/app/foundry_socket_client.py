@@ -649,11 +649,14 @@ class FoundrySocketClient:
 
         @client.on("*")
         def _catch_all(event, *args):
-            if event not in ("connect", "disconnect", "session", "world", self.EVENT_NAME):
-                print(f"[FoundrySocket] Unknown event {event!r}: {str(args)[:300]}")
+            if event not in ("connect", "disconnect", "session", "world"):
+                print(f"[FoundrySocket] Event {event!r}: {str(args)[:300]}")
 
         @client.on(self.EVENT_NAME)
-        def _on_module_event(data):
+        def _on_module_event(*args):
+            # Log raw to see if the event arrives at all and what format it's in
+            print(f"[FoundrySocket] Module event! args={len(args)}, types={[type(a).__name__ for a in args]}, data={str(args[0])[:300] if args else '(none)'}")
+            data = args[0] if args else None
             if not isinstance(data, dict):
                 return
             if data.get("type") == "snapshot":
@@ -667,12 +670,17 @@ class FoundrySocketClient:
         auth = dict(self._socket_auth) if self._socket_auth else {}
         if auth:
             print(f"[FoundrySocket] Connecting with socket auth: {list(auth.keys())}")
+        # Try '/game' namespace first (Foundry v13 may use it for world events),
+        # then fall back to the default '/' namespace.
+        namespace_to_try = "/game"
+        print(f"[FoundrySocket] Trying namespace {namespace_to_try!r}")
         try:
             # Let python-socketio negotiate transport (polling -> websocket upgrade)
             # rather than forcing websocket-only, which can fail behind proxies.
             client.connect(
                 self.foundry_url,
                 auth=auth or None,
+                namespaces=[namespace_to_try],
                 wait_timeout=self.timeout,
             )
         except Exception as exc:
