@@ -294,8 +294,22 @@ class FoundrySocketClient:
         ]:
             try:
                 resp = http.post(join_url, timeout=self.timeout, allow_redirects=True, **post_kwargs)
-                is_error = any(e in resp.text for e in ("ErrorUser", "ErrorPassword", "Error"))
+                is_error = any(e in resp.text for e in ("ErrorUser", "ErrorPassword"))
                 if resp.status_code in (200, 302) and not is_error:
+                    # Verify the session is actually authenticated by fetching /game.
+                    # If Foundry bounces us back to /join, the session wasn't set.
+                    redirect_path = "/game"
+                    try:
+                        body = resp.json()
+                        redirect_path = body.get("redirect", redirect_path)
+                    except Exception:
+                        pass
+                    try:
+                        gr = http.get(f"{self.foundry_url}{redirect_path}", timeout=self.timeout, allow_redirects=True)
+                        if str(gr.url).rstrip("/").endswith("/join"):
+                            continue  # session not authenticated, try next format
+                    except Exception:
+                        pass
                     login_ok = True
                     break
                 if "ErrorPassword" in resp.text:
@@ -308,7 +322,7 @@ class FoundrySocketClient:
                 result.error = f"POST /join failed: {exc}"
                 return result
         if not login_ok:
-            result.error = f"Login did not succeed (last response: {resp.status_code} {resp.text[:120]!r})"
+            result.error = "Login did not succeed — session was not authenticated for the world. Check your User ID and password."
             return result
         if not http.cookies:
             result.error = "Login seemed to succeed but no session cookie was set."
@@ -478,11 +492,11 @@ class FoundrySocketClient:
             user_id = user_id_found
 
         # --- POST login ---
-        # Try form POST first (what browsers actually send — sets session.userId properly
-        # in Express-session). Fall back to JSON API if form POST doesn't work.
+        # Try JSON first (Foundry v13 canonical API: returns {redirect:"/game"} and
+        # sets session.userId).  Fall back to form data for older Foundry versions.
         for post_kwargs in [
-            dict(data={"userid": user_id, "password": self.password}),
             dict(json={"action": "join", "userid": user_id, "password": self.password}),
+            dict(data={"userid": user_id, "password": self.password}),
         ]:
             try:
                 resp = self._http.post(
@@ -508,11 +522,17 @@ class FoundrySocketClient:
                     game_url = f"{self.foundry_url}{redirect_path}"
                     try:
                         gr = self._http.get(game_url, timeout=self.timeout, allow_redirects=True)
+                        final_url = str(gr.url)
                         print(
-                            f"[FoundrySocket] GET {redirect_path} -> {gr.status_code} {gr.url}"
+                            f"[FoundrySocket] GET {redirect_path} -> {gr.status_code} {final_url}"
                             f"  cookies={list(self._http.cookies.keys())}"
                             f"  body={gr.text[:80]!r}"
                         )
+                        # If Foundry bounced us back to /join, this login format
+                        # didn't authenticate the session — try the next format.
+                        if final_url.rstrip("/").endswith("/join"):
+                            print("[FoundrySocket] GET /game redirected to /join — session not authenticated; trying next login format")
+                            continue
                     except Exception as exc:
                         print(f"[FoundrySocket] Warning: GET {redirect_path} failed: {exc}")
                     print(f"[FoundrySocket] Logged in as '{self.username}' (id={user_id})")
@@ -522,7 +542,7 @@ class FoundrySocketClient:
             except Exception as exc:
                 return False, f"POST /join failed: {exc}"
 
-        return False, "Login did not succeed with any format."
+        return False, "Login did not succeed — session was not authenticated for the world. Check your User ID and password."
 
     def _connect_socket(self, on_snapshot: Callable[[Dict[str, Any]], None]) -> None:
         """Create and connect a socket.io client."""
