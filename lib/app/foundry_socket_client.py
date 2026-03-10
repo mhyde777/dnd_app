@@ -548,7 +548,19 @@ class FoundrySocketClient:
 
     def _connect_socket(self, on_snapshot: Callable[[Dict[str, Any]], None]) -> None:
         """Create and connect a socket.io client."""
+        # DEBUG: log every HTTP request the engine.io client makes so we can
+        # verify the session cookie is actually being sent during the handshake.
+        def _log_request(resp, *args, **kwargs):
+            req = resp.request
+            cookie = req.headers.get("Cookie", "(none)")
+            print(f"[FoundrySocket][HTTP] {req.method} {req.url}")
+            print(f"[FoundrySocket][HTTP]   Cookie: {cookie[:120]}")
+            print(f"[FoundrySocket][HTTP]   -> {resp.status_code}  set-cookie: {resp.headers.get('Set-Cookie','(none)')[:80]}")
+        self._http.hooks["response"] = [_log_request]
+
         print(f"[FoundrySocket] Connecting socket.io to {self.foundry_url} ...")
+        cookies_info = [(c.name, c.domain, c.path) for c in self._http.cookies]
+        print(f"[FoundrySocket] Cookies in session: {cookies_info}")
 
         # Pass the authenticated requests.Session as http_session so that
         # python-engineio uses it for its polling requests (where Foundry
