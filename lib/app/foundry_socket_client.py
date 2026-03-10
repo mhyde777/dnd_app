@@ -605,11 +605,23 @@ class FoundrySocketClient:
         # establishes the socket session from the cookie).  Passing a raw
         # Cookie header via connect() headers is insufficient because engine.io
         # may not carry it through all transport phases.
+        #
+        # Also set Origin/Referer so Foundry's socket middleware sees us as a
+        # same-origin browser request navigating from /game.
+        self._http.headers["Origin"] = self.foundry_url
+        self._http.headers["Referer"] = f"{self.foundry_url}/game"
         client = sio_lib.Client(
             logger=False,
             engineio_logger=False,
             reconnection=False,
             http_session=self._http,
+            # websocket-client uses this for the WS Upgrade request headers
+            websocket_extra_options={
+                "header": {
+                    "Origin": self.foundry_url,
+                    "Referer": f"{self.foundry_url}/game",
+                }
+            },
         )
         self._sio = client
 
