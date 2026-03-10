@@ -183,6 +183,7 @@ class FoundrySocketClient:
         self._connected = False
         self._last_snapshot: Optional[Dict[str, Any]] = None
         self._snapshot_lock = threading.Lock()
+        self._socket_auth: Dict[str, Any] = {}
 
     # ------------------------------------------------------------------
     # Public interface (mirrors BridgeClient)
@@ -465,6 +466,38 @@ class FoundrySocketClient:
     # Internal helpers
     # ------------------------------------------------------------------
 
+    def _extract_socket_auth(self, html: str) -> Dict[str, Any]:
+        """
+        Scan the /game HTML for socket.io auth tokens that Foundry v13 may
+        embed (e.g. a world token passed via socket.io auth option).
+        Returns a dict suitable for passing as the `auth=` arg to connect().
+        """
+        auth: Dict[str, Any] = {}
+        # Pattern: socket({ auth: { ... } }) or io(url, { auth: { ... } })
+        for m in re.finditer(r'auth\s*:\s*(\{[^}]{0,300}\})', html):
+            try:
+                # Quick-and-dirty JSON-like extraction
+                chunk = m.group(1)
+                # Extract key-value pairs like "key": "value"
+                for kv in re.finditer(r'"(\w+)"\s*:\s*"([^"]*)"', chunk):
+                    auth[kv.group(1)] = kv.group(2)
+            except Exception:
+                pass
+        # Pattern: data-socket-auth="..." or similar attributes
+        for m in re.finditer(r'data-socket[-_](?:auth|token)\s*=\s*["\']([^"\']{8,})["\']', html, re.IGNORECASE):
+            auth["token"] = m.group(1)
+        # Pattern: socketAuth = "..." or similar JS vars
+        for m in re.finditer(r'socket(?:Auth|Token|Key)\s*[=:]\s*["\']([^"\']{8,})["\']', html, re.IGNORECASE):
+            auth["token"] = m.group(1)
+        # DEBUG: print any nearby context for "auth" mentions in scripts
+        auth_mentions = [(max(0, m.start()-80), min(len(html), m.end()+120))
+                         for m in re.finditer(r'\bauth\b', html, re.IGNORECASE)]
+        if auth_mentions:
+            print(f"[FoundrySocket] /game HTML 'auth' mentions ({len(auth_mentions)} total):")
+            for start, end in auth_mentions[:3]:
+                print(f"  ...{html[start:end].strip()}...")
+        return auth
+
     def _login_verbose(self) -> Tuple[bool, str]:
         """Login and return (success, error_message)."""
         join_url = f"{self.foundry_url}/join"
@@ -535,6 +568,11 @@ class FoundrySocketClient:
                         if final_url.rstrip("/").endswith("/join"):
                             print("[FoundrySocket] GET /game redirected to /join — session not authenticated; trying next login format")
                             continue
+                        # Look for a socket auth token embedded in the /game HTML.
+                        # Foundry v13 may embed a world/socket token in the page.
+                        self._socket_auth = self._extract_socket_auth(gr.text)
+                        if self._socket_auth:
+                            print(f"[FoundrySocket] Found socket auth in /game HTML: {list(self._socket_auth.keys())}")
                     except Exception as exc:
                         print(f"[FoundrySocket] Warning: GET {redirect_path} failed: {exc}")
                     print(f"[FoundrySocket] Logged in as '{self.username}' (id={user_id})")
@@ -614,11 +652,15 @@ class FoundrySocketClient:
                         self._last_snapshot = snapshot
                     on_snapshot(snapshot)
 
+        auth = dict(self._socket_auth) if self._socket_auth else {}
+        if auth:
+            print(f"[FoundrySocket] Connecting with socket auth: {list(auth.keys())}")
         try:
             # Let python-socketio negotiate transport (polling -> websocket upgrade)
             # rather than forcing websocket-only, which can fail behind proxies.
             client.connect(
                 self.foundry_url,
+                auth=auth or None,
                 wait_timeout=self.timeout,
             )
         except Exception as exc:
