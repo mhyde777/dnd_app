@@ -670,17 +670,12 @@ class FoundrySocketClient:
         auth = dict(self._socket_auth) if self._socket_auth else {}
         if auth:
             print(f"[FoundrySocket] Connecting with socket auth: {list(auth.keys())}")
-        # Try '/game' namespace first (Foundry v13 may use it for world events),
-        # then fall back to the default '/' namespace.
-        namespace_to_try = "/game"
-        print(f"[FoundrySocket] Trying namespace {namespace_to_try!r}")
         try:
             # Let python-socketio negotiate transport (polling -> websocket upgrade)
             # rather than forcing websocket-only, which can fail behind proxies.
             client.connect(
                 self.foundry_url,
                 auth=auth or None,
-                namespaces=[namespace_to_try],
                 wait_timeout=self.timeout,
             )
         except Exception as exc:
