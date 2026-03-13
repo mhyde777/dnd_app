@@ -35,12 +35,6 @@ def get_local_data_dir() -> str:
 
 # ---- Feature flags ----
 
-def player_view_enabled() -> bool:
-    v = _settings.get("player_view_enabled")
-    if v is not None:
-        return bool(v)
-    return os.getenv("PLAYER_VIEW_ENABLED", "0").strip() not in ("", "0", "false", "False")
-
 def local_bridge_enabled() -> bool:
     return os.getenv("LOCAL_BRIDGE_ENABLED", "1").strip() not in ("", "0", "false", "False")
 
