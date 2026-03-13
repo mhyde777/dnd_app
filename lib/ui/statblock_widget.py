@@ -345,9 +345,9 @@ class StatblockWidget(QTextBrowser):
             sense_parts = []
             for k, v in senses.items():
                 if k == "passive_perception":
-                    sense_parts.append(f"passive Perception {v}")
+                    sense_parts.append(f"Passive Perception {v}")
                 else:
-                    sense_parts.append(f"{k.replace('_', ' ')} {v} ft.")
+                    sense_parts.append(f"{k.replace('_', ' ').title()} {v}")
             p.append(f'<p style="margin:2px 0;"><b>Senses</b> {", ".join(sense_parts)}</p>')
 
         # Languages

@@ -47,7 +47,6 @@ lib/
     config.py                   # Env var configuration (also loads ~/.dnd_tracker_config/.env)
     bridge_client.py            # Client for Foundry bridge communication (threading)
     local_bridge_server.py      # In-process bridge server (single-machine mode)
-    player_view_server.py       # HTTP server for player-visible combat data
     storage_api.py              # Optional remote storage API
   ui/
     ui.py                       # InitiativeTracker QMainWindow (main UI)
