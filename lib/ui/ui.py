@@ -217,6 +217,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.edit_menu = self.menu_bar.addMenu("&Edit")
         self.encounter_menu = self.menu_bar.addMenu("&Encounters")
         self.monsters_menu = self.menu_bar.addMenu("&Parsers")
+        self.tools_menu = self.menu_bar.addMenu("&Tools")
 
         self.filetool_bar = QToolBar("File", self)
         self.addToolBar(self.filetool_bar)
@@ -303,6 +304,10 @@ class InitiativeTracker(QMainWindow, Application):
         self.lookup_action.setToolTip("Look up spells, monsters, and conditions (Ctrl+L)")
         self.lookup_action.triggered.connect(self.open_lookup_dialog)
         self.monsters_menu.addAction(self.lookup_action)
+
+        self.shop_generator_action = QAction("Shop Generator…", self)
+        self.shop_generator_action.triggered.connect(self.open_shop_generator_dialog)
+        self.tools_menu.addAction(self.shop_generator_action)
 
         self.next_turn_action = QAction("Next Turn", self)
         self.next_turn_action.setShortcut(QKeySequence("Ctrl+N"))
