@@ -1965,6 +1965,11 @@ class Application:
         dlg = SpellImportDialog(storage_api=self.storage_api, parent=self)
         dlg.exec_()
 
+    def open_bulk_item_import_dialog(self):
+        from ui.bulk_item_import_dialog import BulkItemImportDialog
+        dlg = BulkItemImportDialog(storage_api=self.storage_api, parent=self)
+        dlg.exec_()
+
     def open_lookup_dialog(self):
         from ui.lookup_dialog import LookupDialog
         if not hasattr(self, "_lookup_dialog") or self._lookup_dialog is None:

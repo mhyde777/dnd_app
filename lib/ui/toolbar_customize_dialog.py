@@ -43,6 +43,7 @@ TOOLBAR_REGISTRY: list[tuple[str, str]] = [
     ("update_characters",   "Create/Update Characters"),
     ("import_statblock",    "Import Statblock"),
     ("import_spell",        "Import Spell"),
+    ("bulk_import_items",   "Bulk Import Items"),
 ]
 
 DEFAULT_TOOLBAR: list[str] = [

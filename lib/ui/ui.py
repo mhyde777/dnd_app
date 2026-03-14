@@ -293,6 +293,10 @@ class InitiativeTracker(QMainWindow, Application):
         self.import_spell_action.triggered.connect(self.open_import_spell_dialog)
         self.monsters_menu.addAction(self.import_spell_action)
 
+        self.bulk_import_items_action = QAction("Bulk Import Items...", self)
+        self.bulk_import_items_action.triggered.connect(self.open_bulk_item_import_dialog)
+        self.monsters_menu.addAction(self.bulk_import_items_action)
+
         self.monsters_menu.addSeparator()
         self.lookup_action = QAction("Reference Lookup", self)
         self.lookup_action.setShortcut(QKeySequence("Ctrl+L"))
@@ -329,6 +333,7 @@ class InitiativeTracker(QMainWindow, Application):
             "update_characters":    self.update_characters_action,
             "import_statblock":     self.import_statblock_action,
             "import_spell":         self.import_spell_action,
+            "bulk_import_items":    self.bulk_import_items_action,
         }
 
         # Populate toolbar from saved config (or defaults)

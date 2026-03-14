@@ -300,4 +300,52 @@ class StorageAPI:
         except Exception as e:
             raise RuntimeError(f"StorageAPI.delete_spell({key}) failed: {e}") from e
 
+    # ----- Item CRUD -----
+
+    def _items_url(self) -> str:
+        return f"{self.base_url}/v1/items"
+
+    def _items_items_url(self) -> str:
+        return f"{self._items_url()}/items"
+
+    def _item_item_url(self, key: str) -> str:
+        return f"{self._items_url()}/{key}"
+
+    def list_item_keys(self) -> List[str]:
+        """Return list of item keys (e.g. ['longsword.json', 'potion_of_healing.json'])."""
+        candidates = [self._items_items_url(), self._items_url()]
+        return self._list_from_candidates(candidates)
+
+    def get_item(self, key: str) -> Optional[dict]:
+        """GET an item by key. Returns dict or None if not found."""
+        try:
+            r: Response = self.session.get(self._item_item_url(key), timeout=8)
+            if r.status_code == 404:
+                return None
+            r.raise_for_status()
+            return self._unwrap_data(r.json())
+        except Exception as e:
+            raise RuntimeError(f"StorageAPI.get_item({key}) failed: {e}") from e
+
+    def save_item(self, key: str, data: dict) -> bool:
+        """PUT an item. Returns True on success."""
+        try:
+            r: Response = self.session.put(
+                self._item_item_url(key), json=self._wrap_for_put(data), timeout=10
+            )
+            r.raise_for_status()
+            return True
+        except Exception as e:
+            raise RuntimeError(f"StorageAPI.save_item({key}) failed: {e}") from e
+
+    def delete_item(self, key: str) -> bool:
+        """DELETE an item. Returns True on success."""
+        try:
+            r: Response = self.session.delete(self._item_item_url(key), timeout=8)
+            if r.status_code not in (200, 204, 404):
+                r.raise_for_status()
+            return True
+        except Exception as e:
+            raise RuntimeError(f"StorageAPI.delete_item({key}) failed: {e}") from e
+
 
