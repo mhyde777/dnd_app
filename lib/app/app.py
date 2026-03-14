@@ -1970,6 +1970,11 @@ class Application:
         dlg = BulkItemImportDialog(storage_api=self.storage_api, parent=self)
         dlg.exec_()
 
+    def open_shop_generator_dialog(self):
+        from ui.shop_generator_dialog import ShopGeneratorDialog
+        dlg = ShopGeneratorDialog(storage_api=self.storage_api, bridge_client=getattr(self, 'bridge_client', None), parent=self)
+        dlg.exec_()
+
     def open_lookup_dialog(self):
         from ui.lookup_dialog import LookupDialog
         if not hasattr(self, "_lookup_dialog") or self._lookup_dialog is None:
