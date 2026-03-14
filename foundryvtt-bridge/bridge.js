@@ -496,6 +496,39 @@ async function applyAddCondition(payload) {
   return true;
 }
 
+async function applyCreateJournal(payload) {
+  const name = payload?.name ?? "Shop Inventory";
+  const content = payload?.content ?? "";
+  if (!content) {
+    console.warn(`${LOG_PREFIX} create_journal missing content`);
+    return false;
+  }
+  try {
+    const existing = game.journal?.getName(name);
+    if (existing) {
+      const page = existing.pages?.contents?.[0];
+      if (page) {
+        await page.update({ "text.content": content });
+      } else {
+        await existing.createEmbeddedDocuments("JournalEntryPage", [
+          { name: "Inventory", type: "text", "text.content": content },
+        ]);
+      }
+      existing.sheet?.render(true);
+    } else {
+      const entry = await JournalEntry.create({
+        name,
+        pages: [{ name: "Inventory", type: "text", "text.content": content }],
+      });
+      entry?.sheet?.render(true);
+    }
+    return true;
+  } catch (err) {
+    console.error(`${LOG_PREFIX} create_journal error`, err);
+    return false;
+  }
+}
+
 async function applyRemoveCondition(payload) {
   const actor = resolveActor(payload);
   if (!actor) {
@@ -572,6 +605,8 @@ async function handleCommand(cmd) {
       applied = await applyAddCondition(payload);
     } else if (type === "remove_condition") {
       applied = await applyRemoveCondition(payload);
+    } else if (type === "create_journal") {
+      applied = await applyCreateJournal(payload);
     } else {
       console.warn(`${LOG_PREFIX} Unknown command type`, cmd?.type);
     }

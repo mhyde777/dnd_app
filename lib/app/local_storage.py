@@ -32,7 +32,7 @@ class LocalStorage:
         self._ensure_dirs()
 
     def _ensure_dirs(self) -> None:
-        for sub in ("statblocks", "spells"):
+        for sub in ("statblocks", "spells", "items"):
             os.makedirs(os.path.join(self.data_dir, sub), exist_ok=True)
         os.makedirs(self.data_dir, exist_ok=True)
 
@@ -46,6 +46,9 @@ class LocalStorage:
 
     def _spell_path(self, key: str) -> str:
         return os.path.join(self.data_dir, "spells", key)
+
+    def _item_path(self, key: str) -> str:
+        return os.path.join(self.data_dir, "items", key)
 
     @staticmethod
     def _read_json(path: str) -> Optional[dict]:
@@ -126,6 +129,24 @@ class LocalStorage:
 
     def delete_spell(self, key: str) -> bool:
         path = self._spell_path(key)
+        if os.path.exists(path):
+            os.remove(path)
+        return True
+
+    # ---- Items ----
+
+    def list_item_keys(self) -> List[str]:
+        return self._list_json(os.path.join(self.data_dir, "items"))
+
+    def get_item(self, key: str) -> Optional[dict]:
+        return self._read_json(self._item_path(key))
+
+    def save_item(self, key: str, data: dict) -> bool:
+        self._write_json(self._item_path(key), data)
+        return True
+
+    def delete_item(self, key: str) -> bool:
+        path = self._item_path(key)
         if os.path.exists(path):
             os.remove(path)
         return True
