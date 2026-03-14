@@ -43,6 +43,20 @@ _TYPE_MAP: dict[str, str] = {
     "poison":           "poison",
     "food and drink":   "adventuring_gear",
     "food_and_drink":   "adventuring_gear",
+    "mount":            "mount",
+    "pack":             "adventuring_gear",
+    "equipment pack":   "adventuring_gear",
+    "equipment_pack":   "adventuring_gear",
+    "tack and harness": "adventuring_gear",
+    "tack, harness, and drawn vehicles": "adventuring_gear",
+    "druidic focus":    "arcane_focus",
+    "druidic_focus":    "arcane_focus",
+    "musical instrument": "tool",
+    "musical_instrument": "tool",
+    "gaming set":       "tool",
+    "gaming_set":       "tool",
+    "artisan's tools":  "tool",
+    "artisan tools":    "tool",
 }
 
 _RARITY_MAP: dict[str, str] = {
@@ -296,7 +310,8 @@ def _parse_card_format(lines: list[str]) -> dict:
         # Heuristic: if the line contains known item type words, treat it as the type line
         if re.match(
             r'^(weapon|armor|potion|scroll|wondrous item|ring|rod|staff|wand|tool|'
-            r'ammunition|adventuring gear|trade good|vehicle)',
+            r'ammunition|adventuring gear|trade good|vehicle|mount|pack|equipment pack|'
+            r'tack|druidic focus|musical instrument|gaming set|artisan)',
             type_line, re.IGNORECASE
         ):
             item_type, subtype, rarity, attunement = _parse_type_line(type_line)
@@ -342,7 +357,8 @@ def _parse_inline_format(lines: list[str]) -> dict:
         type_line = lines[idx].strip()
         if re.match(
             r'^(weapon|armor|potion|scroll|wondrous item|ring|rod|staff|wand|tool|'
-            r'ammunition|adventuring gear|trade good|vehicle)',
+            r'ammunition|adventuring gear|trade good|vehicle|mount|pack|equipment pack|'
+            r'tack|druidic focus|musical instrument|gaming set|artisan)',
             type_line, re.IGNORECASE
         ):
             item_type, subtype, rarity, attunement = _parse_type_line(type_line)

@@ -164,6 +164,69 @@ def _build_condition_html(name: str, description: str) -> str:
     return "".join(p)
 
 
+_RARITY_COLORS: dict[str, str] = {
+    "common":    "#888888",
+    "uncommon":  "#1a7a1a",
+    "rare":      "#1a3a7a",
+    "very_rare": "#7a1a7a",
+    "legendary": "#b8670a",
+    "artifact":  "#7a1a1a",
+}
+
+
+def _build_item_html(data: dict) -> str:
+    """Render an item dict as styled HTML."""
+    name      = data.get("name", "Unknown")
+    item_type = data.get("item_type", "")
+    rarity    = data.get("rarity", "")
+    cost      = data.get("cost", "")
+    tags      = data.get("tags", [])
+    desc      = data.get("description", "")
+
+    rarity_color = _RARITY_COLORS.get(rarity, _TEXT)
+    subtitle_parts = [p for p in [item_type, rarity.replace("_", " ").title() if rarity else ""] if p]
+    subtitle = " \u2014 ".join(subtitle_parts)
+
+    p = [
+        f'<html><body style="background-color:{_BG}; '
+        f'font-family:&quot;Palatino Linotype&quot;,Palatino,serif; '
+        f'font-size:13px; color:{_TEXT}; margin:8px;">',
+
+        f'<table width="100%" style="border-collapse:collapse; margin-bottom:2px;">'
+        f'<tr><td style="font-size:22px; font-weight:bold; color:{_MAROON}; '
+        f'border-bottom:3px solid {_ORANGE}; padding:0 0 2px 0;">'
+        f'{name}</td></tr></table>',
+    ]
+
+    if subtitle:
+        p.append(
+            f'<p style="font-style:italic; font-size:11px; color:{rarity_color}; margin:0 0 6px 0;">'
+            f'{subtitle}</p>'
+        )
+
+    if cost:
+        p.append(
+            f'<p style="margin:2px 0;">'
+            f'<b style="color:{_RED};">Cost:</b> {cost}</p>'
+        )
+
+    if tags:
+        p.append(
+            f'<p style="margin:2px 0;">'
+            f'<b style="color:{_RED};">Tags:</b> {", ".join(tags)}</p>'
+        )
+
+    if desc:
+        p.append(f'<hr style="border:1px solid {_ORANGE}; margin:6px 0;">')
+        p.append(
+            f'<p style="margin:4px 0; line-height:1.5;">'
+            f'{desc.replace(chr(10), "<br>")}</p>'
+        )
+
+    p.append('</body></html>')
+    return "".join(p)
+
+
 # ── Reusable tab layout ───────────────────────────────────────────────────────
 
 class _SearchListPanel(QWidget):
@@ -240,8 +303,10 @@ class LookupDialog(QDialog):
 
     _spell_keys_ready   = pyqtSignal(list)
     _monster_keys_ready = pyqtSignal(list)
+    _items_ready        = pyqtSignal(list)   # list of (key, data) tuples
     _spell_loaded       = pyqtSignal(object)    # dict | None
     _monster_loaded     = pyqtSignal(object)    # dict | None
+    _item_loaded        = pyqtSignal(object)    # dict | None
 
     def __init__(self, storage_api, parent=None):
         super().__init__(parent)
@@ -254,11 +319,15 @@ class LookupDialog(QDialog):
         self._api = storage_api
         self._all_spell_keys:   list[str] = []
         self._all_monster_keys: list[str] = []
+        self._all_item_keys:    list[str] = []
+        self._all_item_data:    dict[str, dict] = {}
 
         self._current_spell_key:    str | None  = None
         self._current_spell_data:   dict | None = None
         self._current_monster_key:  str | None  = None
         self._current_monster_data: dict | None = None
+        self._current_item_key:     str | None  = None
+        self._current_item_data:    dict | None = None
 
         self._build_ui()
         self._connect_signals()
@@ -304,6 +373,16 @@ class LookupDialog(QDialog):
         self._condition_tab = _LookupTab(self._condition_browser)
         self._tabs.addTab(self._condition_tab, "Conditions")
 
+        # ── Items tab
+        self._item_browser = QTextBrowser()
+        self._item_browser.setOpenLinks(False)
+        self._item_browser.setHtml(_placeholder_html("No item selected."))
+        self._item_tab = _LookupTab(self._item_browser)
+        self._item_delete_btn = QPushButton("Delete")
+        self._item_delete_btn.setEnabled(False)
+        self._item_tab.add_action_button(self._item_delete_btn)
+        self._tabs.addTab(self._item_tab, "Items")
+
         root.addWidget(self._tabs)
 
         # Populate conditions immediately (no API needed)
@@ -324,21 +403,26 @@ class LookupDialog(QDialog):
     def _connect_signals(self):
         self._spell_keys_ready.connect(self._on_spell_keys_loaded)
         self._monster_keys_ready.connect(self._on_monster_keys_loaded)
+        self._items_ready.connect(self._on_items_loaded)
         self._spell_loaded.connect(self._on_spell_loaded)
         self._monster_loaded.connect(self._on_monster_loaded)
+        self._item_loaded.connect(self._on_item_loaded)
 
         self._spell_tab.search.textChanged.connect(self._filter_spells)
         self._monster_tab.search.textChanged.connect(self._filter_monsters)
         self._condition_tab.search.textChanged.connect(self._filter_conditions)
+        self._item_tab.search.textChanged.connect(self._filter_items)
 
         self._spell_tab.list.currentItemChanged.connect(self._select_spell)
         self._monster_tab.list.currentItemChanged.connect(self._select_monster)
         self._condition_tab.list.currentItemChanged.connect(self._select_condition)
+        self._item_tab.list.currentItemChanged.connect(self._select_item)
 
         self._spell_edit_btn.clicked.connect(self._edit_spell)
         self._spell_delete_btn.clicked.connect(self._delete_spell)
         self._monster_edit_btn.clicked.connect(self._edit_monster)
         self._monster_delete_btn.clicked.connect(self._delete_monster)
+        self._item_delete_btn.clicked.connect(self._delete_item)
 
     # ── Background key loading ────────────────────────────────────────────────
 
@@ -360,8 +444,23 @@ class LookupDialog(QDialog):
             except Exception:
                 self._monster_keys_ready.emit([])
 
+        def _load_items():
+            try:
+                keys = sorted(self._api.list_item_keys())
+                pairs = []
+                for key in keys:
+                    try:
+                        data = self._api.get_item(key) or {}
+                    except Exception:
+                        data = {}
+                    pairs.append((key, data))
+                self._items_ready.emit(pairs)
+            except Exception:
+                self._items_ready.emit([])
+
         threading.Thread(target=_load_spells,   daemon=True).start()
         threading.Thread(target=_load_monsters, daemon=True).start()
+        threading.Thread(target=_load_items,    daemon=True).start()
 
     def _on_spell_keys_loaded(self, keys: list):
         self._all_spell_keys = keys
@@ -370,6 +469,21 @@ class LookupDialog(QDialog):
     def _on_monster_keys_loaded(self, keys: list):
         self._all_monster_keys = keys
         self._populate_list(self._monster_tab.list, keys)
+
+    def _on_items_loaded(self, pairs: list):
+        self._all_item_keys = [key for key, _ in pairs]
+        self._all_item_data = {key: data for key, data in pairs}
+        self._populate_item_list(pairs)
+
+    def _populate_item_list(self, pairs: list):
+        self._item_tab.list.clear()
+        for key, data in pairs:
+            name = data.get("name") or _key_to_display(key)
+            cost = data.get("cost", "")
+            display = f"{name}  —  {cost}" if cost else name
+            item = QListWidgetItem(display)
+            item.setData(Qt.UserRole, key)
+            self._item_tab.list.addItem(item)
 
     @staticmethod
     def _populate_list(widget: QListWidget, keys: list):
@@ -397,6 +511,15 @@ class LookupDialog(QDialog):
                 item = QListWidgetItem(display)
                 item.setData(Qt.UserRole, key)
                 widget.addItem(item)
+
+    def _filter_items(self, text: str):
+        text = text.lower().strip()
+        pairs = [
+            (key, self._all_item_data.get(key, {}))
+            for key in self._all_item_keys
+            if text in (self._all_item_data.get(key, {}).get("name") or _key_to_display(key)).lower()
+        ]
+        self._populate_item_list(pairs)
 
     def _filter_conditions(self, text: str):
         text = text.lower().strip()
@@ -451,6 +574,30 @@ class LookupDialog(QDialog):
 
         threading.Thread(target=_load, daemon=True).start()
 
+    def _select_item(self, current: Optional[QListWidgetItem], _prev):
+        self._item_delete_btn.setEnabled(False)
+        if current is None or self._api is None:
+            self._current_item_key  = None
+            self._current_item_data = None
+            return
+        key = current.data(Qt.UserRole)
+        self._current_item_key = key
+        cached = self._all_item_data.get(key)
+        if cached:
+            self._item_loaded.emit(cached)
+        else:
+            self._current_item_data = None
+            self._item_browser.setHtml(_placeholder_html("Loading\u2026"))
+
+            def _load():
+                try:
+                    data = self._api.get_item(key)
+                    self._item_loaded.emit(data)
+                except Exception:
+                    self._item_loaded.emit(None)
+
+            threading.Thread(target=_load, daemon=True).start()
+
     def _select_condition(self, current: Optional[QListWidgetItem], _prev):
         if current is None:
             return
@@ -482,6 +629,15 @@ class LookupDialog(QDialog):
         else:
             self._current_monster_data = None
             self._monster_widget.clear_statblock()
+
+    def _on_item_loaded(self, data):
+        if data:
+            self._current_item_data = data
+            self._item_browser.setHtml(_build_item_html(data))
+            self._item_delete_btn.setEnabled(True)
+        else:
+            self._current_item_data = None
+            self._item_browser.setHtml(_placeholder_html("Item not found in library."))
 
     # ── Edit / Delete handlers ────────────────────────────────────────────────
 
@@ -599,12 +755,43 @@ class LookupDialog(QDialog):
         self._monster_edit_btn.setEnabled(False)
         self._monster_delete_btn.setEnabled(False)
 
+    def _delete_item(self):
+        if not self._current_item_key or self._api is None:
+            return
+        reply = QMessageBox.question(
+            self, "Delete Item",
+            f"Delete '{self._current_item_key}'? This cannot be undone.",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
+        )
+        if reply != QMessageBox.Yes:
+            return
+        try:
+            self._api.delete_item(self._current_item_key)
+        except Exception as exc:
+            QMessageBox.critical(self, "Delete Failed", str(exc))
+            return
+        self._remove_item_item(self._current_item_key)
+
+    def _remove_item_item(self, key: str):
+        for i in range(self._item_tab.list.count()):
+            item = self._item_tab.list.item(i)
+            if item and item.data(Qt.UserRole) == key:
+                self._item_tab.list.takeItem(i)
+                break
+        if key in self._all_item_keys:
+            self._all_item_keys.remove(key)
+        self._all_item_data.pop(key, None)
+        self._current_item_key  = None
+        self._current_item_data = None
+        self._item_browser.setHtml(_placeholder_html("No item selected."))
+        self._item_delete_btn.setEnabled(False)
+
     # ── Focus helper (called by opener) ──────────────────────────────────────
 
     def focus_search(self):
         """Activate the search box of the currently-visible tab."""
         idx = self._tabs.currentIndex()
-        tabs = [self._spell_tab, self._monster_tab, self._condition_tab]
+        tabs = [self._spell_tab, self._monster_tab, self._condition_tab, self._item_tab]
         if 0 <= idx < len(tabs):
             tabs[idx].search.setFocus()
             tabs[idx].search.selectAll()
