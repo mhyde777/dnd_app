@@ -1,6 +1,6 @@
 // foundryvtt-bridge/bridge.js
 const MODULE_ID = "foundryvtt-bridge";
-const BRIDGE_JS_VERSION = "0.2.0";
+const BRIDGE_JS_VERSION = "0.3.0";
 const DEFAULT_BRIDGE_URL = "";
 const LOG_PREFIX = "[bridge]";
 const COMMAND_POLL_INTERVAL_MS = 1500;
@@ -485,14 +485,17 @@ async function applyAddCondition(payload) {
     await actor.update({ [`system.attributes.conditions.${dnd5eKey}`]: true });
   }
 
-  // (B) Token status icon
+  // (B) Token status icon / status effect (v12+ prefers actor.toggleStatusEffect)
   if (payload?.tokenId) {
     const token = canvas?.tokens?.get(payload.tokenId) ?? null;
     if (!token) {
       console.warn(`${LOG_PREFIX} add_condition token not found`, { tokenId: payload.tokenId });
     } else {
       const template = resolveConditionTemplate(payload);
-      if (template) {
+      const effectId = template?.id ?? payload?.effectId ?? null;
+      if (effectId && typeof actor.toggleStatusEffect === "function") {
+        await actor.toggleStatusEffect(effectId, { active: true });
+      } else if (template) {
         await token.toggleEffect(template, { active: true });
       } else if (payload?.label) {
         await token.toggleEffect({ label: payload.label }, { active: true });
@@ -526,14 +529,17 @@ async function applyRemoveCondition(payload) {
     await actor.update({ [`system.attributes.conditions.${dnd5eKey}`]: false });
   }
 
-  // (B) Token status icon
+  // (B) Token status icon / status effect (v12+ prefers actor.toggleStatusEffect)
   if (payload?.tokenId) {
     const token = canvas?.tokens?.get(payload.tokenId) ?? null;
     if (!token) {
       console.warn(`${LOG_PREFIX} remove_condition token not found`, { tokenId: payload.tokenId });
     } else {
       const template = resolveConditionTemplate(payload);
-      if (template) {
+      const effectId = template?.id ?? payload?.effectId ?? null;
+      if (effectId && typeof actor.toggleStatusEffect === "function") {
+        await actor.toggleStatusEffect(effectId, { active: false });
+      } else if (template) {
         await token.toggleEffect(template, { active: false });
       } else if (payload?.label) {
         await token.toggleEffect({ label: payload.label }, { active: false });
@@ -872,25 +878,31 @@ Hooks.on("renderActorSheet", (app, html) => {
   const actor = app?.actor;
   if (!actor) return;
 
-  if (html.find(`[data-bridge-exclude="true"]`).length) return;
+  // html is a plain HTMLElement in v13+; jQuery object in v12 and below.
+  const el = html instanceof HTMLElement ? html : html[0];
+  if (!el) return;
+
+  if (el.querySelector(`[data-bridge-exclude="true"]`)) return;
 
   const isExcluded = Boolean(actor.getFlag(MODULE_ID, "excludeFromSync"));
-  const checkbox = $(`
-    <div class="form-group" data-bridge-exclude="true">
-      <label>Exclude from bridge sync</label>
-      <input type="checkbox" name="excludeFromSync" ${isExcluded ? "checked" : ""} />
-      <p class="notes">Hide this actor's tokens from auto-added initiative sync.</p>
-    </div>
-  `);
+  const wrapper = document.createElement("div");
+  wrapper.className = "form-group";
+  wrapper.dataset.bridgeExclude = "true";
+  wrapper.innerHTML = `
+    <label>Exclude from bridge sync</label>
+    <input type="checkbox" name="excludeFromSync" ${isExcluded ? "checked" : ""} />
+    <p class="notes">Hide this actor's tokens from auto-added initiative sync.</p>
+  `;
 
-  const target = html.find(".sheet-body, .tab[data-tab], .sheet-header").first();
-  if (target.length) {
-    target.prepend(checkbox);
+  const target = el.querySelector(".sheet-body, [data-tab], .sheet-header");
+  if (target) {
+    target.prepend(wrapper);
   } else {
-    html.find("form").first().prepend(checkbox);
+    const form = el.querySelector("form");
+    if (form) form.prepend(wrapper);
   }
 
-  checkbox.find("input").on("change", async (event) => {
+  wrapper.querySelector("input").addEventListener("change", async (event) => {
     const checked = Boolean(event.currentTarget.checked);
     await actor.setFlag(MODULE_ID, "excludeFromSync", checked);
     scheduleSnapshot("actorExcludeToggle");
