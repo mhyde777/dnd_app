@@ -347,8 +347,8 @@ def _is_spell_continuation(line: str, current_name: Optional[str]) -> bool:
     return False
 
 
-# Pattern for entry names - allows parens, slashes, digits, em dashes
-_ENTRY_NAME_CHARS = r"[\w\s,'\-/()–—]"
+# Pattern for entry names
+_ENTRY_NAME_CHARS = '[\\w\\s,\'‘’\\-/()\u2013\u2014]'
 
 
 def _parse_entries(lines: list[str]) -> list[dict]:
