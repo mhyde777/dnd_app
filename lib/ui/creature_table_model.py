@@ -64,6 +64,7 @@ class CreatureTableModel(QAbstractTableModel):
                 "_max_hp_bonus",
                 "_is_lair_action",
                 "_lair_action_notes",
+                "_statblock_override",
             }
             sample = next(iter(self.manager.creatures.values()))
             self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
@@ -452,6 +453,7 @@ class CreatureTableModel(QAbstractTableModel):
             "_max_hp_bonus",
             "_is_lair_action",
             "_lair_action_notes",
+            "_statblock_override",
         }
         sample = next(iter(self.manager.creatures.values()))
         self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
@@ -486,6 +488,7 @@ class CreatureTableModel(QAbstractTableModel):
                 "_max_hp_bonus",
                 "_is_lair_action",
                 "_lair_action_notes",
+                "_statblock_override",
             }
             sample = next(iter(self.manager.creatures.values()))
             self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]

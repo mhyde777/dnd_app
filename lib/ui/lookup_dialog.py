@@ -434,14 +434,7 @@ class LookupDialog(QDialog):
         def _load_spells():
             try:
                 keys = self._api.list_spell_keys()
-                pairs = []
-                for key in sorted(keys):
-                    try:
-                        data = self._api.get_spell(key) or {}
-                    except Exception:
-                        data = {}
-                    pairs.append((key, data))
-                self._spell_keys_ready.emit(pairs)
+                self._spell_keys_ready.emit(sorted(keys))
             except Exception:
                 self._spell_keys_ready.emit([])
 
@@ -470,14 +463,10 @@ class LookupDialog(QDialog):
         threading.Thread(target=_load_monsters, daemon=True).start()
         threading.Thread(target=_load_items,    daemon=True).start()
 
-    def _on_spell_keys_loaded(self, pairs: list):
-        # pairs is list[tuple[str, dict]] from background load
-        self._all_spell_keys = [key for key, _ in pairs]
-        self._spell_display_names = {
-            key: (data.get("name") or _key_to_display(key))
-            for key, data in pairs
-        }
-        self._populate_spell_list(self._all_spell_keys)
+    def _on_spell_keys_loaded(self, keys: list):
+        self._all_spell_keys = keys
+        self._spell_display_names = {key: _key_to_display(key) for key in keys}
+        self._populate_spell_list(keys)
 
     def _on_monster_keys_loaded(self, keys: list):
         self._all_monster_keys = keys
@@ -642,6 +631,16 @@ class LookupDialog(QDialog):
             self._spell_browser.setHtml(_build_spell_html(data))
             self._spell_edit_btn.setEnabled(True)
             self._spell_delete_btn.setEnabled(True)
+            # Update the list item's display name with the authoritative name from data
+            name = data.get("name")
+            key = self._current_spell_key
+            if name and key and self._spell_display_names.get(key) != name:
+                self._spell_display_names[key] = name
+                for i in range(self._spell_tab.list.count()):
+                    item = self._spell_tab.list.item(i)
+                    if item and item.data(Qt.UserRole) == key:
+                        item.setText(name)
+                        break
         else:
             self._current_spell_data = None
             self._spell_browser.setHtml(_placeholder_html("Spell not found in library."))
