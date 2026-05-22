@@ -622,6 +622,8 @@ class InitiativeTracker(QMainWindow, Application):
             )
             if ok:
                 creature.statblock_override = new_val.strip()
+                if creature.statblock_override and hasattr(self, "apply_statblock_slots"):
+                    self.apply_statblock_slots(creature, creature.statblock_override)
                 self.update_table()
                 self.save_state()
             return
