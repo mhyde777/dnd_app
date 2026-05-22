@@ -219,6 +219,13 @@ class Application:
             setattr(creature, "foundry_token_id", combatant.get("tokenId"))
             setattr(creature, "foundry_actor_id", combatant.get("actorId"))
 
+            # Auto-set statblock override from actor name if not already set by user
+            actor_name = (combatant.get("actorName") or "").strip()
+            if actor_name and not creature.statblock_override:
+                base_name = self.get_base_name(creature)
+                if actor_name != base_name:
+                    creature.statblock_override = actor_name
+
             resolved_type = self._resolve_foundry_creature_type(combatant)
             if resolved_type and getattr(creature, "_type", None) == CreatureType.BASE:
                 creature._type = resolved_type
@@ -573,6 +580,11 @@ class Application:
                 setattr(creature, "foundry_effects", effects)
                 labels = [e.get("label") for e in effects if isinstance(e, dict) and e.get("label")]
                 creature.conditions = labels
+
+            # Auto-set statblock override from actor name when token name differs
+            actor_name = (combatant.get("actorName") or "").strip()
+            if actor_name and actor_name != name:
+                creature.statblock_override = actor_name
 
             # Ensure unique name in manager
             base_name = creature.name
@@ -1536,19 +1548,35 @@ class Application:
         self.creature_list.setFixedHeight(list_height)
 
     def populate_monster_list(self):
-        self.monster_list.clear()
-        unique_monster_names = set()
+        prev_selection = (
+            self.monster_list.selectedItems()[0].text()
+            if self.monster_list.selectedItems() else None
+        )
 
-        for row in range(self.table_model.rowCount()):
-            creature_name = self.table_model.creature_names[row]
-            creature = self.manager.creatures.get(creature_name)
-            
-            if creature and creature._type == CreatureType.MONSTER:
-                base_name = re.sub(r'\s*(?:#\s*)?\d+\s*$', '', creature_name)
-                unique_monster_names.add(base_name)
+        self.monster_list.blockSignals(True)
+        try:
+            self.monster_list.clear()
+            unique_monster_names = set()
 
-        for name in unique_monster_names:
-            self.monster_list.addItem(name)
+            for row in range(self.table_model.rowCount()):
+                creature_name = self.table_model.creature_names[row]
+                creature = self.manager.creatures.get(creature_name)
+
+                if creature and creature._type == CreatureType.MONSTER:
+                    base_name = creature.statblock_override or re.sub(r'\s*(?:#\s*)?\d+\s*$', '', creature_name)
+                    unique_monster_names.add(base_name)
+
+            for name in unique_monster_names:
+                self.monster_list.addItem(name)
+
+            # Restore prior selection silently so the statblock isn't spuriously hidden
+            if prev_selection:
+                for i in range(self.monster_list.count()):
+                    if self.monster_list.item(i).text() == prev_selection:
+                        self.monster_list.setCurrentRow(i)
+                        break
+        finally:
+            self.monster_list.blockSignals(False)
 
         list_height = self.monster_list.count() * self.monster_list.sizeHintForRow(0)
         list_height += self.monster_list.frameWidth() * 2
@@ -1932,9 +1960,10 @@ class Application:
     def active_statblock_image(self, creature_name_or_obj):
         # Backward compatibility: accept either name string or creature object
         if isinstance(creature_name_or_obj, str):
-            base_name = self.get_base_name(self.manager.creatures[creature_name_or_obj])
+            creature = self.manager.creatures[creature_name_or_obj]
         else:
-            base_name = self.get_base_name(creature_name_or_obj)
+            creature = creature_name_or_obj
+        base_name = creature.statblock_override or self.get_base_name(creature)
         self.resize_to_fit_screen(base_name)
 
     def resize_to_fit_screen(self, base_name):

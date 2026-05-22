@@ -70,6 +70,7 @@ function buildCombatSnapshot() {
       actorType: actor?.type ?? null,
       actorHasPlayerOwner: Boolean(actor?.hasPlayerOwner),
       name: c.name ?? actor?.name ?? "",
+      actorName: actor?.name ?? null,
       initiative: c.initiative ?? null,
       hp: {
         value: hp.value ?? null,

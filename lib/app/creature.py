@@ -60,6 +60,7 @@ class I_Creature:
     _foundry_actor_id: Optional[str] = field(default=None)
     _is_lair_action: bool = field(default=False)
     _lair_action_notes: str = field(default="")
+    _statblock_override: str = field(default="")
 
     def __gt__(self, other: I_Creature) -> bool:
         if not isinstance(other, I_Creature):
@@ -112,6 +113,7 @@ class I_Creature:
             "_lair_action_notes": self._lair_action_notes,
             "_ability_uses": self._ability_uses,
             "_ability_uses_used": self._ability_uses_used,
+            "_statblock_override": self._statblock_override,
         }
 
     @staticmethod
@@ -138,6 +140,7 @@ class I_Creature:
         lair_action_notes = data.get("_lair_action_notes", "")
         ability_uses = data.get("_ability_uses", {})
         ability_uses_used = data.get("_ability_uses_used", {})
+        statblock_override = data.get("_statblock_override", "")
         if creature_type == CreatureType.PLAYER:
             if player_visible is None:
                 player_visible = True
@@ -204,6 +207,7 @@ class I_Creature:
                 lair_action_notes=lair_action_notes,
                 ability_uses=ability_uses,
                 ability_uses_used=ability_uses_used,
+                statblock_override=statblock_override,
             )
         else:
             return I_Creature(**data)
@@ -345,6 +349,11 @@ class I_Creature:
     @active.setter
     def active(self, value: bool): self._active = value
 
+    @property
+    def statblock_override(self) -> str: return self._statblock_override or ""
+    @statblock_override.setter
+    def statblock_override(self, value: str): self._statblock_override = (value or "").strip()
+
 
 class Monster(I_Creature):
     def __init__(self, name, init=0, max_hp=0, max_hp_bonus=0, curr_hp=0, temp_hp=0, armor_class=0,
@@ -354,7 +363,7 @@ class Monster(I_Creature):
                  innate_slots_used=None, death_saves_prompt=False, active=True,
                  foundry_combatant_id=None, foundry_token_id=None, foundry_actor_id=None,
                  is_lair_action=False, lair_action_notes="",
-                 ability_uses=None, ability_uses_used=None):
+                 ability_uses=None, ability_uses_used=None, statblock_override=""):
         super().__init__(
             _type=CreatureType.MONSTER,
             _name=name,
@@ -386,6 +395,7 @@ class Monster(I_Creature):
             _lair_action_notes=str(lair_action_notes),
             _ability_uses=ability_uses or {},
             _ability_uses_used=ability_uses_used or {},
+            _statblock_override=str(statblock_override or ""),
         )
 
 

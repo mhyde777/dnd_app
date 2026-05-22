@@ -586,6 +586,11 @@ class InitiativeTracker(QMainWindow, Application):
         else:
             visibility_action = None
 
+        if getattr(creature, "_type", None) != CreatureType.PLAYER:
+            statblock_action = menu.addAction("Set Statblock...")
+        else:
+            statblock_action = None
+
         menu.addSeparator()
         menu.addAction(self._make_hp_editor_widget_action(menu, creature))
         menu.addSeparator()
@@ -605,6 +610,20 @@ class InitiativeTracker(QMainWindow, Application):
             creature.player_visible = not bool(getattr(creature, "player_visible", True))
             self.table_model.refresh()
             self.update_table()
+            return
+
+        if statblock_action and chosen == statblock_action:
+            from PyQt5.QtWidgets import QInputDialog
+            current = getattr(creature, "statblock_override", "") or ""
+            suggestion = current or getattr(self, "get_base_name", lambda c: c.name)(creature)
+            new_val, ok = QInputDialog.getText(
+                self, "Set Statblock", "Statblock name to load for this creature:",
+                text=suggestion,
+            )
+            if ok:
+                creature.statblock_override = new_val.strip()
+                self.update_table()
+                self.save_state()
             return
 
         if chosen == edit_public_action:
