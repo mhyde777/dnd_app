@@ -225,6 +225,7 @@ class Application:
                 base_name = self.get_base_name(creature)
                 if actor_name != base_name:
                     creature.statblock_override = actor_name
+                    self.apply_statblock_slots(creature, actor_name)
 
             resolved_type = self._resolve_foundry_creature_type(combatant)
             if resolved_type and getattr(creature, "_type", None) == CreatureType.BASE:
@@ -530,13 +531,15 @@ class Application:
                 del existing_by_actor_id[aid]
                 continue  # don't create new creature
 
-            # Create a new creature for this Foundry combatant
-            creature = I_Creature(_name=str(name))
+            # Create a new creature for this Foundry combatant using the proper subclass
+            # so it is included in save_state (which filters by isinstance(c, Monster/Player))
             resolved_type = self._resolve_foundry_creature_type(combatant)
-            if resolved_type:
-                creature._type = resolved_type
-                if resolved_type == CreatureType.PLAYER:
-                    creature.death_saves_prompt = True
+            if resolved_type == CreatureType.PLAYER:
+                creature = Player(name=str(name))
+            elif resolved_type == CreatureType.MONSTER:
+                creature = Monster(name=str(name))
+            else:
+                creature = I_Creature(_name=str(name))
 
             if cid:
                 setattr(creature, "foundry_combatant_id", cid)
@@ -585,6 +588,7 @@ class Application:
             actor_name = (combatant.get("actorName") or "").strip()
             if actor_name and actor_name != name:
                 creature.statblock_override = actor_name
+                self.apply_statblock_slots(creature, actor_name)
 
             # Ensure unique name in manager
             base_name = creature.name
@@ -1607,6 +1611,47 @@ class Application:
         except Exception:
             return None
 
+    def apply_statblock_slots(self, creature, statblock_name: str) -> bool:
+        """Pull spell/innate slots from a statblock onto the creature.
+
+        Only populates if the creature has no slots configured yet.
+        Returns True if any slots were applied.
+        """
+        data = self.fetch_statblock_for_creature(statblock_name)
+        if not data:
+            return False
+        sc = data.get("spellcasting")
+        if not sc:
+            return False
+        applied = False
+        if not creature._spell_slots:
+            slots = {
+                int(k): v
+                for k, v in sc.get("slots", {}).items()
+                if v
+            }
+            if slots:
+                creature._spell_slots = slots
+                creature._spell_slots_used = {k: 0 for k in slots}
+                applied = True
+        if not creature._innate_slots:
+            innate: dict[str, int] = {}
+            for key, spells in sc.get("innate", {}).items():
+                import re as _re
+                if key == "at_will":
+                    uses = -1
+                elif m := _re.match(r'(\d+)_per_day', key):
+                    uses = int(m.group(1))
+                else:
+                    uses = 1
+                for spell in spells:
+                    innate[spell.title()] = uses
+            if innate:
+                creature._innate_slots = innate
+                creature._innate_slots_used = {}
+                applied = True
+        return applied
+
     def add_combatant(self):
         self.init_tracking_mode(True)
         dialog = AddCombatantWindow(self, statblock_lookup=self.fetch_statblock_for_creature)
@@ -1623,6 +1668,10 @@ class Application:
                     innate_slots=creature_data.get("_innate_slots", {}),
                     ability_uses=creature_data.get("_ability_uses", {}),
                 )
+                # If the dialog didn't pick up spell slots (e.g. editingFinished didn't fire),
+                # fall back to pulling them from the statblock library.
+                if not creature._spell_slots and not creature._innate_slots:
+                    self.apply_statblock_slots(creature, creature.name)
                 self.manager.add_creature(creature)
 
             # ✅ Ensure sorting + fields + stable order
