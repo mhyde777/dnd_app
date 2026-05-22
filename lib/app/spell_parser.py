@@ -26,10 +26,12 @@ import re
 def spell_key(name: str) -> str:
     """Convert a spell name to its storage key.
 
-    'Fireball'      → 'fireball.json'
-    'Magic Missile' → 'magic_missile.json'
+    'Fireball'                 → 'fireball.json'
+    'Magic Missile'            → 'magic_missile.json'
+    "Tasha's Hideous Laughter" → 'tashas_hideous_laughter.json'
     """
     key = name.strip().lower()
+    key = key.replace("'", "").replace("’", "")  # strip apostrophes before slugifying
     key = re.sub(r"[^a-z0-9]+", "_", key)
     key = key.strip("_")
     return f"{key}.json"

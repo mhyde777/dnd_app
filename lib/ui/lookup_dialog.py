@@ -317,7 +317,8 @@ class LookupDialog(QDialog):
         self.setAttribute(Qt.WA_DeleteOnClose, False)
 
         self._api = storage_api
-        self._all_spell_keys:   list[str] = []
+        self._all_spell_keys:    list[str] = []
+        self._spell_display_names: dict[str, str] = {}
         self._all_monster_keys: list[str] = []
         self._all_item_keys:    list[str] = []
         self._all_item_data:    dict[str, dict] = {}
@@ -433,7 +434,14 @@ class LookupDialog(QDialog):
         def _load_spells():
             try:
                 keys = self._api.list_spell_keys()
-                self._spell_keys_ready.emit(sorted(keys))
+                pairs = []
+                for key in sorted(keys):
+                    try:
+                        data = self._api.get_spell(key) or {}
+                    except Exception:
+                        data = {}
+                    pairs.append((key, data))
+                self._spell_keys_ready.emit(pairs)
             except Exception:
                 self._spell_keys_ready.emit([])
 
@@ -462,9 +470,14 @@ class LookupDialog(QDialog):
         threading.Thread(target=_load_monsters, daemon=True).start()
         threading.Thread(target=_load_items,    daemon=True).start()
 
-    def _on_spell_keys_loaded(self, keys: list):
-        self._all_spell_keys = keys
-        self._populate_list(self._spell_tab.list, keys)
+    def _on_spell_keys_loaded(self, pairs: list):
+        # pairs is list[tuple[str, dict]] from background load
+        self._all_spell_keys = [key for key, _ in pairs]
+        self._spell_display_names = {
+            key: (data.get("name") or _key_to_display(key))
+            for key, data in pairs
+        }
+        self._populate_spell_list(self._all_spell_keys)
 
     def _on_monster_keys_loaded(self, keys: list):
         self._all_monster_keys = keys
@@ -485,6 +498,14 @@ class LookupDialog(QDialog):
             item.setData(Qt.UserRole, key)
             self._item_tab.list.addItem(item)
 
+    def _populate_spell_list(self, keys: list):
+        self._spell_tab.list.clear()
+        for key in keys:
+            display = self._spell_display_names.get(key, _key_to_display(key))
+            item = QListWidgetItem(display)
+            item.setData(Qt.UserRole, key)
+            self._spell_tab.list.addItem(item)
+
     @staticmethod
     def _populate_list(widget: QListWidget, keys: list):
         widget.clear()
@@ -496,7 +517,12 @@ class LookupDialog(QDialog):
     # ── Filtering ────────────────────────────────────────────────────────────
 
     def _filter_spells(self, text: str):
-        self._apply_filter(self._spell_tab.list, self._all_spell_keys, text)
+        text = text.lower().strip()
+        filtered = [
+            key for key in self._all_spell_keys
+            if text in self._spell_display_names.get(key, _key_to_display(key)).lower()
+        ]
+        self._populate_spell_list(filtered)
 
     def _filter_monsters(self, text: str):
         self._apply_filter(self._monster_tab.list, self._all_monster_keys, text)
@@ -650,18 +676,25 @@ class LookupDialog(QDialog):
         if dlg.action == "saved":
             old_key = self._current_spell_key
             new_key = dlg.saved_key
-            # Update the list item if the key changed
+            new_display = (dlg.saved_data or {}).get("name") or _key_to_display(new_key)
             if new_key != old_key:
                 for i in range(self._spell_tab.list.count()):
                     item = self._spell_tab.list.item(i)
                     if item and item.data(Qt.UserRole) == old_key:
                         item.setData(Qt.UserRole, new_key)
-                        item.setText(_key_to_display(new_key))
+                        item.setText(new_display)
                         break
-                # Update master key list
                 if old_key in self._all_spell_keys:
                     idx = self._all_spell_keys.index(old_key)
                     self._all_spell_keys[idx] = new_key
+                self._spell_display_names.pop(old_key, None)
+            else:
+                for i in range(self._spell_tab.list.count()):
+                    item = self._spell_tab.list.item(i)
+                    if item and item.data(Qt.UserRole) == new_key:
+                        item.setText(new_display)
+                        break
+            self._spell_display_names[new_key] = new_display
             self._current_spell_key  = new_key
             self._current_spell_data = dlg.saved_data
             self._spell_browser.setHtml(_build_spell_html(dlg.saved_data))
@@ -686,6 +719,7 @@ class LookupDialog(QDialog):
         self._remove_spell_item(self._current_spell_key)
 
     def _remove_spell_item(self, key: str):
+        self._spell_display_names.pop(key, None)
         for i in range(self._spell_tab.list.count()):
             item = self._spell_tab.list.item(i)
             if item and item.data(Qt.UserRole) == key:
