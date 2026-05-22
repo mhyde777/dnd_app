@@ -231,8 +231,18 @@ class StatblockImportDialog(QDialog):
         except Exception:
             return  # don't block the save on a spell-list failure
 
+        import re as _re
         from app.spell_parser import spell_key as _spell_key
-        missing = [s for s in all_spells if _spell_key(s) not in existing_keys]
+
+        def _spell_key_variants(name: str) -> list[str]:
+            """Return new key and legacy key (pre-apostrophe-fix) to handle both formats."""
+            new_key = _spell_key(name)
+            legacy = name.strip().lower()
+            legacy = _re.sub(r"[^a-z0-9]+", "_", legacy)
+            legacy = legacy.strip("_") + ".json"
+            return [new_key] if new_key == legacy else [new_key, legacy]
+
+        missing = [s for s in all_spells if not any(k in existing_keys for k in _spell_key_variants(s))]
 
         if missing:
             # Deduplicate while preserving order
