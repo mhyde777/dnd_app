@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import (
     QAction, QMenuBar, QDesktopWidget, QTableView,
     QSizePolicy, QMessageBox, QDialog, QDialogButtonBox,
     QMenu, QTextEdit, QGroupBox, QStatusBar, QShortcut,
-    QWidgetAction, QFormLayout, QSpinBox,
+    QWidgetAction, QFormLayout, QSpinBox, QFrame,
 )
 from ui.statblock_widget import StatblockWidget
 from PyQt5.QtCore import Qt
@@ -133,6 +133,8 @@ class InitiativeTracker(QMainWindow, Application):
         self.value_input = QLineEdit(self)
         self.value_input.setPlaceholderText("HP value...")
         self.value_input.setFixedWidth(200)
+        self.value_input.setToolTip("Enter HP value — Enter to damage, Shift+Enter to heal")
+        self.value_input.installEventFilter(self)
 
         self.dam_button = QPushButton("Damage", self)
         self.dam_button.setObjectName("damageButton")
@@ -143,6 +145,38 @@ class InitiativeTracker(QMainWindow, Application):
         hp_group_layout.addWidget(self.value_input)
         hp_group_layout.addWidget(self.dam_button)
         self.dam_layout.addWidget(hp_group)
+
+        # -- HP Mods group (Temp HP + Max HP Bonus, multi-creature) --
+        hp_mods_group = QGroupBox("HP Mods")
+        hp_mods_layout = QFormLayout(hp_mods_group)
+        hp_mods_layout.setContentsMargins(6, 6, 6, 6)
+        hp_mods_layout.setSpacing(4)
+
+        self.temp_hp_spin = QSpinBox(self)
+        self.temp_hp_spin.setRange(0, 9999)
+        self.temp_hp_spin.setFixedWidth(200)
+        self.temp_hp_spin.setToolTip("Temporary HP to set on selected creatures")
+
+        self.max_hp_bonus_spin = QSpinBox(self)
+        self.max_hp_bonus_spin.setRange(-9999, 9999)
+        self.max_hp_bonus_spin.setFixedWidth(200)
+        self.max_hp_bonus_spin.setToolTip("Max HP bonus/penalty to set on selected creatures")
+
+        hp_mods_layout.addRow("Temp HP:", self.temp_hp_spin)
+        hp_mods_layout.addRow("Max Bonus:", self.max_hp_bonus_spin)
+
+        hp_mods_btn_row = QWidget()
+        hp_mods_btn_layout = QHBoxLayout(hp_mods_btn_row)
+        hp_mods_btn_layout.setContentsMargins(0, 2, 0, 0)
+        self.hp_mods_apply_button = QPushButton("Apply")
+        self.hp_mods_apply_button.clicked.connect(self.apply_hp_mods_to_selected)
+        self.hp_mods_clear_button = QPushButton("Clear")
+        self.hp_mods_clear_button.clicked.connect(lambda: self.apply_hp_mods_to_selected(clear=True))
+        hp_mods_btn_layout.addWidget(self.hp_mods_apply_button)
+        hp_mods_btn_layout.addWidget(self.hp_mods_clear_button)
+        hp_mods_layout.addRow(hp_mods_btn_row)
+
+        self.dam_layout.addWidget(hp_mods_group)
 
         self.dam_layout.addStretch()
 
@@ -195,10 +229,26 @@ class InitiativeTracker(QMainWindow, Application):
         # === Status Bar ===
         self.status_bar = QStatusBar(self)
         self.setStatusBar(self.status_bar)
+        self.bridge_status_label = QLabel("● Bridge: Disabled")
+        self.bridge_status_label.setStyleSheet("padding: 0 8px; color: #888;")
+        self.status_bar.addPermanentWidget(self.bridge_status_label)
 
     def show_status_message(self, msg: str, timeout_ms: int = 4000):
         if hasattr(self, "status_bar"):
             self.status_bar.showMessage(msg, timeout_ms)
+
+    def set_bridge_status(self, state: str) -> None:
+        if not hasattr(self, "bridge_status_label"):
+            return
+        if state == "connected":
+            self.bridge_status_label.setText("● Bridge: Connected")
+            self.bridge_status_label.setStyleSheet("padding: 0 8px; color: #2ecc71;")
+        elif state == "error":
+            self.bridge_status_label.setText("● Bridge: Disconnected")
+            self.bridge_status_label.setStyleSheet("padding: 0 8px; color: #e74c3c;")
+        else:
+            self.bridge_status_label.setText("● Bridge: Disabled")
+            self.bridge_status_label.setStyleSheet("padding: 0 8px; color: #888;")
 
     def _monster_list_context_menu(self, pos):
         menu = QMenu(self)
@@ -613,19 +663,54 @@ class InitiativeTracker(QMainWindow, Application):
             return
 
         if statblock_action and chosen == statblock_action:
-            from PyQt5.QtWidgets import QInputDialog
-            current = getattr(creature, "statblock_override", "") or ""
-            suggestion = current or getattr(self, "get_base_name", lambda c: c.name)(creature)
-            new_val, ok = QInputDialog.getText(
-                self, "Set Statblock", "Statblock name to load for this creature:",
-                text=suggestion,
+            try:
+                keys = self.storage_api.list_statblock_keys()
+            except Exception:
+                keys = []
+            display_names = sorted(
+                k.removesuffix(".json").replace("_", " ").title() for k in keys
             )
-            if ok:
-                creature.statblock_override = new_val.strip()
-                if creature.statblock_override and hasattr(self, "apply_statblock_slots"):
-                    self.apply_statblock_slots(creature, creature.statblock_override)
-                self.update_table()
-                self.save_state()
+
+            dlg = QDialog(self)
+            dlg.setWindowTitle("Set Statblock")
+            dlg.setMinimumWidth(300)
+            dlg_layout = QVBoxLayout(dlg)
+
+            search_box = QLineEdit()
+            search_box.setPlaceholderText("Filter statblocks...")
+            picker_list = QListWidget()
+            picker_list.addItems(display_names)
+
+            current_override = getattr(creature, "statblock_override", "") or ""
+            for i in range(picker_list.count()):
+                if picker_list.item(i).text().lower() == current_override.lower():
+                    picker_list.setCurrentRow(i)
+                    break
+
+            def _filter_picker(text):
+                for i in range(picker_list.count()):
+                    picker_list.item(i).setHidden(text.lower() not in picker_list.item(i).text().lower())
+
+            search_box.textChanged.connect(_filter_picker)
+            picker_list.itemDoubleClicked.connect(dlg.accept)
+
+            dlg_btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+            dlg_btns.accepted.connect(dlg.accept)
+            dlg_btns.rejected.connect(dlg.reject)
+
+            dlg_layout.addWidget(search_box)
+            dlg_layout.addWidget(picker_list)
+            dlg_layout.addWidget(dlg_btns)
+
+            if dlg.exec_() == QDialog.Accepted:
+                item = picker_list.currentItem()
+                new_val = (item.text() if item and not item.isHidden() else search_box.text()).strip()
+                if new_val:
+                    creature.statblock_override = new_val
+                    if hasattr(self, "apply_statblock_slots"):
+                        self.apply_statblock_slots(creature, creature.statblock_override)
+                    self.update_table()
+                    self.save_state()
             return
 
         if chosen == edit_public_action:
@@ -746,6 +831,15 @@ class InitiativeTracker(QMainWindow, Application):
         super().closeEvent(event)
 
     def eventFilter(self, obj, event):
+        from PyQt5.QtCore import QEvent
+        if hasattr(self, "value_input") and obj is self.value_input:
+            if event.type() == QEvent.KeyPress and event.key() in (Qt.Key_Return, Qt.Key_Enter):
+                if event.modifiers() & Qt.ShiftModifier:
+                    self.heal_selected_creatures()
+                else:
+                    self.damage_selected_creatures()
+                return True
+
         if event.type() == event.MouseButtonPress:
             # If the click target is NOT inside the table, clear selection
             if hasattr(self, "table"):
