@@ -75,6 +75,8 @@ class BridgeClient:
         self,
         on_snapshot: Callable[[Dict[str, Any]], None],
         stop_event: "threading.Event",
+        on_connect: Optional[Callable[[], None]] = None,
+        on_disconnect: Optional[Callable[[], None]] = None,
     ) -> None:
         if not self.enabled:
             print("[Bridge] BRIDGE_TOKEN is not set; skipping stream.")
@@ -95,8 +97,12 @@ class BridgeClient:
                         print(
                             f"[Bridge] GET /state/stream failed: {response.status_code} {response.text}"
                         )
+                        if on_disconnect:
+                            on_disconnect()
                         time.sleep(retry_delay)
                         continue
+                    if on_connect:
+                        on_connect()
                     for line in response.iter_lines(decode_unicode=True):
                         if stop_event.is_set():
                             return
@@ -116,6 +122,8 @@ class BridgeClient:
                                 on_snapshot(payload)
             except requests.RequestException as exc:
                 print(f"[Bridge] Stream error: {exc}")
+                if on_disconnect:
+                    on_disconnect()
                 time.sleep(retry_delay)
 
     def enqueue_set_hp(

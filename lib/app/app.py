@@ -99,6 +99,8 @@ class Application:
     def start_bridge_polling(self) -> None:
         if not self.bridge_client.enabled:
             print("[Bridge] BRIDGE_TOKEN is not set; bridge sync is disabled.")
+            if hasattr(self, "set_bridge_status"):
+                self.set_bridge_status("disabled")
             return
         if bridge_stream_enabled():
             self.start_bridge_stream()
@@ -121,9 +123,18 @@ class Application:
         def on_snapshot(snapshot: Dict[str, Any]) -> None:
             QTimer.singleShot(0, lambda payload=snapshot: self._set_bridge_snapshot(payload))
 
+        def on_stream_connect() -> None:
+            if hasattr(self, "set_bridge_status"):
+                QTimer.singleShot(0, lambda: self.set_bridge_status("connected"))
+
+        def on_stream_disconnect() -> None:
+            if hasattr(self, "set_bridge_status"):
+                QTimer.singleShot(0, lambda: self.set_bridge_status("error"))
+
         self.bridge_stream_thread = threading.Thread(
             target=self.bridge_client.stream_state,
             args=(on_snapshot, self.bridge_stream_stop),
+            kwargs={"on_connect": on_stream_connect, "on_disconnect": on_stream_disconnect},
             daemon=True,
         )
         self.bridge_stream_thread.start()
@@ -135,6 +146,12 @@ class Application:
             snapshot = self.bridge_client.fetch_state()
         except Exception as exc:
             print(f"[Bridge] Failed to fetch state: {exc}")
+            if hasattr(self, "set_bridge_status"):
+                self.set_bridge_status("error")
+            return
+        if snapshot is None:
+            if hasattr(self, "set_bridge_status"):
+                self.set_bridge_status("error")
             return
         self._set_bridge_snapshot(snapshot)
 
@@ -149,6 +166,8 @@ class Application:
         self._apply_bridge_snapshot(snapshot)
         world = snapshot.get("world")
         print(f"[Bridge] Snapshot loaded world={world!r} combatants={len(combatants)}")
+        if hasattr(self, "set_bridge_status"):
+            self.set_bridge_status("connected")
 
     def _has_missing_initiatives(self) -> bool:
         if not getattr(self, "manager", None) or not getattr(self.manager, "creatures", None):
@@ -2164,6 +2183,32 @@ class Application:
             names = ", ".join(selected_names)
             action = "Healed" if positive else "Damaged"
             self.show_status_message(f"{action} {names} by {value}")
+
+    def apply_hp_mods_to_selected(self, clear: bool = False) -> None:
+        selected_items = self.creature_list.selectedItems()
+        selected_names = [item.text() for item in selected_items if item and item.text()]
+        if not selected_names:
+            return
+
+        temp_hp = 0 if clear else int(getattr(self, "temp_hp_spin", None) and self.temp_hp_spin.value() or 0)
+        max_bonus = 0 if clear else int(getattr(self, "max_hp_bonus_spin", None) and self.max_hp_bonus_spin.value() or 0)
+
+        for creature_name in selected_names:
+            creature = self.manager.creatures.get(creature_name)
+            if creature:
+                self._commit_hp_overrides(creature, temp_hp, max_bonus)
+
+        if not clear:
+            if hasattr(self, "temp_hp_spin"):
+                self.temp_hp_spin.setValue(0)
+            if hasattr(self, "max_hp_bonus_spin"):
+                self.max_hp_bonus_spin.setValue(0)
+
+        if hasattr(self, "show_status_message") and selected_names:
+            if clear:
+                self.show_status_message(f"HP mods cleared for {', '.join(selected_names)}")
+            else:
+                self.show_status_message(f"HP mods applied to {', '.join(selected_names)}")
 
     # ================= Encounter Builder =====================
     def save_encounter(self):
