@@ -15,6 +15,7 @@ from PyQt5.QtCore import QPoint
 from PyQt5.QtWidgets import QTextBrowser, QToolTip
 
 from app.conditions import get_condition
+from app.spell_parser import spell_key as _spell_key
 
 _SPELL_ORDINALS = {0: "Cantrip", 1: "1st", 2: "2nd", 3: "3rd",
                    4: "4th", 5: "5th", 6: "6th", 7: "7th", 8: "8th", 9: "9th"}
@@ -612,7 +613,7 @@ class StatblockWidget(QTextBrowser):
             if not name:
                 continue
 
-            key = name.lower().replace(" ", "_")
+            key = _spell_key(name).removesuffix(".json")
             link = (
                 f'<a href="spell:{key}" '
                 f'style="color:{_BLUE}; text-decoration:none;">{_spell_title(name)}</a>'
