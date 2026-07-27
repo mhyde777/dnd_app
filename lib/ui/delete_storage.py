@@ -55,6 +55,7 @@ class DeleteStorageWindow(QDialog):
             if isinstance(k, str)
             and k.endswith(".json")
             and k not in ("players.json", "last_state.json")
+            and not k.startswith("pcgroup_")
         ]
         keys.sort(key=str.lower)
 

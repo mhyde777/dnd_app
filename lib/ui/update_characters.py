@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QLabel,
+    QComboBox,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
@@ -18,29 +19,55 @@ from PyQt5.QtWidgets import (
 
 from app.creature import Player
 
+# Sentinel for the "not a saved group" entry in the roster picker.
+DEFAULT_ROSTER = ""
+
 
 class UpdateCharactersWindow(QDialog):
     """
     Create/Update Players.
-    Reads/writes players.json via Storage API if configured, else local data/players.json.
+
+    Edits one roster at a time, chosen with the picker at the top:
+      - the default roster (players.json), or
+      - any saved PC group (pcgroup_*.json).
+
+    Defaults to the group currently loaded in the tracker, so editing characters
+    while a group is active writes back to that group rather than the global
+    roster. Pass ``group_key`` to target a specific group, and ``new_group=True``
+    to start an empty roster for a group that doesn't exist yet.
 
     File format supported on load:
       1) {"players": [<player dicts>], ...}   (preferred)
       2) [<player dicts>]                      (legacy/simple)
     Save format:
-      {"players": [<player dicts>]}
+      players.json -> {"players": [<player dicts>]}
+      pcgroup_*    -> full GameState dict (via Application.save_pc_group_roster)
     """
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, group_key=None, new_group=False):
         super().__init__(parent)
         self.app = parent  # main window (InitiativeTracker), also your Application mixin
         self.setWindowTitle("Create/Update Characters")
+
+        self.new_group = bool(new_group)
+        if group_key is None and not new_group:
+            group_key = getattr(self.app, "active_pc_group", None)
+        self.group_key = group_key or DEFAULT_ROSTER
 
         self.layout = QVBoxLayout(self)
 
         title = QLabel("Create/Update Characters")
         title.setStyleSheet("font-size: 16px; font-weight: bold;")
         self.layout.addWidget(title)
+
+        # Roster picker — which list of PCs these rows belong to.
+        picker_row = QHBoxLayout()
+        picker_row.addWidget(QLabel("Roster:"))
+        self.roster_combo = QComboBox()
+        picker_row.addWidget(self.roster_combo, 1)
+        self.layout.addLayout(picker_row)
+        self._populate_roster_combo()
+        self.roster_combo.currentIndexChanged.connect(self._on_roster_changed)
 
         self.table = QTableWidget()
         self.table.setColumnCount(5)
@@ -54,6 +81,10 @@ class UpdateCharactersWindow(QDialog):
         self.add_btn.clicked.connect(self.add_character_row)
         self.controls.addWidget(self.add_btn)
 
+        self.delete_btn = QPushButton("Delete Row")
+        self.delete_btn.clicked.connect(self.delete_selected_rows)
+        self.controls.addWidget(self.delete_btn)
+
         self.controls.addStretch(1)
 
         self.buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
@@ -66,9 +97,84 @@ class UpdateCharactersWindow(QDialog):
         self.load_players()
 
     # -------------------------
+    # Roster picker
+    # -------------------------
+    def _roster_label(self, key: str) -> str:
+        if not key:
+            return "Default Roster (players.json)"
+        return f"PC Group: {self.app._pc_group_display(key)}"
+
+    def _populate_roster_combo(self):
+        """List the default roster plus every saved group, selecting the target."""
+        self.roster_combo.blockSignals(True)
+        self.roster_combo.clear()
+        self.roster_combo.addItem(self._roster_label(DEFAULT_ROSTER), DEFAULT_ROSTER)
+
+        try:
+            keys = [k for _, k in self.app.list_pc_groups()]
+        except Exception:
+            keys = []
+        # A brand-new group isn't in storage yet, but must still be selectable.
+        if self.group_key and self.group_key not in keys:
+            keys.append(self.group_key)
+
+        for key in keys:
+            label = self._roster_label(key)
+            if key == self.group_key and self.new_group:
+                label += "  (new)"
+            self.roster_combo.addItem(label, key)
+
+        idx = self.roster_combo.findData(self.group_key)
+        self.roster_combo.setCurrentIndex(idx if idx >= 0 else 0)
+        self.roster_combo.blockSignals(False)
+
+    def _on_roster_changed(self, _index: int):
+        new_key = self.roster_combo.currentData() or DEFAULT_ROSTER
+        if new_key == self.group_key:
+            return
+        if self.table.rowCount() and not self._confirm_discard():
+            # Snap back to the roster the rows actually belong to.
+            self.roster_combo.blockSignals(True)
+            idx = self.roster_combo.findData(self.group_key)
+            self.roster_combo.setCurrentIndex(idx if idx >= 0 else 0)
+            self.roster_combo.blockSignals(False)
+            return
+        was_new = self.new_group
+        self.new_group = False
+        self.group_key = new_key
+        if was_new:
+            # Drop the unsaved new group from the list.
+            self._populate_roster_combo()
+        self.load_players()
+
+    def _confirm_discard(self) -> bool:
+        resp = QMessageBox.question(
+            self,
+            "Switch Roster",
+            "Switch rosters? Any unsaved edits to the current list will be lost.",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        return resp == QMessageBox.Yes
+
+    # -------------------------
     # IO (Storage API or local)
     # -------------------------
+    def _load_group_payload(self) -> Optional[Dict[str, Any]]:
+        """Payload for the selected PC group, or an empty one for a new group."""
+        if self.new_group:
+            return {"players": []}
+        try:
+            players = self.app.get_pc_group_players(self.group_key)
+        except Exception as e:
+            QMessageBox.warning(self, "Load Failed", f"Failed to load PC group:\n{e}")
+            return None
+        return {"players": [p.to_dict() for p in players]}
+
     def _load_players_payload(self) -> Optional[Dict[str, Any]]:
+        if self.group_key:
+            return self._load_group_payload()
+
         filename = "players.json"
 
         # Prefer Storage API (your app uses it when configured)
@@ -103,6 +209,14 @@ class UpdateCharactersWindow(QDialog):
         except Exception as e:
             QMessageBox.warning(self, "Load Failed", f"Failed to load local players.json:\n{e}")
             return None
+
+    def _save_group_payload(self, players: List[Player]) -> bool:
+        try:
+            self.app.save_pc_group_roster(self.group_key, players)
+            return True
+        except Exception as e:
+            QMessageBox.warning(self, "Save Failed", f"Failed to save PC group:\n{e}")
+            return False
 
     def _save_players_payload(self, payload: Dict[str, Any]) -> bool:
         filename = "players.json"
@@ -176,6 +290,18 @@ class UpdateCharactersWindow(QDialog):
             self.table.scrollToItem(item)
             self.table.editItem(item)
 
+    def delete_selected_rows(self):
+        rows = sorted(
+            {idx.row() for idx in self.table.selectedIndexes()}, reverse=True
+        )
+        if not rows:
+            QMessageBox.information(
+                self, "No Selection", "Select one or more character rows to delete."
+            )
+            return
+        for row in rows:
+            self.table.removeRow(row)
+
     def _player_from_dict(self, d: Dict[str, Any]) -> Player:
         name = d.get("_name", "") or d.get("name", "") or ""
         max_hp = d.get("_max_hp", d.get("max_hp", 0)) or 0
@@ -237,6 +363,7 @@ class UpdateCharactersWindow(QDialog):
 
     def save_players(self):
         players_out: List[Dict[str, Any]] = []
+        players: List[Player] = []
 
         for row in range(self.table.rowCount()):
             name_item = self.table.item(row, 0)
@@ -271,7 +398,27 @@ class UpdateCharactersWindow(QDialog):
                 active=active,
                 public_notes=public_notes,
             )
+            players.append(pl)
             players_out.append(pl.to_dict())
+
+        if self.group_key:
+            if not self._save_group_payload(players):
+                return
+            self.new_group = False
+            # Swap the tracker's party over to the group we just wrote, so the
+            # editor and the initiative table never disagree.
+            try:
+                self.app.load_pc_group(self.group_key)
+                if hasattr(self.app, "show_status_message"):
+                    self.app.show_status_message(
+                        f"Saved PC group: {self.app._pc_group_display(self.group_key)}"
+                    )
+            except Exception as e:
+                QMessageBox.warning(
+                    self, "Load Failed", f"Group saved, but loading it failed:\n{e}"
+                )
+            self.accept()
+            return
 
         payload = {"players": players_out}
 

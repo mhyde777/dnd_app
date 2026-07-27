@@ -1,5 +1,5 @@
 from typing import Dict, Any, List, Optional
-import json, os, re, sys, threading
+import fnmatch, json, os, re, sys, threading
 from dotenv import load_dotenv
 
 from PyQt5.QtWidgets import(
@@ -16,6 +16,7 @@ from app.creature import (
 from app.save_json import GameState
 from app.manager import CreatureManager
 from app.storage_api import StorageAPI
+from app import settings as app_settings
 from app.config import (
     bridge_stream_enabled,
     get_storage_api_base,
@@ -52,6 +53,15 @@ class Application:
         self.current_idx: int = 0         # pointer into turn_order
         self.current_creature_name: Optional[str] = None
 
+        # Key of the PC group currently loaded, or None when the party came from
+        # the default players.json roster. The character editor saves back here.
+        self.active_pc_group: Optional[str] = None
+
+        # Foundry combatants to skip (summons, familiars, effect tokens...).
+        self._foundry_ignore: Dict[str, List[str]] = app_settings.get_foundry_ignore()
+        self._ignore_logged: set = set()  # keeps the log to one line per name
+        self._last_raw_combatants: List[Dict[str, Any]] = []
+
 
         self.boolean_fields = {
             '_action': 'set_creature_action',
@@ -77,6 +87,7 @@ class Application:
         self.bridge_stream_thread: Optional[threading.Thread] = None
         self.bridge_stream_stop: Optional[threading.Event] = None
         self.bridge_combatants_by_name: Dict[str, List[Dict[str, Any]]] = {}
+        self._pending_bridge_snapshot: Optional[Dict[str, Any]] = None
         self._initiative_reset_pending = False
 
         # --- Storage backend ---
@@ -158,16 +169,67 @@ class Application:
     def _set_bridge_snapshot(self, snapshot: Optional[Dict[str, Any]]) -> None:
         if snapshot is None or not isinstance(snapshot, dict):
             return
-        self.bridge_snapshot = snapshot
+        # If the user is mid-edit in a table cell (e.g. typing a note), applying
+        # the snapshot now fires layoutChanged and Qt discards the uncommitted
+        # editor text. Stash the latest snapshot and replay it once editing ends.
+        if self._is_table_editing():
+            self._pending_bridge_snapshot = snapshot
+            return
         combatants = snapshot.get("combatants", [])
         if not isinstance(combatants, list):
             combatants = []
+        # Keep the unfiltered feed so the ignore dialog can still show (and
+        # un-ignore) the things being dropped.
+        self._last_raw_combatants = list(combatants)
+
+        # Drop ignored combatants once, here, so nothing downstream ever sees
+        # them: they can't be added to initiative, can't be matched by name, and
+        # can't sync HP/conditions. Filtering summons out also un-confuses name
+        # resolution for the PCs they're named after ("Surina's Echo" vs "Echo").
+        combatants, ignored = self._filter_ignored_combatants(combatants)
+        if ignored:
+            snapshot = dict(snapshot)
+            snapshot["combatants"] = combatants
+
+        self.bridge_snapshot = snapshot
         self.bridge_combatants_by_name = self._index_bridge_combatants(combatants)
+
+        # Anything already in the tracker that the rules now cover (added before
+        # a rule existed, or restored from a saved state) goes too.
+        for name in self.prune_ignored_creatures():
+            print(f"[Bridge] Dropped ignored '{name}' from initiative")
+
         self._apply_bridge_snapshot(snapshot)
         world = snapshot.get("world")
-        print(f"[Bridge] Snapshot loaded world={world!r} combatants={len(combatants)}")
+        suffix = f" (ignored {len(ignored)})" if ignored else ""
+        print(f"[Bridge] Snapshot loaded world={world!r} combatants={len(combatants)}{suffix}")
         if hasattr(self, "set_bridge_status"):
             self.set_bridge_status("connected")
+
+    def _is_table_editing(self) -> bool:
+        """True if a table cell editor is currently open (mid-edit)."""
+        table = getattr(self, "table", None)
+        if table is None:
+            return False
+        try:
+            from PyQt5.QtWidgets import QAbstractItemView
+            return table.state() == QAbstractItemView.EditingState
+        except Exception:
+            return False
+
+    def _flush_pending_bridge_snapshot(self, *args) -> None:
+        """Apply a snapshot that was deferred while a cell was being edited.
+
+        Wired to the table delegate's closeEditor signal so it runs right after
+        the user commits or cancels an edit.
+        """
+        snapshot = getattr(self, "_pending_bridge_snapshot", None)
+        if snapshot is None:
+            return
+        self._pending_bridge_snapshot = None
+        # Defer to the next event loop tick so the editor is fully torn down
+        # before we fire layoutChanged again.
+        QTimer.singleShot(0, lambda payload=snapshot: self._set_bridge_snapshot(payload))
 
     def _has_missing_initiatives(self) -> bool:
         if not getattr(self, "manager", None) or not getattr(self.manager, "creatures", None):
@@ -244,13 +306,26 @@ class Application:
                 base_name = self.get_base_name(creature)
                 if actor_name != base_name:
                     creature.statblock_override = actor_name
-                    self.apply_statblock_slots(creature, actor_name)
 
             resolved_type = self._resolve_foundry_creature_type(combatant)
             if resolved_type and getattr(creature, "_type", None) == CreatureType.BASE:
                 creature._type = resolved_type
                 if resolved_type == CreatureType.PLAYER:
                     creature.death_saves_prompt = True
+
+            # Populate spell slots / innate spells / X-per-day abilities from the
+            # statblock library for bridge-sourced creatures whose resources are
+            # still empty. Only monsters/NPCs — players don't have statblocks.
+            if getattr(creature, "_type", None) == CreatureType.MONSTER and not (
+                creature._spell_slots or creature._innate_slots or creature._ability_uses
+            ):
+                sb_name = (
+                    creature.statblock_override
+                    or actor_name
+                    or self.get_base_name(creature)
+                )
+                if sb_name:
+                    self.apply_statblock_slots(creature, sb_name)
 
             effects = combatant.get("effects", [])
             if isinstance(effects, list):
@@ -698,6 +773,155 @@ class Application:
         creatures.sort(key=lambda c: (-_init(c), _nm_key(c)))
         return creatures
 
+    # ================== Foundry ignore list ======================
+    # Summons, familiars, effect tokens and the like clutter initiative. Anything
+    # matching this list is stripped from the snapshot on arrival.
+
+    def reload_foundry_ignore(self) -> None:
+        self._foundry_ignore = app_settings.get_foundry_ignore()
+
+    @property
+    def foundry_ignore_patterns(self) -> List[str]:
+        return list(self._foundry_ignore.get("patterns", []))
+
+    @property
+    def foundry_ignore_actor_ids(self) -> List[str]:
+        return list(self._foundry_ignore.get("actor_ids", []))
+
+    @property
+    def ignore_player_owned_npcs(self) -> bool:
+        return bool(self._foundry_ignore.get("player_owned_npcs", True))
+
+    def set_foundry_ignore(
+        self, patterns: List[str], actor_ids: List[str], player_owned_npcs: bool = None
+    ) -> None:
+        app_settings.set_foundry_ignore(patterns, actor_ids, player_owned_npcs)
+        self.reload_foundry_ignore()
+        self._ignore_logged.clear()
+
+    def add_foundry_ignore(self, pattern: str = "", actor_id: str = "") -> None:
+        """Add a name pattern and/or actor id to the ignore list."""
+        patterns = self.foundry_ignore_patterns
+        actor_ids = self.foundry_ignore_actor_ids
+        if pattern and pattern not in patterns:
+            patterns.append(pattern)
+        if actor_id and actor_id not in actor_ids:
+            actor_ids.append(actor_id)
+        self.set_foundry_ignore(patterns, actor_ids)
+
+    def _name_matches_ignore(self, name: str) -> Optional[str]:
+        """Return the pattern that matches this name, if any.
+
+        A pattern with no wildcard is an exact (case-insensitive) match, so
+        ignoring "Echo" never silently swallows "Echo Talonshade". Use globs
+        like "*Echo" or "Summon*" when you want a family of tokens.
+        """
+        if not name:
+            return None
+        candidate = self._normalize_bridge_name(name)
+        for pattern in self.foundry_ignore_patterns:
+            norm = self._normalize_bridge_name(pattern)
+            if not norm:
+                continue
+            if any(ch in norm for ch in "*?["):
+                if fnmatch.fnmatchcase(candidate, norm):
+                    return pattern
+            elif candidate == norm:
+                return pattern
+        return None
+
+    def combatant_ignore_reason(self, combatant: Dict[str, Any]) -> Optional[str]:
+        """Why this Foundry combatant should be skipped, or None to track it."""
+        if not isinstance(combatant, dict):
+            return None
+        if combatant.get("excludeFromSync"):
+            return "excluded in Foundry"
+        actor_id = combatant.get("actorId")
+        if actor_id and str(actor_id) in self.foundry_ignore_actor_ids:
+            return "ignored actor"
+        if self.ignore_player_owned_npcs:
+            actor_type = (combatant.get("actorType") or "").lower()
+            if actor_type == "npc" and combatant.get("actorHasPlayerOwner") is True:
+                return "player-owned NPC (summon/companion)"
+        for key in ("name", "actorName"):
+            matched = self._name_matches_ignore((combatant.get(key) or "").strip())
+            if matched:
+                return f"matches '{matched}'"
+        return None
+
+    def _filter_ignored_combatants(
+        self, combatants: List[Dict[str, Any]]
+    ) -> tuple:
+        """Split a snapshot's combatants into (kept, ignored)."""
+        kept: List[Dict[str, Any]] = []
+        ignored: List[Dict[str, Any]] = []
+        for combatant in combatants:
+            reason = self.combatant_ignore_reason(combatant)
+            if reason:
+                ignored.append(combatant)
+                if combatant.get("name") not in self._ignore_logged:
+                    self._ignore_logged.add(combatant.get("name"))
+                    print(f"[Bridge] Ignoring '{combatant.get('name')}' ({reason})")
+            else:
+                kept.append(combatant)
+        return kept, ignored
+
+    def _raw_combatant_for_creature(self, creature: I_Creature) -> Optional[Dict[str, Any]]:
+        """Find the unfiltered snapshot entry a tracked creature came from."""
+        cid = getattr(creature, "foundry_combatant_id", None)
+        tid = getattr(creature, "foundry_token_id", None)
+        aid = getattr(creature, "foundry_actor_id", None)
+        name = self._normalize_bridge_name(getattr(creature, "name", "") or "")
+        for combatant in self._last_raw_combatants:
+            if not isinstance(combatant, dict):
+                continue
+            if cid and str(combatant.get("combatantId")) == str(cid):
+                return combatant
+            if tid and str(combatant.get("tokenId")) == str(tid):
+                return combatant
+            if aid and str(combatant.get("actorId")) == str(aid):
+                return combatant
+            if name and self._normalize_bridge_name(combatant.get("name") or "") == name:
+                return combatant
+        return None
+
+    def creature_ignore_reason(self, creature: I_Creature) -> Optional[str]:
+        """Same check, for a creature already sitting in the tracker.
+
+        Prefers the creature's snapshot entry, since rules like the summon one
+        key off Foundry fields (actorType) the creature itself doesn't carry.
+        """
+        raw = self._raw_combatant_for_creature(creature)
+        if raw is not None:
+            return self.combatant_ignore_reason(raw)
+        actor_id = getattr(creature, "foundry_actor_id", None)
+        if actor_id and str(actor_id) in self.foundry_ignore_actor_ids:
+            return "ignored actor"
+        for name in (getattr(creature, "name", ""), getattr(creature, "statblock_override", "")):
+            matched = self._name_matches_ignore((name or "").strip())
+            if matched:
+                return f"matches '{matched}'"
+        return None
+
+    def prune_ignored_creatures(self) -> List[str]:
+        """Drop creatures already in the tracker that the ignore list now covers."""
+        if not getattr(self, "manager", None):
+            return []
+        doomed = [
+            name for name, creature in self.manager.creatures.items()
+            if not getattr(creature, "_is_lair_action", False)
+            and self.creature_ignore_reason(creature)
+        ]
+        if not doomed:
+            return []
+        self.manager.rm_creatures(doomed)
+        self.manager.sort_creatures()
+        self.table_model.refresh()
+        self.build_turn_order()
+        self.update_table()
+        self.pop_lists()
+        return doomed
+
     def _normalize_bridge_name(self, name: str) -> str:
         cleaned = re.sub(r"\s*#\s*(\d+)\s*$", r" \1", name or "")
         return re.sub(r"\s+", " ", cleaned).strip().casefold()
@@ -707,12 +931,14 @@ class Application:
             return None
         actor_type = combatant.get("actorType")
         has_player_owner = combatant.get("actorHasPlayerOwner")
-        if has_player_owner is True:
-            return CreatureType.PLAYER
+        # actorType wins over ownership: a player-owned "npc" is a summon or
+        # companion, not a PC, and typing it as one gives it death saves.
         if isinstance(actor_type, str) and actor_type.lower() == "character":
             return CreatureType.PLAYER
         if actor_type:
             return CreatureType.MONSTER
+        if has_player_owner is True:
+            return CreatureType.PLAYER
         return None
 
     def _index_bridge_combatants(
@@ -1058,6 +1284,8 @@ class Application:
         filename = "players.json"
         try:
             self.load_file_to_manager(filename, self.manager)
+            # Party now comes from the default roster, not a saved group.
+            self.active_pc_group = None
             # After loading, refresh the table model and update UI
             self.table_model.set_fields_from_sample()
             self.table_model.refresh()
@@ -1639,10 +1867,21 @@ class Application:
         data = self.fetch_statblock_for_creature(statblock_name)
         if not data:
             return False
+        applied = False
+
+        # Limited-use martial abilities (X/Day, Recharge, Legendary Actions).
+        # Independent of spellcasting so pure-martial statblocks populate too.
+        if not creature._ability_uses:
+            from app.statblock_parser import extract_limited_abilities
+            ability_uses = extract_limited_abilities(data)
+            if ability_uses:
+                creature._ability_uses = ability_uses
+                creature._ability_uses_used = {k: 0 for k in ability_uses}
+                applied = True
+
         sc = data.get("spellcasting")
         if not sc:
-            return False
-        applied = False
+            return applied
         if not creature._spell_slots:
             slots = {
                 int(k): v
@@ -2264,6 +2503,128 @@ class Application:
     def load_players_to_manager(self, manager):
         filename = "players.json"
         self.load_file_to_manager(filename, manager, monsters=False)
+
+    # ================== PC Groups ======================
+    # A "PC group" is a saved, named roster of player characters. Handy for
+    # switching between a standing campaign party and rotating one-shot groups.
+    # Stored in the same backend as encounters, namespaced with a prefix so the
+    # two never collide in pickers.
+    PC_GROUP_PREFIX = "pcgroup_"
+
+    def _pc_group_slug(self, name: str) -> str:
+        slug = re.sub(r"[^A-Za-z0-9]+", "_", (name or "").strip()).strip("_").lower()
+        return slug or "group"
+
+    def _pc_group_key(self, name: str) -> str:
+        return f"{self.PC_GROUP_PREFIX}{self._pc_group_slug(name)}.json"
+
+    def _pc_group_display(self, key: str) -> str:
+        base = key[len(self.PC_GROUP_PREFIX):] if key.startswith(self.PC_GROUP_PREFIX) else key
+        if base.endswith(".json"):
+            base = base[: -len(".json")]
+        return base.replace("_", " ").title()
+
+    def list_pc_groups(self) -> List[tuple]:
+        """Return sorted list of (display_name, key) for saved PC groups."""
+        if not getattr(self, "storage_api", None):
+            return []
+        out: List[tuple] = []
+        try:
+            for key in self.storage_api.list():
+                if (
+                    isinstance(key, str)
+                    and key.startswith(self.PC_GROUP_PREFIX)
+                    and key.endswith(".json")
+                ):
+                    out.append((self._pc_group_display(key), key))
+        except Exception as e:
+            self._log(f"[Groups] list failed: {e}")
+        return sorted(out, key=lambda t: t[0].lower())
+
+    def pc_group_exists(self, key: str) -> bool:
+        return key in {k for _, k in self.list_pc_groups()}
+
+    def save_pc_group_roster(self, key: str, players: List[Player]) -> str:
+        """Write an explicit roster to a group key. Returns the key.
+
+        An empty roster is allowed here: the character editor needs to be able
+        to create a group and fill it in, and saving a party down to zero PCs is
+        a legitimate edit.
+        """
+        if not getattr(self, "storage_api", None):
+            raise RuntimeError("Storage is not configured. Go to File → Settings.")
+        state = GameState()
+        state.players = list(players)
+        state.monsters = []
+        state.current_turn = 0
+        state.round_counter = 1
+        state.time_counter = 0
+        self.storage_api.put_json(key, state.to_dict())
+        return key
+
+    def save_pc_group(self, name: str) -> str:
+        """Save the current player characters as a named group. Returns its key."""
+        players = [c for c in self.manager.creatures.values() if isinstance(c, Player)]
+        if not players:
+            raise RuntimeError("There are no player characters to save.")
+        key = self.save_pc_group_roster(self._pc_group_key(name), players)
+        self.active_pc_group = key
+        return key
+
+    def get_pc_group_players(self, key: str) -> List[Player]:
+        """Return the saved roster for a group without touching the live table."""
+        if not getattr(self, "storage_api", None):
+            raise RuntimeError("Storage is not configured.")
+        raw = self.storage_api.get_json(key)
+        if raw is None:
+            raise RuntimeError(f"Group not found: {key}")
+        state = json.loads(json.dumps(raw), object_hook=self.custom_decoder)
+        return [c for c in (state.get("players", []) or []) if isinstance(c, Player)]
+
+    def delete_pc_group(self, key: str) -> None:
+        if not getattr(self, "storage_api", None):
+            raise RuntimeError("Storage is not configured.")
+        self.storage_api.delete(key)
+        if self.active_pc_group == key:
+            self.active_pc_group = None
+
+    def load_pc_group(self, key: str) -> None:
+        """Swap the current PC roster for the saved group; monsters are kept.
+
+        Loading a group into the app also establishes those names as the
+        recognized PCs: when a Foundry snapshot matches them by name they map to
+        these Player creatures, so the bridge treats them as party members.
+        """
+        new_players = self.get_pc_group_players(key)
+
+        preserved_active = getattr(self, "current_creature_name", None)
+
+        # Drop the existing player roster, keep monsters/lair actions intact.
+        existing_players = [
+            n for n, c in self.manager.creatures.items() if isinstance(c, Player)
+        ]
+        if existing_players:
+            self.manager.rm_creatures(existing_players)
+
+        for creature in new_players:
+            name = creature.name
+            counter = 1
+            while name in self.manager.creatures:
+                name = f"{creature.name}_{counter}"
+                counter += 1
+            creature.name = name
+            self.manager.add_creature(creature)
+
+        self.active_pc_group = key
+        self.manager.sort_creatures()
+        self.table_model.set_fields_from_sample()
+        self.table_model.refresh()
+        self.build_turn_order()
+        if preserved_active in getattr(self, "turn_order", []):
+            self.current_creature_name = preserved_active
+            self.current_idx = self.turn_order.index(preserved_active)
+        self.update_table()
+        self.pop_lists()
 
     # ================== Secondary Windows ======================
     def load_encounter(self):

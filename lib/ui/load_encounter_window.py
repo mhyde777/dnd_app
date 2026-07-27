@@ -65,6 +65,7 @@ class LoadEncounterWindow(QDialog):
                     isinstance(filename, str)
                     and filename.endswith(".json")
                     and filename not in ("players.json", "last_state.json")
+                    and not filename.startswith("pcgroup_")
                     and encounter_status.get(filename, True)
                 ):
                     display = filename.replace("_", " ").replace(".json", "")
