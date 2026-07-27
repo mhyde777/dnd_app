@@ -78,6 +78,9 @@ class InitiativeTracker(QMainWindow, Application):
         self.table_delegate = CreatureTableDelegate(self.table)
         self.table.setItemDelegate(self.table_delegate)
         self.table_delegate.commitData.connect(self.on_commit_data)
+        # When a cell editor closes, replay any bridge snapshot that was deferred
+        # while editing so in-progress notes aren't clobbered by layoutChanged.
+        self.table_delegate.closeEditor.connect(self._flush_pending_bridge_snapshot)
         self.table.clicked.connect(self.handle_cell_clicked)
         self.table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self.show_table_context_menu)
@@ -237,6 +240,77 @@ class InitiativeTracker(QMainWindow, Application):
         if hasattr(self, "status_bar"):
             self.status_bar.showMessage(msg, timeout_ms)
 
+    def _populate_groups_menu(self):
+        """Rebuild the PC Groups submenu: manager entry + one-click loaders."""
+        self.groups_menu.clear()
+        new_action = self.groups_menu.addAction("New Group…")
+        new_action.triggered.connect(self.new_pc_group)
+        manage_action = self.groups_menu.addAction("Manage Groups…")
+        manage_action.triggered.connect(self.open_pc_groups)
+        self.groups_menu.addSeparator()
+        try:
+            groups = self.list_pc_groups()
+        except Exception:
+            groups = []
+        if not groups:
+            empty = self.groups_menu.addAction("(no saved groups)")
+            empty.setEnabled(False)
+            return
+        for display, key in groups:
+            act = self.groups_menu.addAction(display)
+            act.triggered.connect(lambda _=False, k=key: self._quick_load_group(k))
+
+    def _quick_load_group(self, key: str):
+        try:
+            self.load_pc_group(key)
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to load group:\n{e}")
+            return
+        self.show_status_message(f"Loaded PC group: {self._pc_group_display(key)}")
+
+    def open_pc_groups(self):
+        from ui.pc_groups_dialog import PCGroupsDialog
+        PCGroupsDialog(self).exec_()
+
+    def ignore_creature_in_foundry_sync(self, name, creature):
+        """Ignore this creature by actor id when we know it, else by name."""
+        actor_id = getattr(creature, "foundry_actor_id", None)
+        if actor_id:
+            detail = "Its Foundry actor will be skipped on future snapshots."
+        else:
+            detail = f"Combatants named '{name}' will be skipped on future snapshots."
+        resp = QMessageBox.question(
+            self, "Ignore in Foundry Sync",
+            f"Stop tracking '{name}'?\n\n{detail}\n"
+            "Manage this later under Tools → Foundry Ignore List.",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
+        )
+        if resp != QMessageBox.Yes:
+            return
+        if actor_id:
+            self.add_foundry_ignore(actor_id=str(actor_id))
+        else:
+            self.add_foundry_ignore(pattern=str(name))
+        removed = self.prune_ignored_creatures()
+        if name not in removed:
+            # No Foundry ids and the name didn't match — remove it directly.
+            self.manager.rm_creatures([name])
+            self.manager.sort_creatures()
+            self.table_model.refresh()
+            self.build_turn_order()
+            self.update_table()
+            self.pop_lists()
+        self.show_status_message(f"Ignoring '{name}' in Foundry sync")
+
+    def open_foundry_ignore(self):
+        from ui.foundry_ignore_dialog import FoundryIgnoreDialog
+        FoundryIgnoreDialog(self).exec_()
+
+    def new_pc_group(self):
+        """Straight to the 'name it, then build the roster' flow."""
+        from ui.pc_groups_dialog import create_new_pc_group
+        create_new_pc_group(self, self)
+
     def set_bridge_status(self, state: str) -> None:
         if not hasattr(self, "bridge_status_label"):
             return
@@ -291,6 +365,11 @@ class InitiativeTracker(QMainWindow, Application):
         self.customize_toolbar_action = QAction("Customize Toolbar…", self)
         self.customize_toolbar_action.triggered.connect(self.open_customize_toolbar)
         self.file_menu.addAction(self.customize_toolbar_action)
+
+        # PC Groups: quick-switch saved player rosters. The submenu is rebuilt
+        # each time it opens so newly saved groups appear without a restart.
+        self.groups_menu = self.file_menu.addMenu("PC Groups")
+        self.groups_menu.aboutToShow.connect(self._populate_groups_menu)
 
         self.initialize_players_action = QAction("Initialize", self)
         self.initialize_players_action.triggered.connect(self.init_players)
@@ -358,6 +437,13 @@ class InitiativeTracker(QMainWindow, Application):
         self.shop_generator_action = QAction("Shop Generator…", self)
         self.shop_generator_action.triggered.connect(self.open_shop_generator_dialog)
         self.tools_menu.addAction(self.shop_generator_action)
+
+        self.foundry_ignore_action = QAction("Foundry Ignore List…", self)
+        self.foundry_ignore_action.setToolTip(
+            "Keep summons, familiars and effect tokens out of initiative"
+        )
+        self.foundry_ignore_action.triggered.connect(self.open_foundry_ignore)
+        self.tools_menu.addAction(self.foundry_ignore_action)
 
         self.next_turn_action = QAction("Next Turn", self)
         self.next_turn_action.setShortcut(QKeySequence("Ctrl+N"))
@@ -651,9 +737,17 @@ class InitiativeTracker(QMainWindow, Application):
         clear_conditions_action = menu.addAction("Clear Conditions")
         set_active_action = menu.addAction("Set as Active Turn")
         remove_action = menu.addAction("Remove Combatant")
+        ignore_action = menu.addAction("Ignore in Foundry Sync")
+        ignore_action.setToolTip(
+            "Remove now and keep this out of initiative on future snapshots"
+        )
 
         chosen = menu.exec_(self.table.viewport().mapToGlobal(pos))
         if chosen is None:
+            return
+
+        if chosen == ignore_action:
+            self.ignore_creature_in_foundry_sync(name, creature)
             return
 
         if visibility_action and chosen == visibility_action:

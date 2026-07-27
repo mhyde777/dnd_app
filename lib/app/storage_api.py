@@ -37,7 +37,7 @@ class StorageAPI:
     def _encounters_url(self) -> str:
         return f"{self.base_url}/v1/encounters"
 
-    def _items_url(self) -> str:
+    def _encounters_items_url(self) -> str:
         return f"{self._encounters_url()}/items"
 
     def _item_url(self, key: str) -> str:
@@ -143,10 +143,11 @@ class StorageAPI:
         Return a list of item keys (e.g., ["Goblin_Caves.json", "players.json", ...]).
         Tries multiple endpoints and normalizes a variets of response shapes.
         """
-        #Candidate endpoints your server might expose
+        # Candidate endpoints your server might expose. These must stay scoped to
+        # /v1/encounters — /v1/items is the equipment collection, not encounters.
         candidates = [
-            self._items_url(),          # .../v1/encounters/itmes (your original guess)
-            self._encounters_url(),     # .../v1/_encounters      (often used for listing)
+            self._encounters_items_url(),  # .../v1/encounters/items
+            self._encounters_url(),        # .../v1/encounters (often used for listing)
         ]
         return self._list_from_candidates(candidates)
 
