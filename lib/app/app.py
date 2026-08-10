@@ -54,8 +54,21 @@ class Application:
         self.current_creature_name: Optional[str] = None
 
         # Key of the PC group currently loaded, or None when the party came from
-        # the default players.json roster. The character editor saves back here.
-        self.active_pc_group: Optional[str] = None
+        # the default players.json roster. The character editor saves back here,
+        # and Initialize reloads it. Persisted so switching campaigns survives a
+        # restart instead of silently reverting to the default roster.
+        restored_group = app_settings.get(self.ACTIVE_PC_GROUP_SETTING)
+        self.active_pc_group: Optional[str] = (
+            restored_group if isinstance(restored_group, str) and restored_group else None
+        )
+
+        # PC-group-vs-Foundry mismatch prompt state. Snapshots arrive every few
+        # seconds, so the check is keyed on the set of Foundry PC names and each
+        # distinct party is only ever evaluated (and prompted about) once.
+        self._pc_group_check_seen: set = set()
+        self._pc_group_check_dismissed: set = set()
+        self._pc_group_prompt_open: bool = False
+        self._pc_group_roster_cache: Dict[str, set] = {}
 
         # Foundry combatants to skip (summons, familiars, effect tokens...).
         self._foundry_ignore: Dict[str, List[str]] = app_settings.get_foundry_ignore()
@@ -205,6 +218,7 @@ class Application:
         print(f"[Bridge] Snapshot loaded world={world!r} combatants={len(combatants)}{suffix}")
         if hasattr(self, "set_bridge_status"):
             self.set_bridge_status("connected")
+        self._check_pc_group_matches_foundry(combatants)
 
     def _is_table_editing(self) -> bool:
         """True if a table cell editor is currently open (mid-edit)."""
@@ -1281,11 +1295,23 @@ class Application:
     # JSON Manipulation
     # ----------------
     def init_players(self):
-        filename = "players.json"
+        """Reset the table to the active PC group, or the default roster.
+
+        Whichever group was last loaded or saved is the one Initialize brings
+        back, so switching campaigns doesn't drop you onto the default party.
+        """
         try:
-            self.load_file_to_manager(filename, self.manager)
-            # Party now comes from the default roster, not a saved group.
-            self.active_pc_group = None
+            group_key = self.active_pc_group
+            if group_key and self.load_file_to_manager(group_key, self.manager):
+                self._log(f"[Groups] Initialized from '{self._pc_group_display(group_key)}'")
+            else:
+                if group_key:
+                    # Group is gone (deleted elsewhere?) — don't leave the table
+                    # untouched and look like the button did nothing.
+                    self._log(f"[Groups] '{group_key}' unavailable; using default roster")
+                self.load_file_to_manager("players.json", self.manager)
+                # Party now comes from the default roster, not a saved group.
+                self._set_active_pc_group(None)
             # After loading, refresh the table model and update UI
             self.table_model.set_fields_from_sample()
             self.table_model.refresh()
@@ -1396,7 +1422,8 @@ class Application:
         except Exception as e:
             print(f"[ERROR] Failed to save state: {e}")
 
-    def load_file_to_manager(self, file_name, manager, monsters=False, merge=False, prompt_for_initiatives: bool = False):
+    def load_file_to_manager(self, file_name, manager, monsters=False, merge=False, prompt_for_initiatives: bool = False) -> bool:
+        """Load a saved state into `manager`. Returns False if nothing loaded."""
         state = None
 
         try:
@@ -1408,20 +1435,20 @@ class Application:
                 raw = self.storage_api.get_json(file_name)
                 if raw is None:
                     self._log(f"[WARN] Storage key not found: {file_name}")
-                    return
+                    return False
                 # Run through your custom decoder
                 state = json.loads(json.dumps(raw), object_hook=self.custom_decoder)
             else:
                 # Local file fallback (dev/offline)
                 if not os.path.exists(file_path):
                     self._log(f"[WARN] Local file not found: {file_path}")
-                    return
+                    return False
                 with open(file_path, "r", encoding="utf-8") as f:
                     state = json.load(f, object_hook=self.custom_decoder)
 
         except Exception as e:
             self._log(f"[ERROR] Failed to load '{file_name}': {e}")
-            return
+            return False
 
         # ----- Extract lists -----
         players = state.get("players", [])
@@ -1436,7 +1463,7 @@ class Application:
             self.update_table()
             self.pop_lists()
             self._maybe_prompt_enter_initiatives(manager, prompt_for_initiatives and not merge)
-            return
+            return True
 
         # ===== Merge path: add monsters with unique names; keep counters/active =====
         if merge:
@@ -1462,7 +1489,7 @@ class Application:
             self.update_table()
             self.pop_lists()
             self._maybe_prompt_enter_initiatives(manager, prompt_for_initiatives and not merge)
-            return
+            return True
 
         # ===== Full replace (default): clear, load players+monsters, apply counters =====
         pending_inits: List[Player] = []
@@ -1498,6 +1525,7 @@ class Application:
         self.update_active_init()
         self.pop_lists()
         self._maybe_prompt_enter_initiatives(manager, prompt_for_initiatives and not merge)
+        return True
 
     def _maybe_prompt_enter_initiatives(self, manager: CreatureManager, should_prompt: bool) -> None:
         """
@@ -2510,6 +2538,23 @@ class Application:
     # Stored in the same backend as encounters, namespaced with a prefix so the
     # two never collide in pickers.
     PC_GROUP_PREFIX = "pcgroup_"
+    ACTIVE_PC_GROUP_SETTING = "active_pc_group"
+
+    def _set_active_pc_group(self, key: Optional[str]) -> None:
+        """Point the app at a PC group (or None for the default roster).
+
+        Written through to settings.json so Initialize still reloads the right
+        party after a restart.
+        """
+        self.active_pc_group = key
+        # Changing the party by hand re-opens the question of whether it matches
+        # Foundry; an explicit "Keep Current" dismissal still stands.
+        self._pc_group_check_seen.clear()
+        self._pc_group_roster_cache.clear()
+        try:
+            app_settings.set(self.ACTIVE_PC_GROUP_SETTING, key)
+        except Exception as e:
+            self._log(f"[Groups] Failed to persist active group: {e}")
 
     def _pc_group_slug(self, name: str) -> str:
         slug = re.sub(r"[^A-Za-z0-9]+", "_", (name or "").strip()).strip("_").lower()
@@ -2544,6 +2589,133 @@ class Application:
     def pc_group_exists(self, key: str) -> bool:
         return key in {k for _, k in self.list_pc_groups()}
 
+    # ---- Foundry party vs loaded group ----
+    # Running the wrong group is easy to miss: the bridge adds Foundry's PCs to
+    # the table alongside whatever roster is loaded, so instead of an obvious
+    # error you quietly end up running two parties at once.
+
+    def _foundry_pc_names(self, combatants: List[Dict[str, Any]]) -> Dict[str, str]:
+        """Map normalized -> display name for snapshot combatants Foundry calls PCs."""
+        names: Dict[str, str] = {}
+        for combatant in combatants or []:
+            if not isinstance(combatant, dict):
+                continue
+            if self._resolve_foundry_creature_type(combatant) != CreatureType.PLAYER:
+                continue
+            display = (combatant.get("actorName") or combatant.get("name") or "").strip()
+            key = self._normalize_bridge_name(display)
+            if key:
+                names.setdefault(key, display)
+        return names
+
+    def _pc_group_roster_names(self, key: str) -> set:
+        """Normalized PC names in a saved group. Cached — this hits storage."""
+        if key in self._pc_group_roster_cache:
+            return self._pc_group_roster_cache[key]
+        try:
+            players = self.get_pc_group_players(key)
+        except Exception as e:
+            self._log(f"[Groups] Could not read '{key}': {e}")
+            return set()
+        names = {
+            self._normalize_bridge_name(getattr(p, "name", "") or "")
+            for p in players
+        }
+        names.discard("")
+        self._pc_group_roster_cache[key] = names
+        return names
+
+    def _current_pc_names(self) -> set:
+        """Normalized names of the PCs sitting in the table right now."""
+        names = {
+            self._normalize_bridge_name(self.get_base_name(c))
+            for c in self.manager.creatures.values()
+            if isinstance(c, Player)
+        }
+        names.discard("")
+        return names
+
+    def _check_pc_group_matches_foundry(self, combatants: List[Dict[str, Any]]) -> None:
+        """Warn when Foundry's party isn't the group loaded here, and offer a fix."""
+        if self._pc_group_prompt_open:
+            return
+
+        foundry_pcs = self._foundry_pc_names(combatants)
+        if not foundry_pcs:
+            return
+        fingerprint = frozenset(foundry_pcs)
+
+        # One evaluation per distinct party, so this doesn't re-run every
+        # snapshot. A dismissal also covers any party it's a subset of, so
+        # adding a late-arriving PC doesn't re-open a prompt already declined.
+        if fingerprint in self._pc_group_check_seen:
+            return
+        self._pc_group_check_seen.add(fingerprint)
+        if any(d <= fingerprint for d in self._pc_group_check_dismissed):
+            return
+
+        active_key = self.active_pc_group
+        # With no group loaded, the table itself is the roster to compare.
+        loaded_names = (
+            self._pc_group_roster_names(active_key) if active_key else self._current_pc_names()
+        )
+        missing = fingerprint - loaded_names
+        if not missing:
+            return
+
+        # Only suggest a group that accounts for more of Foundry's party than
+        # what's loaded; otherwise switching would be a lateral move.
+        self._pc_group_roster_cache.clear()
+        best_cover = len(fingerprint & loaded_names)
+        best_key: Optional[str] = None
+        for _display, key in self.list_pc_groups():
+            if key == active_key:
+                continue
+            cover = len(fingerprint & self._pc_group_roster_names(key))
+            if cover > best_cover:
+                best_cover, best_key = cover, key
+
+        missing_display = ", ".join(sorted(foundry_pcs[k] for k in missing))
+        if not best_key:
+            msg = f"Foundry PCs not in your roster: {missing_display}"
+            self._log(f"[Groups] {msg}")
+            if hasattr(self, "show_status_message"):
+                self.show_status_message(msg, 8000)
+            return
+
+        loaded_label = (
+            f"'{self._pc_group_display(active_key)}'" if active_key else "the current table"
+        )
+        best_label = self._pc_group_display(best_key)
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Warning)
+        box.setWindowTitle("PC Group Mismatch")
+        box.setText("Foundry's party doesn't match the PCs loaded here.")
+        box.setInformativeText(
+            f"In Foundry but not in {loaded_label}:\n    {missing_display}\n\n"
+            f"The saved group '{best_label}' matches Foundry's party more closely.\n"
+            "Switch to it? Monsters already in the tracker are kept."
+        )
+        switch_btn = box.addButton(f"Switch to {best_label}", QMessageBox.AcceptRole)
+        box.addButton("Keep Current", QMessageBox.RejectRole)
+
+        self._pc_group_prompt_open = True
+        try:
+            box.exec_()
+        finally:
+            self._pc_group_prompt_open = False
+
+        if box.clickedButton() is not switch_btn:
+            self._pc_group_check_dismissed.add(fingerprint)
+            return
+        try:
+            self.load_pc_group(best_key)
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to load group:\n{e}")
+            return
+        if hasattr(self, "show_status_message"):
+            self.show_status_message(f"Loaded PC group: {best_label}")
+
     def save_pc_group_roster(self, key: str, players: List[Player]) -> str:
         """Write an explicit roster to a group key. Returns the key.
 
@@ -2568,7 +2740,7 @@ class Application:
         if not players:
             raise RuntimeError("There are no player characters to save.")
         key = self.save_pc_group_roster(self._pc_group_key(name), players)
-        self.active_pc_group = key
+        self._set_active_pc_group(key)
         return key
 
     def get_pc_group_players(self, key: str) -> List[Player]:
@@ -2586,7 +2758,7 @@ class Application:
             raise RuntimeError("Storage is not configured.")
         self.storage_api.delete(key)
         if self.active_pc_group == key:
-            self.active_pc_group = None
+            self._set_active_pc_group(None)
 
     def load_pc_group(self, key: str) -> None:
         """Swap the current PC roster for the saved group; monsters are kept.
@@ -2615,7 +2787,7 @@ class Application:
             creature.name = name
             self.manager.add_creature(creature)
 
-        self.active_pc_group = key
+        self._set_active_pc_group(key)
         self.manager.sort_creatures()
         self.table_model.set_fields_from_sample()
         self.table_model.refresh()
