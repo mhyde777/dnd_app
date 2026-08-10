@@ -209,8 +209,8 @@ Module folder: `foundryvtt-bridge/`
 
 **Install:**
 1. Copy `foundryvtt-bridge/` into your Foundry `Data/modules/` folder.
-2. Enable **Foundry Bridge Sync** in your world.
-3. In **Module Settings**, confirm the Bridge URL (default `http://127.0.0.1:8787`) and optional shared secret.
+2. Enable **Foundry Bridge Sync** in your world. (Module activation is per-world — a new world needs this again.)
+3. In **Module Settings**, confirm the Bridge URL (default `http://127.0.0.1:8787`) and optional shared secret. These two are client-scoped: set them once per browser and they carry over to every world.
 
 The module posts a full combat snapshot to `http://127.0.0.1:8787/foundry/snapshot` on combat/turn/HP/effect changes.
 

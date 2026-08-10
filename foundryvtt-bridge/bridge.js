@@ -1,6 +1,6 @@
 // foundryvtt-bridge/bridge.js
 const MODULE_ID = "foundryvtt-bridge";
-const BRIDGE_JS_VERSION = "0.2.0";
+const BRIDGE_JS_VERSION = "0.3.0";
 const DEFAULT_BRIDGE_URL = "http://127.0.0.1:8787";
 const LOG_PREFIX = "[bridge]";
 const COMMAND_POLL_INTERVAL_MS = 1500;
@@ -759,10 +759,12 @@ function startCommandStream() {
 }
 
 Hooks.once("init", () => {
+  // Client-scoped so they persist across worlds: a new world (e.g. a one-shot)
+  // would otherwise silently reset these to defaults and post nowhere.
   game.settings.register(MODULE_ID, "bridgeUrl", {
     name: "Bridge URL",
-    hint: "Local bridge service URL (default http://127.0.0.1:8787).",
-    scope: "world",
+    hint: "Bridge service URL (default http://127.0.0.1:8787). Saved per browser, shared across all worlds.",
+    scope: "client",
     config: true,
     type: String,
     default: DEFAULT_BRIDGE_URL,
@@ -770,8 +772,8 @@ Hooks.once("init", () => {
 
   game.settings.register(MODULE_ID, "bridgeSecret", {
     name: "Bridge shared secret",
-    hint: "Optional shared secret for Foundry → bridge posts.",
-    scope: "world",
+    hint: "Optional shared secret for Foundry → bridge posts. Saved per browser, shared across all worlds.",
+    scope: "client",
     config: true,
     type: String,
     default: "",
