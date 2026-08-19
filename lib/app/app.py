@@ -2,10 +2,9 @@ from typing import Dict, Any, List, Optional
 import fnmatch, json, os, re, sys, threading
 from dotenv import load_dotenv
 
-from PyQt5.QtWidgets import(
-   QDialog, QMessageBox,
-    QApplication, QInputDialog, QLineEdit
-) 
+from PyQt5.QtWidgets import (
+    QDialog, QMessageBox, QApplication, QInputDialog, QLineEdit, QHeaderView,
+)
 from PyQt5.QtGui import (
         QPixmap, QFont
 )
@@ -25,8 +24,10 @@ from app.config import (
     local_bridge_enabled,
     use_storage_api_only,
 )
+from app.app_log import get_logger
 from app.bridge_client import BridgeClient
 from app.local_bridge_server import LocalBridgeServer
+from ui.notifications import report_error, report_warning, toast
 from ui.windows import (
     AddCombatantWindow, RemoveCombatantWindow, BuildEncounterWindow
 )
@@ -87,10 +88,10 @@ class Application:
         if local_bridge_enabled():
             if not os.getenv("BRIDGE_TOKEN"):
                 os.environ["BRIDGE_TOKEN"] = "local-dev"
-                print("[Bridge] BRIDGE_TOKEN not set; defaulting to 'local-dev'.")
+                self._log("[Bridge] BRIDGE_TOKEN not set; defaulting to 'local-dev'.")
             if not os.getenv("BRIDGE_INGEST_SECRET"):
                 os.environ["BRIDGE_INGEST_SECRET"] = os.environ["BRIDGE_TOKEN"]
-                print("[Bridge] BRIDGE_INGEST_SECRET not set; using BRIDGE_TOKEN for local bridge.")
+                self._log("[Bridge] BRIDGE_INGEST_SECRET not set; using BRIDGE_TOKEN for local bridge.")
             self.local_bridge = LocalBridgeServer.from_env()
             self.local_bridge.start()
 
@@ -122,7 +123,7 @@ class Application:
 
     def start_bridge_polling(self) -> None:
         if not self.bridge_client.enabled:
-            print("[Bridge] BRIDGE_TOKEN is not set; bridge sync is disabled.")
+            self._log("[Bridge] BRIDGE_TOKEN is not set; bridge sync is disabled.")
             if hasattr(self, "set_bridge_status"):
                 self.set_bridge_status("disabled")
             return
@@ -139,7 +140,7 @@ class Application:
         if self.bridge_stream_thread and self.bridge_stream_thread.is_alive():
             return
         if not self.bridge_client.enabled:
-            print("[Bridge] BRIDGE_TOKEN is not set; bridge stream is disabled.")
+            self._log("[Bridge] BRIDGE_TOKEN is not set; bridge stream is disabled.")
             return
         if self.bridge_stream_stop is None:
             self.bridge_stream_stop = threading.Event()
@@ -162,14 +163,14 @@ class Application:
             daemon=True,
         )
         self.bridge_stream_thread.start()
-        print("[Bridge] Using SSE stream for snapshots.")
+        self._log("[Bridge] Using SSE stream for snapshots.")
 
     def refresh_bridge_state(self) -> None:
         try:
-            print(f"[Bridge][DBG] polling base_url={getattr(self.bridge_client, 'base_url', None)!r}")
+            self._log(f"[Bridge][DBG] polling base_url={getattr(self.bridge_client, 'base_url', None)!r}")
             snapshot = self.bridge_client.fetch_state()
         except Exception as exc:
-            print(f"[Bridge] Failed to fetch state: {exc}")
+            self._log(f"[Bridge] Failed to fetch state: {exc}")
             if hasattr(self, "set_bridge_status"):
                 self.set_bridge_status("error")
             return
@@ -210,12 +211,12 @@ class Application:
         # Anything already in the tracker that the rules now cover (added before
         # a rule existed, or restored from a saved state) goes too.
         for name in self.prune_ignored_creatures():
-            print(f"[Bridge] Dropped ignored '{name}' from initiative")
+            self._log(f"[Bridge] Dropped ignored '{name}' from initiative")
 
         self._apply_bridge_snapshot(snapshot)
         world = snapshot.get("world")
         suffix = f" (ignored {len(ignored)})" if ignored else ""
-        print(f"[Bridge] Snapshot loaded world={world!r} combatants={len(combatants)}{suffix}")
+        self._log(f"[Bridge] Snapshot loaded world={world!r} combatants={len(combatants)}{suffix}")
         if hasattr(self, "set_bridge_status"):
             self.set_bridge_status("connected")
         self._check_pc_group_matches_foundry(combatants)
@@ -354,7 +355,7 @@ class Application:
                 hp_max = hp_data.get("max")
                 hp_temp = hp_data.get("temp")
                 hp_tempmax = hp_data.get("tempmax")
-                print(f"[Bridge][HP] {creature_name!r}: value={hp_value} max={hp_max} temp={hp_temp} tempmax={hp_tempmax}")
+                self._log(f"[Bridge][HP] {creature_name!r}: value={hp_value} max={hp_max} temp={hp_temp} tempmax={hp_tempmax}")
                 if hp_value is not None:
                     try:
                         new_hp = int(hp_value)
@@ -875,7 +876,7 @@ class Application:
                 ignored.append(combatant)
                 if combatant.get("name") not in self._ignore_logged:
                     self._ignore_logged.add(combatant.get("name"))
-                    print(f"[Bridge] Ignoring '{combatant.get('name')}' ({reason})")
+                    self._log(f"[Bridge] Ignoring '{combatant.get('name')}' ({reason})")
             else:
                 kept.append(combatant)
         return kept, ignored
@@ -984,7 +985,7 @@ class Application:
         if len(matches) == 1:
             return matches[0]
         if len(matches) > 1:
-            print(f"[Bridge] Multiple combatants match '{creature_name}', skipping command enqueue.")
+            self._log(f"[Bridge] Multiple combatants match '{creature_name}', skipping command enqueue.")
             return None
 
         # 2) Fallback: prefix/contains match against indexed keys
@@ -1011,11 +1012,11 @@ class Application:
                 flat.append(c)
 
         if len(flat) == 1:
-            print(f"[Bridge] Fuzzy matched '{creature_name}' -> '{flat[0].get('name')}'")
+            self._log(f"[Bridge] Fuzzy matched '{creature_name}' -> '{flat[0].get('name')}'")
             return flat[0]
 
         if len(flat) > 1:
-            print(f"[Bridge] Fuzzy match ambiguous for '{creature_name}' ({len(flat)} candidates), skipping.")
+            self._log(f"[Bridge] Fuzzy match ambiguous for '{creature_name}' ({len(flat)} candidates), skipping.")
             return None
 
         return None
@@ -1039,14 +1040,14 @@ class Application:
         if not token_id:
             combatant = self._resolve_bridge_combatant(creature_name)
             if not combatant:
-                print(f"[Bridge] No combatant match for '{creature_name}', skipping.")
+                self._log(f"[Bridge] No combatant match for '{creature_name}', skipping.")
                 return
             token_id = combatant.get("tokenId")
             actor_id = combatant.get("actorId")
         if not token_id:
-            print(f"[Bridge] Missing tokenId for '{creature_name}', skipping.")
+            self._log(f"[Bridge] Missing tokenId for '{creature_name}', skipping.")
             return
-        print(f"[Bridge] enqueue set_hp name={creature_name!r} hp={hp}")
+        self._log(f"[Bridge] enqueue set_hp name={creature_name!r} hp={hp}")
         self.bridge_client.enqueue_set_hp(
             token_id=str(token_id), hp=int(hp), actor_id=str(actor_id) if actor_id else None
         )
@@ -1075,7 +1076,7 @@ class Application:
             actor_id = combatant.get("actorId")
         if not token_id:
             return
-        print(f"[Bridge] enqueue set_temp_hp name={creature_name!r} temp={temp_hp}")
+        self._log(f"[Bridge] enqueue set_temp_hp name={creature_name!r} temp={temp_hp}")
         self.bridge_client.enqueue_set_temp_hp(
             token_id=str(token_id),
             temp_hp=int(temp_hp),
@@ -1106,7 +1107,7 @@ class Application:
             actor_id = combatant.get("actorId")
         if not token_id:
             return
-        print(f"[Bridge] enqueue set_max_hp_bonus name={creature_name!r} bonus={max_hp_bonus}")
+        self._log(f"[Bridge] enqueue set_max_hp_bonus name={creature_name!r} bonus={max_hp_bonus}")
         self.bridge_client.enqueue_set_max_hp_bonus(
             token_id=str(token_id),
             max_hp_bonus=int(max_hp_bonus),
@@ -1115,11 +1116,11 @@ class Application:
 
     def _enqueue_bridge_set_initiative(self, creature_name: str, initiative: int) -> None:
         if not getattr(self, "bridge_client", None):
-            print("[Bridge][DBG] bridge_client missing; cannot send set_initiative")
+            self._log("[Bridge][DBG] bridge_client missing; cannot send set_initiative")
             return
 
         if not self.bridge_client.enabled:
-            print("[Bridge][DBG] bridge_client disabled; skipping set_initiative")
+            self._log("[Bridge][DBG] bridge_client disabled; skipping set_initiative")
             return
 
         creature = None
@@ -1161,7 +1162,7 @@ class Application:
                 combatant = self._resolve_bridge_combatant(creature_name)
 
             if not combatant:
-                print(f"[Bridge][DBG] no combatant match for {creature_name!r}; skipping set_initiative")
+                self._log(f"[Bridge][DBG] no combatant match for {creature_name!r}; skipping set_initiative")
                 return
 
             combatant_id = combatant.get("combatantId") or combatant_id
@@ -1169,10 +1170,10 @@ class Application:
             actor_id = combatant.get("actorId") or actor_id
 
         if not combatant_id and not token_id and not actor_id:
-            print(f"[Bridge][DBG] missing all ids for {creature_name!r}; skipping set_initiative")
+            self._log(f"[Bridge][DBG] missing all ids for {creature_name!r}; skipping set_initiative")
             return
 
-        print(
+        self._log(
             "[Bridge] enqueue set_initiative "
             f"name={creature_name!r} initiative={initiative!r} "
             f"combatant_id={combatant_id!r} token_id={token_id!r} actor_id={actor_id!r}"
@@ -1208,16 +1209,16 @@ class Application:
                 token_id = combatant.get("tokenId")
                 actor_id = combatant.get("actorId")
         if not token_id and not actor_id:
-            print(
+            self._log(
                 f"[Bridge] Missing tokenId/actorId for condition sync '{getattr(creature, 'name', '')}'"
             )
             return
         if added:
-            print(
+            self._log(
                 f"[Bridge] enqueue add_condition name={getattr(creature, 'name', '')!r} added={added}"
             )
         if removed:
-            print(
+            self._log(
                 f"[Bridge] enqueue remove_condition name={getattr(creature, 'name', '')!r} removed={removed}"
             )
         effects = getattr(creature, "foundry_effects", []) or []
@@ -1319,7 +1320,10 @@ class Application:
             self.build_turn_order()
             self._clear_statblock()
         except Exception as e:
-            print(f"[ERROR] Failed to initialize players: {e}")
+            report_error(
+                self, "Initialize Failed",
+                "Could not load the player roster.", e,
+            )
 
     def load_state(self):
         filename = "last_state.json"
@@ -1411,16 +1415,17 @@ class Application:
         try:
             if getattr(self, "storage_api", None):
                 self.storage_api.put_json(filename, save_data)
-                if hasattr(self, "show_status_message"):
-                    self.show_status_message("State saved")
             else:
                 file_path = self.get_data_path(filename)
                 with open(file_path, "w", encoding="utf-8") as f:
                     json.dump(save_data, f, ensure_ascii=False, indent=2)
-                if hasattr(self, "show_status_message"):
-                    self.show_status_message("State saved")
+            self.notify("State saved", "success")
         except Exception as e:
-            print(f"[ERROR] Failed to save state: {e}")
+            report_error(
+                self, "Save Failed",
+                "Your combat state could not be saved. Recent changes are still "
+                "in the app but are not written to disk.", e,
+            )
 
     def load_file_to_manager(self, file_name, manager, monsters=False, merge=False, prompt_for_initiatives: bool = False) -> bool:
         """Load a saved state into `manager`. Returns False if nothing loaded."""
@@ -1698,8 +1703,8 @@ class Application:
         if hasattr(self, "_sync_conditions_panel_from_selection"):
             try:
                 self._sync_conditions_panel_from_selection()
-            except Exception:
-                pass
+            except Exception as exc:
+                self._log(f"[WARN] Condition panel sync failed: {exc}")
 
         # Labels
         if hasattr(self, "active_init_label") and self.active_init_label:
@@ -1716,8 +1721,8 @@ class Application:
             if hasattr(self.table_model, "set_active_creature"):
                 try:
                     self.table_model.set_active_creature(name or "")
-                except Exception:
-                    pass
+                except Exception as exc:
+                    self._log(f"[WARN] set_active_creature failed: {exc}")
         if hasattr(self, "table_delegate") and self.table_delegate:
             if hasattr(self.table_model, "refresh"):
                 try:
@@ -1775,7 +1780,6 @@ class Application:
 
         screen_geometry = QApplication.primaryScreen().availableGeometry()
         screen_height = screen_geometry.height()
-        screen_width = screen_geometry.width()
 
         font_size = max(int(screen_height * 0.012), 10) if screen_height < 1440 else 18
         self.table.setFont(QFont('Arial', font_size))
@@ -1783,7 +1787,6 @@ class Application:
         self.table.resizeColumnsToContents()
         self.table.resizeRowsToContents()
 
-        total_width = self.table.verticalHeader().width()
         model = self.table.model()
         source_fields = getattr(self, "table_model", None)
         source_fields = getattr(source_fields, "fields", []) if source_fields else []
@@ -1795,21 +1798,17 @@ class Application:
                     cap = _COL_MAX_WIDTHS.get(field)
                     if cap is not None and self.table.columnWidth(column) > cap:
                         self.table.setColumnWidth(column, cap)
-                    total_width += self.table.columnWidth(column)
 
-        total_height = self.table.horizontalHeader().height()
-        for row in range(model.rowCount() if model else 0):
-            total_height += self.table.rowHeight(row)
-
-        max_width = int(screen_width * 0.55)
-        if total_width > max_width:
-            self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-            total_width = max_width
-        else:
-            self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
-        self.table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.table.setFixedSize(total_width + 2, total_height + 2)  # extra padding for gutter
+        self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.table.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        # Any leftover horizontal space goes to the name column rather than
+        # leaving a dead grey strip on the right.
+        header = self.table.horizontalHeader()
+        header.setStretchLastSection(False)
+        if "_name" in source_fields:
+            header.setSectionResizeMode(
+                source_fields.index("_name"), QHeaderView.Stretch
+            )
 
     # ============== Populate Lists ====================
     def pop_lists(self):
@@ -1819,12 +1818,13 @@ class Application:
     def populate_creature_list(self):
         self.creature_list.clear()
         for row in range(self.table_model.rowCount()):
-            creature_name = self.table_model.creature_names[row]  # Adjust based on your model's data
+            creature_name = self.table_model.creature_names[row]
             self.creature_list.addItem(creature_name)
 
-        list_height = self.creature_list.count() * self.creature_list.sizeHintForRow(0)
-        list_height += self.creature_list.frameWidth() * 2
-        self.creature_list.setFixedHeight(list_height)
+        # The list lives in a resizable dock now, so it stretches with the panel
+        # instead of being pinned to its content height.
+        if hasattr(self, "_filter_creature_list"):
+            self._filter_creature_list(self.creature_filter.text())
 
     def populate_monster_list(self):
         prev_selection = (
@@ -1857,18 +1857,15 @@ class Application:
         finally:
             self.monster_list.blockSignals(False)
 
-        list_height = self.monster_list.count() * self.monster_list.sizeHintForRow(0)
-        list_height += self.monster_list.frameWidth() * 2
-        self.monster_list.setFixedHeight(list_height)
-
-        if self.monster_list.count() == 0:
-            self.hide_img.hide()
-            self.show_img.hide()
-            self.monster_list.hide()
-        else:
-            self.hide_img.show()
-            self.show_img.show()
+        # Grow with content up to the widget's own maximum, then scroll.
+        if self.monster_list.count():
+            row_height = self.monster_list.sizeHintForRow(0)
+            list_height = self.monster_list.count() * row_height
+            list_height += self.monster_list.frameWidth() * 2
+            self.monster_list.setMinimumHeight(min(list_height, 140))
             self.monster_list.show()
+        else:
+            self.monster_list.hide()
 
     def get_base_name(self, creature):
         non_num_name = re.sub(r'\s*(?:#\s*)?\d+\s*$', '', creature.name)
@@ -2036,7 +2033,8 @@ class Application:
         if not getattr(self, "turn_order", None):
             self.build_turn_order()
             if not self.turn_order:
-                print("[WARNING] No creatures in encounter. Cannot advance turn.")
+                self._log("[WARNING] No creatures in encounter. Cannot advance turn.")
+                toast(self, "No combatants in the encounter", "warning")
                 return
         else:
             # 2) Keep it in sync with the manager's canonical order
@@ -2131,7 +2129,8 @@ class Application:
         if not getattr(self, "turn_order", None):
             self.build_turn_order()
             if not self.turn_order:
-                print("[WARNING] No creatures in encounter. Cannot go back.")
+                self._log("[WARNING] No creatures in encounter. Cannot go back.")
+                toast(self, "No combatants in the encounter", "warning")
                 return
         else:
             try:
@@ -2311,8 +2310,10 @@ class Application:
                     self.statblock_widget.load_statblock(data)
                     self.statblock_widget.show()
                     return
-            except Exception:
-                pass
+                self._log(f"[WARN] No statblock stored for '{base_name}'")
+            except Exception as exc:
+                self._log(f"[ERROR] Statblock lookup failed for '{base_name}': {exc}")
+                toast(self, f"Couldn't load statblock for {base_name}", "warning")
         self._clear_statblock()
 
     def _clear_statblock(self):
@@ -2349,10 +2350,19 @@ class Application:
         self._lookup_dialog.focus_search()
 
     def hide_statblock(self):
-        self.statblock_widget.hide()
+        dock = getattr(self, "statblock_dock", None)
+        if dock is not None:
+            dock.hide()
+        else:
+            self.statblock_widget.hide()
 
     def show_statblock(self):
-        self.statblock_widget.show()
+        dock = getattr(self, "statblock_dock", None)
+        if dock is not None:
+            dock.show()
+            dock.raise_()
+        else:
+            self.statblock_widget.show()
 
 # ================= Damage/Healing ======================
     def heal_selected_creatures(self):
@@ -2711,10 +2721,11 @@ class Application:
         try:
             self.load_pc_group(best_key)
         except Exception as e:
-            QMessageBox.warning(self, "Error", f"Failed to load group:\n{e}")
+            report_error(self, "Load Group Failed",
+                         "Could not load that PC group.", e)
             return
         if hasattr(self, "show_status_message"):
-            self.show_status_message(f"Loaded PC group: {best_label}")
+            self.notify(f"Loaded PC group: {best_label}", "success")
 
     def save_pc_group_roster(self, key: str, players: List[Player]) -> str:
         """Write an explicit roster to a group key. Returns the key.
@@ -2810,7 +2821,7 @@ class Application:
                 if cr and cr._type == CreatureType.MONSTER:
                     self.active_statblock_image(cr)
             if hasattr(self, "show_status_message"):
-                self.show_status_message(f"Loaded encounter: {dialog.selected_file}")
+                self.notify(f"Loaded encounter: {dialog.selected_file}", "success")
 
     def merge_encounter(self):
         dialog = LoadEncounterWindow(self, storage=self.storage_api)
@@ -2865,13 +2876,21 @@ class Application:
         from ui.toolbar_customize_dialog import load_toolbar_items
         self.filetool_bar.clear()
         for action_id in load_toolbar_items():
+            if action_id == "separator":
+                self.filetool_bar.addSeparator()
+                continue
             action = self._toolbar_action_map.get(action_id)
             if action:
                 self.filetool_bar.addAction(action)
+        # An empty toolbar reads as a broken app, so hide the strip entirely.
+        self.filetool_bar.setVisible(bool(self.filetool_bar.actions()))
 
     def _toolbar_context_menu(self, pos):
-        menu = __import__('PyQt5.QtWidgets', fromlist=['QMenu']).QMenu(self)
+        from PyQt5.QtWidgets import QMenu
+        menu = QMenu(self)
         menu.addAction("Customize Toolbar…", self.open_customize_toolbar)
+        menu.addSeparator()
+        menu.addAction("Hide Toolbar", lambda: self.filetool_bar.setVisible(False))
         menu.exec_(self.filetool_bar.mapToGlobal(pos))
 
     def create_or_update_characters(self):
@@ -2932,6 +2951,25 @@ class Application:
         except Exception:
             pass
 
+    def notify(self, message: str, level: str = "info") -> None:
+        """
+        Transient user feedback. Overridden by InitiativeTracker to also raise an
+        in-window toast; this base version keeps the app usable headless.
+        """
+        self._log(message)
+        if hasattr(self, "show_status_message"):
+            self.show_status_message(message)
+
     def _log(self, msg: str) -> None:
-        """Lightweight logger used throughout the app."""
-        print(msg)
+        """Central logger. Goes to the log file and Help → Show Log."""
+        text = str(msg)
+        logger = get_logger()
+        # Existing call sites tag severity in the message prefix.
+        if "[DBG]" in text:
+            logger.debug(text)
+        elif text.startswith("[ERROR]"):
+            logger.error(text)
+        elif text.startswith(("[WARN]", "[WARNING]")):
+            logger.warning(text)
+        else:
+            logger.info(text)

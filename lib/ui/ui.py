@@ -7,18 +7,31 @@ from PyQt5.QtWidgets import (
     QSizePolicy, QMessageBox, QDialog, QDialogButtonBox,
     QMenu, QTextEdit, QGroupBox, QStatusBar, QShortcut,
     QWidgetAction, QFormLayout, QSpinBox, QFrame,
+    QDockWidget, QScrollArea, QTabWidget,
 )
 from ui.statblock_widget import StatblockWidget
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QByteArray
 from PyQt5.QtGui import QKeySequence
 from app.app import Application
 from app.creature import CreatureType
 from app.manager import CreatureManager
+from app import settings as app_settings
 from ui.creature_table_model import CreatureTableModel
 from ui.delegates import CreatureTableDelegate
+from ui import colors
+from ui.banner import BannerArea
+from ui.icons import icon_for
+from ui.layout_settings_dialog import (
+    PANEL_REGISTRY, load_panel_layout, save_panel_layout,
+)
+from ui.notifications import report_error, reposition_toasts, toast
 from ui.spellcasting_dropdown import SpellcastingDropdown
 from ui.ability_uses_dropdown import AbilityUsesDropdown
 from ui.conditions_dropdown import ConditionsDropdown, DEFAULT_CONDITIONS
+
+# Bumped whenever the set of docks/toolbars changes, so a layout saved by an
+# older build is discarded instead of restoring into a broken arrangement.
+LAYOUT_VERSION = 1
 
 class InitiativeTracker(QMainWindow, Application):
     def __init__(self):
@@ -27,7 +40,13 @@ class InitiativeTracker(QMainWindow, Application):
         self.update_size_constraints()
         self.setWindowTitle("DnD Combat Tracker")
         self.manager = CreatureManager()
+        self._allow_panel_drag = False
+        self._panel_layout = None
         self.initUI()
+
+        # Layout must be applied after every dock exists, or placing them
+        # silently no-ops for docks that weren't created yet.
+        self._layout_restored = self.restore_layout()
 
         warning = getattr(self, "storage_api_warning", None)
         if warning:
@@ -38,21 +57,63 @@ class InitiativeTracker(QMainWindow, Application):
             self.table_model.set_fields_from_sample()
             self.table_model.refresh()
             self.update_table()
-            self.update_active_init()  # ✅ <- This is what updates the labels!
+            self.update_active_init()
             self.pop_lists()
         except Exception as e:
-            print(f"[Startup] Failed to load last state: {e}")
+            report_error(
+                self, "Could Not Load Last Session",
+                "The app started, but your last combat state could not be "
+                "restored. You can load an encounter from the Encounters menu.",
+                e,
+            )
         self.start_bridge_polling()
 
     def initUI(self):
+        # Layout model: the initiative table is the fixed centre of the window;
+        # every supporting panel is a QDockWidget so the user can resize, float,
+        # re-dock or close it. Arrangement is saved on exit and restored on
+        # launch, and View → Reset Panel Layout puts it all back.
+        self._build_central_table_area()
+        self._build_controls_dock()
+        self._build_statblock_dock()
+
+        self.setTabPosition(Qt.AllDockWidgetAreas, QTabWidget.North)
+
+        self.setup_menu_and_toolbar()
+        self._build_status_bar()
+
+        self.filter_shortcut = QShortcut(QKeySequence("Ctrl+F"), self)
+        self.filter_shortcut.activated.connect(self.focus_creature_filter)
+
+        # Statblock legibility without resizing the panel.
+        for sequence, slot in (
+            ("Ctrl++", self.statblock_widget.zoom_in),
+            ("Ctrl+=", self.statblock_widget.zoom_in),   # same physical key, unshifted
+            ("Ctrl+-", self.statblock_widget.zoom_out),
+            ("Ctrl+0", self.statblock_widget.reset_zoom),
+        ):
+            shortcut = QShortcut(QKeySequence(sequence), self)
+            shortcut.activated.connect(slot)
+
+    # ---- layout construction ------------------------------------------------
+
+    def _build_central_table_area(self):
+        """Combat info labels + the initiative table, as the central widget."""
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
-        self.mainlayout = QHBoxLayout(self.central_widget)
+        self.mainlayout = QVBoxLayout(self.central_widget)
+        self.mainlayout.setContentsMargins(8, 8, 8, 8)
+        self.mainlayout.setSpacing(6)
+
+        # Persistent notifications live above the table, where you're looking.
+        self.banner_area = BannerArea(self)
+        self.mainlayout.addWidget(self.banner_area)
 
         # === LABEL AREA (Top) ===
         self.label_widget = QWidget()
         self.label_layout = QHBoxLayout(self.label_widget)
         self.label_layout.setContentsMargins(0, 0, 0, 0)
+        self.label_layout.setSpacing(18)
 
         self.active_init_label = QLabel("Active: None", self)
         self.active_init_label.setObjectName("combatInfoLabel")
@@ -71,7 +132,7 @@ class InitiativeTracker(QMainWindow, Application):
 
         self.label_layout.addStretch()
 
-        # === TABLE AREA (under labels) ===
+        # === TABLE ===
         self.table_model = CreatureTableModel(self.manager, parent=self, bridge_owner=self)
         self.table = QTableView(self)
         self.table.setModel(self.table_model)
@@ -85,28 +146,35 @@ class InitiativeTracker(QMainWindow, Application):
         self.table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self.show_table_context_menu)
         self.table.setMouseTracking(True)
+        self.table.setHorizontalScrollMode(QTableView.ScrollPerPixel)
+        self.table.setVerticalScrollMode(QTableView.ScrollPerPixel)
+        # The table grows with the window instead of being pinned to its content
+        # size, so a long initiative order scrolls rather than running off-screen.
+        self.table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.installEventFilter(self)
-        # Ensure that the table's size is fixed and matches its content
-        self.table.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
-        self.table_widget = QWidget()
-        self.table_layout = QVBoxLayout(self.table_widget)
-        self.table_layout.setContentsMargins(0, 0, 0, 0)
-        self.table_layout.addWidget(self.label_widget)
-        self.table_layout.addWidget(self.table)
+        self.mainlayout.addWidget(self.label_widget)
+        self.mainlayout.addWidget(self.table, stretch=1)
 
-        # === SIDEBAR with buttons ===
+        # Kept as an alias: older code and saved dock state refer to table_widget.
+        self.table_widget = self.central_widget
+
+    def _build_controls_dock(self):
+        """Left dock: turn controls, combatant picker, HP entry and HP mods."""
         self.dam_layout = QVBoxLayout()
+        self.dam_layout.setContentsMargins(8, 8, 8, 8)
+        self.dam_layout.setSpacing(8)
 
         # -- Turn Controls group --
         turn_group = QGroupBox("Turn Controls")
-        turn_group_layout = QVBoxLayout(turn_group)
-        self.prev_button = QPushButton("Prev", self)
+        turn_group_layout = QHBoxLayout(turn_group)
+        self.prev_button = QPushButton("◀  Prev", self)
         self.prev_button.setToolTip("Go to previous turn (Ctrl+Shift+N)")
         self.prev_button.clicked.connect(self.prev_turn)
         turn_group_layout.addWidget(self.prev_button)
 
-        self.next_button = QPushButton("Next", self)
+        self.next_button = QPushButton("Next  ▶", self)
+        self.next_button.setObjectName("primaryButton")
         self.next_button.setToolTip("Advance to next turn (Ctrl+N)")
         self.next_button.clicked.connect(self.next_turn)
         turn_group_layout.addWidget(self.next_button)
@@ -116,37 +184,64 @@ class InitiativeTracker(QMainWindow, Application):
         combatants_group = QGroupBox("Combatants")
         combatants_group_layout = QVBoxLayout(combatants_group)
         combatants_group_layout.setContentsMargins(6, 6, 6, 6)
+        self.creature_filter = QLineEdit(self)
+        self.creature_filter.setPlaceholderText("Filter combatants… (Ctrl+F)")
+        self.creature_filter.setClearButtonEnabled(True)
+        self.creature_filter.textChanged.connect(self._filter_creature_list)
+        combatants_group_layout.addWidget(self.creature_filter)
+
         self.creature_list = QListWidget(self)
         self.creature_list.setSelectionMode(QListWidget.MultiSelection)
-        self.creature_list.setFixedWidth(200)
-        self.creature_list.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum)
+        self.creature_list.setMinimumWidth(180)
+        self.creature_list.setToolTip(
+            "Select one or more combatants, then use the HP controls below"
+        )
         combatants_group_layout.addWidget(self.creature_list)
-        combatants_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
-        self.dam_layout.addWidget(combatants_group)
+
+        selection_row = QHBoxLayout()
+        selection_row.setContentsMargins(0, 0, 0, 0)
+        selection_row.setSpacing(6)
+        select_all_btn = QPushButton("Select All")
+        select_all_btn.setToolTip("Select every visible combatant")
+        select_all_btn.clicked.connect(self._select_all_visible_creatures)
+        clear_sel_btn = QPushButton("Clear")
+        clear_sel_btn.setToolTip("Clear the combatant selection")
+        clear_sel_btn.clicked.connect(self.creature_list.clearSelection)
+        selection_row.addWidget(select_all_btn)
+        selection_row.addWidget(clear_sel_btn)
+        combatants_group_layout.addLayout(selection_row)
+        self.dam_layout.addWidget(combatants_group, stretch=1)
 
         # -- HP Controls group --
+        # Ordered heal / value / damage so the destructive button isn't the one
+        # sitting under the cursor after typing a number.
         hp_group = QGroupBox("HP Controls")
         hp_group_layout = QVBoxLayout(hp_group)
+        hp_group_layout.setSpacing(5)
+
+        self.value_input = QLineEdit(self)
+        self.value_input.setPlaceholderText("HP value…")
+        self.value_input.setMinimumWidth(180)
+        self.value_input.setToolTip("Enter HP value — Enter to damage, Shift+Enter to heal")
+        self.value_input.installEventFilter(self)
+        hp_group_layout.addWidget(self.value_input)
+
+        hp_button_row = QHBoxLayout()
+        hp_button_row.setSpacing(6)
 
         self.heal_button = QPushButton("Heal", self)
         self.heal_button.setObjectName("healButton")
-        self.heal_button.setToolTip("Heal selected creatures by the entered value")
+        self.heal_button.setToolTip("Heal selected creatures by the entered value (Shift+Enter)")
         self.heal_button.clicked.connect(self.heal_selected_creatures)
-
-        self.value_input = QLineEdit(self)
-        self.value_input.setPlaceholderText("HP value...")
-        self.value_input.setFixedWidth(200)
-        self.value_input.setToolTip("Enter HP value — Enter to damage, Shift+Enter to heal")
-        self.value_input.installEventFilter(self)
+        hp_button_row.addWidget(self.heal_button)
 
         self.dam_button = QPushButton("Damage", self)
         self.dam_button.setObjectName("damageButton")
-        self.dam_button.setToolTip("Damage selected creatures by the entered value")
+        self.dam_button.setToolTip("Damage selected creatures by the entered value (Enter)")
         self.dam_button.clicked.connect(self.damage_selected_creatures)
+        hp_button_row.addWidget(self.dam_button)
 
-        hp_group_layout.addWidget(self.heal_button)
-        hp_group_layout.addWidget(self.value_input)
-        hp_group_layout.addWidget(self.dam_button)
+        hp_group_layout.addLayout(hp_button_row)
         self.dam_layout.addWidget(hp_group)
 
         # -- HP Mods group (Temp HP + Max HP Bonus, multi-creature) --
@@ -154,15 +249,16 @@ class InitiativeTracker(QMainWindow, Application):
         hp_mods_layout = QFormLayout(hp_mods_group)
         hp_mods_layout.setContentsMargins(6, 6, 6, 6)
         hp_mods_layout.setSpacing(4)
+        hp_mods_layout.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
 
         self.temp_hp_spin = QSpinBox(self)
         self.temp_hp_spin.setRange(0, 9999)
-        self.temp_hp_spin.setFixedWidth(200)
+        self.temp_hp_spin.setMinimumWidth(80)
         self.temp_hp_spin.setToolTip("Temporary HP to set on selected creatures")
 
         self.max_hp_bonus_spin = QSpinBox(self)
         self.max_hp_bonus_spin.setRange(-9999, 9999)
-        self.max_hp_bonus_spin.setFixedWidth(200)
+        self.max_hp_bonus_spin.setMinimumWidth(80)
         self.max_hp_bonus_spin.setToolTip("Max HP bonus/penalty to set on selected creatures")
 
         hp_mods_layout.addRow("Temp HP:", self.temp_hp_spin)
@@ -171,6 +267,7 @@ class InitiativeTracker(QMainWindow, Application):
         hp_mods_btn_row = QWidget()
         hp_mods_btn_layout = QHBoxLayout(hp_mods_btn_row)
         hp_mods_btn_layout.setContentsMargins(0, 2, 0, 0)
+        hp_mods_btn_layout.setSpacing(6)
         self.hp_mods_apply_button = QPushButton("Apply")
         self.hp_mods_apply_button.clicked.connect(self.apply_hp_mods_to_selected)
         self.hp_mods_clear_button = QPushButton("Clear")
@@ -181,60 +278,324 @@ class InitiativeTracker(QMainWindow, Application):
 
         self.dam_layout.addWidget(hp_mods_group)
 
-        self.dam_layout.addStretch()
+        self.dam_widget = QWidget()
+        self.dam_widget.setLayout(self.dam_layout)
+        self.dam_widget.setMinimumWidth(210)
 
-        # === RIGHT PANEL: STATBLOCK VIEW ===
+        # Scrolled, so shrinking the dock hides nothing outright.
+        controls_scroll = QScrollArea()
+        controls_scroll.setWidget(self.dam_widget)
+        controls_scroll.setWidgetResizable(True)
+        controls_scroll.setFrameShape(QFrame.NoFrame)
+        controls_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        self.controls_dock = QDockWidget("Combat Controls", self)
+        self.controls_dock.setObjectName("controlsDock")  # required by saveState()
+        self.controls_dock.setWidget(controls_scroll)
+        self.controls_dock.setMinimumWidth(230)
+        self.controls_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.controls_dock)
+
+    def _filter_creature_list(self, text: str):
+        """Hide non-matching rows; a hidden row keeps its selection state."""
+        needle = (text or "").strip().lower()
+        for row in range(self.creature_list.count()):
+            item = self.creature_list.item(row)
+            hidden = bool(needle) and needle not in item.text().lower()
+            item.setHidden(hidden)
+            if hidden:
+                # Never leave a filtered-out combatant selected — otherwise
+                # damage lands on something the user can no longer see.
+                item.setSelected(False)
+
+    def _select_all_visible_creatures(self):
+        for row in range(self.creature_list.count()):
+            item = self.creature_list.item(row)
+            if not item.isHidden():
+                item.setSelected(True)
+
+    def focus_creature_filter(self):
+        self.controls_dock.show()
+        self.creature_filter.setFocus(Qt.ShortcutFocusReason)
+        self.creature_filter.selectAll()
+
+    def _build_statblock_dock(self):
+        """Right dock: the statblock reader plus its monster picker."""
         self.stat_layout = QVBoxLayout()
+        self.stat_layout.setContentsMargins(8, 8, 8, 8)
+        self.stat_layout.setSpacing(6)
 
         self.statblock_widget = StatblockWidget(self)
 
         self.monster_list = QListWidget(self)
         self.monster_list.setSelectionMode(QListWidget.SingleSelection)
         self.monster_list.itemSelectionChanged.connect(self.update_statblock_image)
-        self.monster_list.setFixedSize(200, 100)
+        self.monster_list.setMinimumHeight(80)
+        self.monster_list.setMaximumHeight(140)
+        self.monster_list.setToolTip("Pick a monster to show its statblock")
         self.monster_list.setContextMenuPolicy(Qt.CustomContextMenu)
         self.monster_list.customContextMenuRequested.connect(self._monster_list_context_menu)
 
-        self.hide_img = QPushButton("Hide", self)
-        self.hide_img.setToolTip("Hide the statblock panel")
-        self.hide_img.clicked.connect(self.hide_statblock)
-        self.show_img = QPushButton("Show", self)
-        self.show_img.setToolTip("Show the statblock panel")
-        self.show_img.clicked.connect(self.show_statblock)
-
-        self.list_buttons = QHBoxLayout()
-        self.show_hide_butts = QVBoxLayout()
-        self.show_hide_butts.addWidget(self.show_img)
-        self.show_hide_butts.addWidget(self.hide_img)
-        self.list_buttons.addWidget(self.monster_list)
-        self.list_buttons.addLayout(self.show_hide_butts)
-        self.list_buttons.addStretch()
-
-        # Statblock fills available space; buttons pinned at bottom
+        # Statblock fills available space; the picker is pinned underneath it.
         self.stat_layout.addWidget(self.statblock_widget, stretch=1)
-        self.stat_layout.addLayout(self.list_buttons)
-
-        # === Wrap and attach all to main layout ===
-        self.dam_widget = QWidget()
-        self.dam_widget.setLayout(self.dam_layout)
+        self.stat_layout.addWidget(self.monster_list)
 
         self.stat_widget = QWidget()
         self.stat_widget.setLayout(self.stat_layout)
+        self.stat_widget.setMinimumWidth(240)
+
+        self.statblock_dock = QDockWidget("Statblock", self)
+        self.statblock_dock.setObjectName("statblockDock")  # required by saveState()
+        self.statblock_dock.setWidget(self.stat_widget)
+        self.statblock_dock.setMinimumWidth(260)
+        self.statblock_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.statblock_dock)
+
         _screen_w = QApplication.primaryScreen().availableGeometry().width()
-        self.stat_widget.setMaximumWidth(min(int(_screen_w * 0.35), 520))
+        self.resizeDocks(
+            [self.controls_dock, self.statblock_dock],
+            [250, min(int(_screen_w * 0.28), 460)],
+            Qt.Horizontal,
+        )
 
-        self.mainlayout.addWidget(self.dam_widget, alignment=Qt.AlignLeft)
-        self.mainlayout.addWidget(self.table_widget, alignment=Qt.AlignTop)
-        self.mainlayout.addWidget(self.stat_widget, stretch=1)
-
-        self.setup_menu_and_toolbar()
-
-        # === Status Bar ===
+    def _build_status_bar(self):
         self.status_bar = QStatusBar(self)
         self.setStatusBar(self.status_bar)
         self.bridge_status_label = QLabel("● Bridge: Disabled")
+        self.bridge_status_label.setToolTip("Foundry VTT bridge connection state")
         self.bridge_status_label.setStyleSheet("padding: 0 8px; color: #888;")
         self.status_bar.addPermanentWidget(self.bridge_status_label)
+
+    # ---- layout persistence -------------------------------------------------
+
+    # The saved panel configuration is the source of truth for where things sit.
+    # Free-form dock dragging is opt-in; only then is the dragged arrangement
+    # remembered instead.
+
+    def _dock_for_key(self, key: str):
+        return {
+            "controls": getattr(self, "controls_dock", None),
+            "statblock": getattr(self, "statblock_dock", None),
+        }.get(key)
+
+    def apply_panel_layout(self, config: dict = None):
+        """Place every panel according to `config` (defaults to the saved one)."""
+        if config is None:
+            config = load_panel_layout()
+        self._panel_layout = config
+
+        allow_drag = bool(config.get("allow_drag", False))
+        docks, widths = [], []
+
+        for key, entry in (config.get("panels") or {}).items():
+            dock = self._dock_for_key(key)
+            if dock is None:
+                continue
+            area = (
+                Qt.RightDockWidgetArea
+                if entry.get("side") == "right"
+                else Qt.LeftDockWidgetArea
+            )
+            if dock.isFloating():
+                dock.setFloating(False)
+            self.addDockWidget(area, dock)
+            dock.setVisible(bool(entry.get("visible", True)))
+            if entry.get("visible", True):
+                docks.append(dock)
+                widths.append(int(entry.get("width", 250)))
+
+        if docks:
+            # resizeDocks only takes effect once the widgets have been laid out.
+            self.resizeDocks(docks, widths, Qt.Horizontal)
+
+        toolbar_config = config.get("toolbar") or {}
+        toolbar_area = (
+            Qt.BottomToolBarArea
+            if toolbar_config.get("area") == "bottom"
+            else Qt.TopToolBarArea
+        )
+        self.addToolBar(toolbar_area, self.filetool_bar)
+        # An empty toolbar is hidden regardless of the preference.
+        self.filetool_bar.setVisible(
+            bool(toolbar_config.get("visible", True)) and bool(self.filetool_bar.actions())
+        )
+        self.apply_toolbar_button_style(toolbar_config.get("button_style"))
+
+        self.set_dragging_allowed(allow_drag)
+
+    def set_dragging_allowed(self, allowed: bool):
+        """Whether panels can be moved/floated/closed with the mouse."""
+        self._allow_panel_drag = bool(allowed)
+        features = (
+            (
+                QDockWidget.DockWidgetMovable
+                | QDockWidget.DockWidgetFloatable
+                | QDockWidget.DockWidgetClosable
+            )
+            if allowed
+            else QDockWidget.NoDockWidgetFeatures
+        )
+        for key, _label, _side in PANEL_REGISTRY:
+            dock = self._dock_for_key(key)
+            if dock is not None:
+                dock.setFeatures(features)
+        self.filetool_bar.setMovable(allowed)
+        self.setDockOptions(
+            (
+                QMainWindow.AnimatedDocks
+                | QMainWindow.AllowNestedDocks
+                | QMainWindow.AllowTabbedDocks
+            )
+            if allowed
+            else QMainWindow.AnimatedDocks
+        )
+
+    def open_layout_settings(self):
+        from ui.layout_settings_dialog import LayoutSettingsDialog
+        LayoutSettingsDialog(self).exec_()
+
+    def open_color_settings(self):
+        from ui.color_settings_dialog import ColorSettingsDialog
+        ColorSettingsDialog(self).exec_()
+
+    def refresh_theme(self):
+        """
+        Re-apply everything that bakes in a colour.
+
+        The stylesheet is rebuilt from the live palette, toolbar icons are
+        redrawn in the new tint, and the table is repainted so row colours
+        follow immediately rather than at the next turn change.
+        """
+        from ui.theme import get_stylesheet
+
+        app = QApplication.instance()
+        if app is not None:
+            base = getattr(app, "_base_stylesheet", None)
+            if base is None:
+                # Capture whatever the theme library installed underneath ours
+                # once, so repeated refreshes don't stack copies of our QSS.
+                base = app.styleSheet()
+                marker = "/* ── Global ──"
+                if marker in base:
+                    base = base.split(marker)[0]
+                app._base_stylesheet = base
+            app.setStyleSheet(base + get_stylesheet())
+
+        self._assign_toolbar_icons()
+        self.bridge_status_label.setStyleSheet(
+            self.bridge_status_label.styleSheet()
+        )
+        if hasattr(self, "table_model"):
+            self.table_model.refresh()
+        if hasattr(self, "table"):
+            self.table.viewport().update()
+
+    def save_layout(self):
+        """
+        Persist window geometry, plus whatever the user changed live.
+
+        Panel visibility is toggleable from the View menu, and the dragged
+        arrangement matters only when dragging is enabled — capture both so the
+        next launch matches what was on screen.
+        """
+        try:
+            app_settings.set(
+                "window_geometry",
+                bytes(self.saveGeometry().toBase64()).decode("ascii"),
+            )
+            config = dict(getattr(self, "_panel_layout", None) or load_panel_layout())
+            panels = dict(config.get("panels") or {})
+            for key, _label, _side in PANEL_REGISTRY:
+                dock = self._dock_for_key(key)
+                if dock is None:
+                    continue
+                entry = dict(panels.get(key) or {})
+                entry["visible"] = dock.isVisible()
+                width = dock.width()
+                if entry["visible"] and width > 0:
+                    entry["width"] = width
+                panels[key] = entry
+            config["panels"] = panels
+            toolbar = dict(config.get("toolbar") or {})
+            toolbar["visible"] = self.filetool_bar.isVisible()
+            config["toolbar"] = toolbar
+            save_panel_layout(config)
+
+            if config.get("allow_drag"):
+                app_settings.set(
+                    "window_state",
+                    bytes(self.saveState(LAYOUT_VERSION).toBase64()).decode("ascii"),
+                )
+        except Exception as exc:
+            self._log(f"[WARN] Could not save window layout: {exc}")
+
+    def restore_layout(self) -> bool:
+        """Reapply the saved layout. Returns False when there was nothing to restore."""
+        restored = False
+        try:
+            geometry = app_settings.get("window_geometry")
+            if geometry:
+                self.restoreGeometry(QByteArray.fromBase64(geometry.encode("ascii")))
+                restored = True
+
+            config = load_panel_layout()
+            self.apply_panel_layout(config)
+
+            # A freely dragged arrangement is only meaningful while dragging is
+            # enabled; otherwise the declarative config above already won.
+            state = app_settings.get("window_state")
+            if config.get("allow_drag") and state:
+                # restoreState() returns False when the saved layout came from an
+                # older, incompatible version — fall back to the config.
+                if self.restoreState(
+                    QByteArray.fromBase64(state.encode("ascii")), LAYOUT_VERSION
+                ):
+                    restored = True
+        except Exception as exc:
+            self._log(f"[WARN] Could not restore window layout: {exc}")
+            return restored
+        return restored
+
+    def reset_layout(self):
+        """Put every panel back to the shipped defaults."""
+        from ui.layout_settings_dialog import DEFAULT_PANEL_LAYOUT
+        from copy import deepcopy
+
+        config = deepcopy(DEFAULT_PANEL_LAYOUT)
+        save_panel_layout(config)
+        self.apply_panel_layout(config)
+        toast(self, "Panel layout reset", "success")
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        reposition_toasts(self)
+
+    def notify(self, message: str, level: str = "info"):
+        """Transient, in-window feedback that also lands in the status bar."""
+        self.show_status_message(message)
+        toast(self, message, level)
+
+    def show_banner(
+        self,
+        key: str,
+        message: str,
+        level: str = "warning",
+        action_label: str = None,
+        action=None,
+        dismissable: bool = True,
+    ):
+        """
+        Raise a persistent notification that stays until the condition clears.
+
+        For anything still true after a toast would have faded — a dead bridge,
+        a storage backend that can't be reached.
+        """
+        self.banner_area.show_banner(
+            key, message, level, action_label, action, dismissable
+        )
+
+    def clear_banner(self, key: str):
+        self.banner_area.clear_banner(key)
 
     def show_status_message(self, msg: str, timeout_ms: int = 4000):
         if hasattr(self, "status_bar"):
@@ -264,9 +625,10 @@ class InitiativeTracker(QMainWindow, Application):
         try:
             self.load_pc_group(key)
         except Exception as e:
-            QMessageBox.warning(self, "Error", f"Failed to load group:\n{e}")
+            report_error(self, "Load Group Failed",
+                         f"Could not load the PC group '{key}'.", e)
             return
-        self.show_status_message(f"Loaded PC group: {self._pc_group_display(key)}")
+        self.notify(f"Loaded PC group: {self._pc_group_display(key)}", "success")
 
     def open_pc_groups(self):
         from ui.pc_groups_dialog import PCGroupsDialog
@@ -300,7 +662,7 @@ class InitiativeTracker(QMainWindow, Application):
             self.build_turn_order()
             self.update_table()
             self.pop_lists()
-        self.show_status_message(f"Ignoring '{name}' in Foundry sync")
+        self.notify(f"Ignoring '{name}' in Foundry sync", "info")
 
     def open_foundry_ignore(self):
         from ui.foundry_ignore_dialog import FoundryIgnoreDialog
@@ -311,18 +673,32 @@ class InitiativeTracker(QMainWindow, Application):
         from ui.pc_groups_dialog import create_new_pc_group
         create_new_pc_group(self, self)
 
+    BRIDGE_BANNER_KEY = "bridge_disconnected"
+
     def set_bridge_status(self, state: str) -> None:
         if not hasattr(self, "bridge_status_label"):
             return
         if state == "connected":
             self.bridge_status_label.setText("● Bridge: Connected")
             self.bridge_status_label.setStyleSheet("padding: 0 8px; color: #2ecc71;")
+            self.clear_banner(self.BRIDGE_BANNER_KEY)
         elif state == "error":
             self.bridge_status_label.setText("● Bridge: Disconnected")
             self.bridge_status_label.setStyleSheet("padding: 0 8px; color: #e74c3c;")
+            # Losing sync silently is the worst case: the app keeps accepting
+            # HP and initiative edits that never reach Foundry.
+            self.show_banner(
+                self.BRIDGE_BANNER_KEY,
+                "Foundry bridge disconnected — HP, initiative and condition "
+                "changes are not syncing.",
+                "error",
+                action_label="Show Log",
+                action=self.show_log,
+            )
         else:
             self.bridge_status_label.setText("● Bridge: Disabled")
             self.bridge_status_label.setStyleSheet("padding: 0 8px; color: #888;")
+            self.clear_banner(self.BRIDGE_BANNER_KEY)
 
     def _monster_list_context_menu(self, pos):
         menu = QMenu(self)
@@ -342,9 +718,13 @@ class InitiativeTracker(QMainWindow, Application):
         self.encounter_menu = self.menu_bar.addMenu("&Encounters")
         self.monsters_menu = self.menu_bar.addMenu("&Parsers")
         self.tools_menu = self.menu_bar.addMenu("&Tools")
+        self.view_menu = self.menu_bar.addMenu("&View")
+        self.help_menu = self.menu_bar.addMenu("&Help")
 
-        self.filetool_bar = QToolBar("File", self)
-        self.addToolBar(self.filetool_bar)
+        self.filetool_bar = QToolBar("Toolbar", self)
+        self.filetool_bar.setObjectName("mainToolBar")  # required by saveState()
+        self.filetool_bar.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.addToolBar(Qt.TopToolBarArea, self.filetool_bar)
 
         self.save_action = QAction("Save", self)
         self.save_action.triggered.connect(self.save_state)
@@ -362,9 +742,23 @@ class InitiativeTracker(QMainWindow, Application):
         self.settings_action.triggered.connect(self.open_settings)
         self.file_menu.addAction(self.settings_action)
 
+        self.customize_layout_action = QAction("Customize Layout…", self)
+        self.customize_layout_action.setToolTip(
+            "Choose where each panel sits, how wide it is, and where the toolbar goes"
+        )
+        self.customize_layout_action.triggered.connect(self.open_layout_settings)
+        self.file_menu.addAction(self.customize_layout_action)
+
         self.customize_toolbar_action = QAction("Customize Toolbar…", self)
         self.customize_toolbar_action.triggered.connect(self.open_customize_toolbar)
         self.file_menu.addAction(self.customize_toolbar_action)
+
+        self.customize_colors_action = QAction("Customize Colors…", self)
+        self.customize_colors_action.setToolTip(
+            "Change the turn, bloodied, down and dead row colours, and the theme"
+        )
+        self.customize_colors_action.triggered.connect(self.open_color_settings)
+        self.file_menu.addAction(self.customize_colors_action)
 
         # PC Groups: quick-switch saved player rosters. The submenu is rebuilt
         # each time it opens so newly saved groups appear without a restart.
@@ -455,7 +849,11 @@ class InitiativeTracker(QMainWindow, Application):
         self.prev_turn_action.triggered.connect(self.prev_turn)
         self.edit_menu.addAction(self.prev_turn_action)
 
-        # Build the id → QAction map used by _apply_toolbar_config
+        self._setup_view_menu()
+        self._setup_help_menu()
+
+        # Build the id → QAction map used by _apply_toolbar_config.
+        # Keys must match the ids in ui.toolbar_customize_dialog.TOOLBAR_REGISTRY.
         self._toolbar_action_map: dict[str, QAction] = {
             "save":                 self.save_action,
             "save_as":              self.save_as_action,
@@ -475,7 +873,13 @@ class InitiativeTracker(QMainWindow, Application):
             "import_statblock":     self.import_statblock_action,
             "import_spell":         self.import_spell_action,
             "bulk_import_items":    self.bulk_import_items_action,
+            "shop_generator":       self.shop_generator_action,
+            "settings":             self.settings_action,
+            "foundry_ignore":       self.foundry_ignore_action,
+            "show_log":             self.show_log_action,
         }
+
+        self._assign_toolbar_icons()
 
         # Populate toolbar from saved config (or defaults)
         self._apply_toolbar_config()
@@ -483,6 +887,99 @@ class InitiativeTracker(QMainWindow, Application):
         # Right-click on toolbar opens customize dialog
         self.filetool_bar.setContextMenuPolicy(Qt.CustomContextMenu)
         self.filetool_bar.customContextMenuRequested.connect(self._toolbar_context_menu)
+
+    def _assign_toolbar_icons(self):
+        """
+        Give toolbar actions an icon drawn from the current palette.
+
+        Actions without an honest visual metaphor deliberately get none — a
+        wrong icon costs more than a text-only button. See ui.icons.
+        """
+        tint = colors.TEXT_PRIMARY
+        for action_id, action in self._toolbar_action_map.items():
+            icon = icon_for(action_id, tint)
+            action.setIcon(icon)
+
+    def apply_toolbar_button_style(self, style: str = None):
+        """Text-only, icons-only, or both — the user's call."""
+        if style is None:
+            style = load_panel_layout().get("toolbar", {}).get("button_style", "text_beside_icon")
+        self.filetool_bar.setToolButtonStyle(
+            {
+                "text_only": Qt.ToolButtonTextOnly,
+                "icon_only": Qt.ToolButtonIconOnly,
+                "text_under_icon": Qt.ToolButtonTextUnderIcon,
+            }.get(style, Qt.ToolButtonTextBesideIcon)
+        )
+
+    def _setup_view_menu(self):
+        """Panel visibility and layout controls, all in one predictable place."""
+        # toggleViewAction() keeps the checkmark in sync when the user closes a
+        # dock with its own × button, so the menu can never lie about state.
+        self.view_menu.addAction(self.controls_dock.toggleViewAction())
+        self.view_menu.addAction(self.statblock_dock.toggleViewAction())
+
+        self.toggle_toolbar_action = self.filetool_bar.toggleViewAction()
+        self.toggle_toolbar_action.setText("Toolbar")
+        self.view_menu.addAction(self.toggle_toolbar_action)
+
+        self.view_menu.addSeparator()
+
+        # Placement and sizing live in a dialog rather than being dragged, so
+        # the layout can't be knocked out of shape by a stray mouse gesture.
+        self.view_menu.addAction(self.customize_layout_action)
+        self.view_menu.addAction(self.customize_toolbar_action)
+        self.view_menu.addAction(self.customize_colors_action)
+
+        self.reset_layout_action = QAction("Reset Panel Layout", self)
+        self.reset_layout_action.setToolTip("Put every panel back to its default position")
+        self.reset_layout_action.triggered.connect(self.reset_layout)
+        self.view_menu.addAction(self.reset_layout_action)
+
+    def _setup_help_menu(self):
+        self.shortcuts_action = QAction("Keyboard Shortcuts", self)
+        self.shortcuts_action.setShortcut(QKeySequence("F1"))
+        self.shortcuts_action.triggered.connect(self.show_shortcuts)
+        self.help_menu.addAction(self.shortcuts_action)
+
+        self.show_log_action = QAction("Show Log…", self)
+        self.show_log_action.setToolTip("Recent activity and errors — useful when reporting a bug")
+        self.show_log_action.triggered.connect(self.show_log)
+        self.help_menu.addAction(self.show_log_action)
+
+    def show_log(self):
+        from ui.log_dialog import LogDialog
+        LogDialog(self).exec_()
+
+    def show_shortcuts(self):
+        """A discoverable list of shortcuts — otherwise they're only in tooltips."""
+        rows = [
+            ("Ctrl+N", "Next turn"),
+            ("Ctrl+Shift+N", "Previous turn"),
+            ("Ctrl+S", "Save state"),
+            ("Ctrl+L", "Reference lookup"),
+            ("Ctrl+F", "Focus the combatant filter"),
+            ("Ctrl +/-", "Zoom the statblock in/out (or Ctrl+scroll)"),
+            ("Ctrl+0", "Reset statblock zoom"),
+            ("Enter", "Damage selected (in the HP value box)"),
+            ("Shift+Enter", "Heal selected (in the HP value box)"),
+            ("Esc", "Clear selection / close dropdowns"),
+            ("F1", "This list"),
+        ]
+        body = "\n".join(f"{key:<16}{label}" for key, label in rows)
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Keyboard Shortcuts")
+        layout = QVBoxLayout(dialog)
+        view = QTextEdit(dialog)
+        view.setReadOnly(True)
+        view.setPlainText(body)
+        view.setMinimumSize(400, 280)
+        layout.addWidget(view)
+        buttons = QDialogButtonBox(QDialogButtonBox.Close, dialog)
+        buttons.rejected.connect(dialog.reject)
+        buttons.accepted.connect(dialog.accept)
+        layout.addWidget(buttons)
+        dialog.exec_()
 
     def update_size_constraints(self):
         # Get the current screen where the app is being displayed
@@ -910,6 +1407,7 @@ class InitiativeTracker(QMainWindow, Application):
         super().keyPressEvent(event)
     
     def closeEvent(self, event):
+        self.save_layout()
         local_bridge = getattr(self, "local_bridge", None)
         if local_bridge is not None:
             try:

@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import (
 )
 
 from app.config import get_config_path
+from ui.notifications import report_error
 
 STATUS_PATH = get_config_path("encounter_status.json")
 
@@ -76,7 +77,8 @@ class LoadEncounterWindow(QDialog):
             if self.encounter_list.count() == 0:
                 self.info_label.setText("No encounters found.")
         except Exception as e:
-            QMessageBox.warning(self, "Error", f"Failed to load encounters: {e}")
+            report_error(self, "Could Not List Encounters",
+                         "The list of saved encounters could not be loaded.", e)
             self.reject()
 
     def on_load_clicked(self):

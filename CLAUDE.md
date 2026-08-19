@@ -45,6 +45,7 @@ lib/
     manager.py                  # CreatureManager — in-memory collection, natural-sort ordering
     save_json.py                # GameState serialization (local JSON persistence)
     config.py                   # Env var configuration (also loads ~/.dnd_tracker_config/.env)
+    app_log.py                  # Rotating file log + in-memory ring buffer (Application._log routes here)
     bridge_client.py            # Client for Foundry bridge communication (threading)
     local_bridge_server.py      # In-process bridge server (single-machine mode)
     storage_api.py              # Optional remote storage API
@@ -57,6 +58,15 @@ lib/
     death_saves_dialog.py       # Death saving throws dialog
     enter_initiatives_dialog.py # Initiative roll input dialog
     update_characters.py        # Creature property editor
+    notifications.py            # toast() / report_error() / report_warning() + sys.excepthook
+    banner.py                   # BannerArea — persistent, keyed, dismissible notifications
+    layout_settings_dialog.py   # Panel placement/width config + PANEL_REGISTRY
+    log_dialog.py               # Help → Show Log viewer
+    toolbar_customize_dialog.py # Two-pane toolbar customizer + TOOLBAR_REGISTRY
+    theme.py                    # QSS stylesheet, built from the live palette
+    colors.py                   # PALETTE_SCHEMA + user-overridable colour globals
+    color_settings_dialog.py    # Colour picker generated from PALETTE_SCHEMA
+    icons.py                    # QPainter-drawn toolbar icons (no image assets)
 bridge_service/
   app.py                        # Flask REST API for bridge
   command_queue.py              # Command queue with TTL sweeper
@@ -82,3 +92,14 @@ tests/
 - **Configuration is environment-driven**: `.env` at repo root + `~/.dnd_tracker_config/.env`. See `lib/app/config.py` for all variables and defaults.
 - **Local bridge server** starts in-process by default (`LOCAL_BRIDGE_ENABLED=1`), so single-machine setups need no external bridge.
 - **Player View**: optional HTTP server (port 5001) serving an iframe-friendly page with public-only combat data.
+- **Panel layout is configured, not dragged**: the initiative table is the central widget; "Combat Controls" and "Statblock" are `QDockWidget`s. The saved `panel_layout` dict in `settings.json` (see `lib/ui/layout_settings_dialog.py`) is the source of truth for each panel's side, width and visibility — dock dragging is **disabled by default** and only opt-in via "Let me drag panels around the window". `saveState()`/`restoreState()` are consulted *only* when `allow_drag` is on; otherwise `apply_panel_layout()` places everything declaratively. Adding a panel means adding it to `PANEL_REGISTRY`, `DEFAULT_PANEL_LAYOUT`, and `_dock_for_key()`. Every dock still needs an `objectName` or `saveState()` drops it; bump `LAYOUT_VERSION` in `lib/ui/ui.py` when the set of docks or toolbars changes.
+- **Three tiers of error reporting** — never `print()`, since the packaged build runs `console=False` and stdout is discarded:
+  1. `notify(msg, level)` / `toast(...)` — transient confirmations that auto-dismiss ("State saved").
+  2. `show_banner(key, msg, level, action_label, action)` / `clear_banner(key)` — persistent, non-blocking strip above the table for conditions that outlive a toast (bridge disconnected). Keyed, so re-showing updates in place instead of stacking.
+  3. `report_error(parent, title, msg, exc)` — blocking modal with the traceback under "Show Details", for when the requested action did not happen.
+  Uncaught exceptions reach a dialog via the excepthook installed in `main.py`. `self._log(...)` infers severity from an `[ERROR]`/`[WARN]`/`[DBG]` prefix.
+- **Customizable toolbar**: add a new action by putting it in `TOOLBAR_REGISTRY` (`lib/ui/toolbar_customize_dialog.py`) *and* in `_toolbar_action_map` (`lib/ui/ui.py`) — the ids must match. Give it an icon by adding the id to `ACTION_GLYPHS` in `lib/ui/icons.py`; an action with no entry stays text-only **on purpose** — a misleading icon is worse than none. Icons are drawn with `QPainter`, not `QStyle.standardIcon` (which renders differently per platform/theme) and not bundled image files.
+- **Colours are user-overridable**: `lib/ui/colors.py` holds `PALETTE_SCHEMA` (the shipped values are the defaults) and rebinds its module globals in `apply()`. **Consumers must use attribute access** — `colors.HP_LOW_ACTIVE`, never `from ui.colors import HP_LOW_ACTIVE`, which binds once at import and would never see a user change. Adding a colour to `PALETTE_SCHEMA` is all that's needed for it to appear in the colour dialog. `InitiativeTracker.refresh_theme()` re-applies the stylesheet, redraws icons and repaints the table; it caches the underlying qdarktheme QSS as `app._base_stylesheet` so repeated refreshes don't stack copies.
+- **Active-turn row highlight**: `CreatureTableModel._row_background()` is the single authority on a row's colour. It resolves the whole row *before* any per-cell tint, always returns a colour for the active creature (even when HP is untracked), and falls back to the zebra stripe last. Action/bonus/reaction cell tinting is opt-in (`colors.tint_action_cells()`, off by default) since the ✔/✘ glyph already carries that state.
+  - **Never call `QTableView.setAlternatingRowColors(True)` here.** Qt paints the alternate row background *over* the model's `BackgroundRole`, which silently hides the active-turn highlight on every second row — the highlight appears to flicker on and off as turns advance. Zebra striping was tried and deliberately removed; the table has no row banding by design.
+  - When verifying row colours, sample **painted pixels** from `table.viewport().grab()`, not just `model.data(..., BackgroundRole)` — the model can be correct while the view paints something else. Sample above/below the text baseline or take the modal colour across the row; sampling mid-row hits anti-aliased glyph pixels and gives false failures. Note `_type` is a hidden column with width 0, so `columnViewportPosition(0)` lands inside the name column.

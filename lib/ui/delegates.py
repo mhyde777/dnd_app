@@ -3,7 +3,7 @@ from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QColor, QFont
 from PyQt5.QtWidgets import QStyledItemDelegate
 
-from ui.colors import BOOL_TRUE_FG, BOOL_FALSE_FG
+from ui import colors
 
 
 class CreatureTableDelegate(QStyledItemDelegate):
@@ -27,7 +27,11 @@ class CreatureTableDelegate(QStyledItemDelegate):
         # Paint boolean symbol with color on top if applicable
         if is_bool_cell:
             painter.save()
-            color = QColor(BOOL_TRUE_FG) if display == "\u2714" else QColor(BOOL_FALSE_FG)
+            color = (
+                QColor(colors.BOOL_TRUE_FG)
+                if display == "\u2714"
+                else QColor(colors.BOOL_FALSE_FG)
+            )
             font = QFont(option.font)
             font.setPointSize(font.pointSize() + 2)
             font.setBold(True)

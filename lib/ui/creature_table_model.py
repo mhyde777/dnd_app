@@ -3,13 +3,7 @@ from PyQt5.QtGui import QColor, QFont
 from dataclasses import fields as dataclass_fields
 
 from app.creature import CreatureType
-from ui.colors import (
-    HP_HEALTHY_ACTIVE, HP_LOW_ACTIVE, HP_LOW_INACTIVE,
-    HP_ZERO_ACTIVE, HP_ZERO_INACTIVE,
-    DEAD_BG_ACTIVE, DEAD_BG_INACTIVE, DEAD_TEXT,
-    STABLE_BG_ACTIVE, STABLE_BG_INACTIVE,
-    BOOL_TRUE_BG, BOOL_FALSE_BG,
-)
+from ui import colors
 
 SPELL_ICON_COLUMN_NAME = "_spellbook"
 ABILITY_ICON_COLUMN_NAME = "_abilities"
@@ -202,48 +196,18 @@ class CreatureTableModel(QAbstractTableModel):
 
         # ----- Background/Foreground coloring -----
         if role == Qt.BackgroundRole:
-            # Lair action rows: dark purple
-            if getattr(creature, "_is_lair_action", False):
-                return QColor("#4a2060")
-
-            # Boolean columns: muted tint backgrounds
-            if isinstance(value, bool):
-                return QColor(BOOL_TRUE_BG) if value else QColor(BOOL_FALSE_BG)
-
-            # Death save visuals (Players only)
-            try:
-                succ = int(getattr(creature, "_death_successes", 0) or 0)
-                fail = int(getattr(creature, "_death_failures", 0) or 0)
-                stable = bool(getattr(creature, "_death_stable", False))
-            except Exception:
-                succ = fail = 0
-                stable = False
-
+            # The active-turn highlight must run unbroken across the whole row,
+            # so it is resolved before any per-cell tint gets a chance to win.
             is_active = (name == self.active_creature_name)
+            row_color = self._row_background(creature, is_active)
 
-            # dead = gray (slightly lighter if active)
-            if fail >= 3:
-                return QColor(DEAD_BG_ACTIVE) if is_active else QColor(DEAD_BG_INACTIVE)
+            if row_color is not None:
+                return QColor(row_color)
 
-            # stable = blue (slightly brighter if active)
-            if stable:
-                return QColor(STABLE_BG_ACTIVE) if is_active else QColor(STABLE_BG_INACTIVE)
-
-            # HP-based coloring + active row
-            curr_hp = getattr(creature, "_curr_hp", -1)
-            max_hp = int(getattr(creature, "_max_hp", -1) or -1) + int(getattr(creature, "_max_hp_bonus", 0) or 0)
-
-            if isinstance(curr_hp, int) and isinstance(max_hp, int) and max_hp > 0:
-                hp_ratio = curr_hp / max_hp
-
-                if curr_hp == 0:
-                    return QColor(HP_ZERO_ACTIVE) if is_active else QColor(HP_ZERO_INACTIVE)
-
-                if hp_ratio <= 0.5:
-                    return QColor(HP_LOW_ACTIVE) if is_active else QColor(HP_LOW_INACTIVE)
-
-                if is_active:
-                    return QColor(HP_HEALTHY_ACTIVE)
+            # Per-cell tint for the action tracker, on non-active rows only. The
+            # ✔/✘ glyph already carries the state, so this is opt-in.
+            if isinstance(value, bool) and colors.tint_action_cells():
+                return QColor(colors.BOOL_TRUE_BG if value else colors.BOOL_FALSE_BG)
 
         if role == Qt.ForegroundRole:
             try:
@@ -251,7 +215,7 @@ class CreatureTableModel(QAbstractTableModel):
             except Exception:
                 fail = 0
             if fail >= 3:
-                return QColor(DEAD_TEXT)
+                return QColor(colors.DEAD_TEXT)
 
         # ----- Font -----
         if role == Qt.FontRole:
@@ -279,6 +243,42 @@ class CreatureTableModel(QAbstractTableModel):
                 return font
 
         return QVariant()
+
+    def _row_background(self, creature, is_active: bool):
+        """
+        Background for the creature's whole row, or None to leave it unpainted.
+
+        Returns a colour for *every* state when `is_active`, so the turn
+        highlight can never be interrupted by a cell with no HP data.
+        """
+        if getattr(creature, "_is_lair_action", False):
+            return colors.LAIR_ACTION_BG
+
+        try:
+            fail = int(getattr(creature, "_death_failures", 0) or 0)
+            stable = bool(getattr(creature, "_death_stable", False))
+        except Exception:
+            fail, stable = 0, False
+
+        if fail >= 3:
+            return colors.DEAD_BG_ACTIVE if is_active else colors.DEAD_BG_INACTIVE
+
+        if stable:
+            return colors.STABLE_BG_ACTIVE if is_active else colors.STABLE_BG_INACTIVE
+
+        curr_hp = getattr(creature, "_curr_hp", -1)
+        max_hp = int(getattr(creature, "_max_hp", -1) or -1) + int(
+            getattr(creature, "_max_hp_bonus", 0) or 0
+        )
+
+        if isinstance(curr_hp, int) and max_hp > 0:
+            if curr_hp == 0:
+                return colors.HP_ZERO_ACTIVE if is_active else colors.HP_ZERO_INACTIVE
+            if curr_hp / max_hp <= 0.5:
+                return colors.HP_LOW_ACTIVE if is_active else colors.HP_LOW_INACTIVE
+
+        # Healthy, or HP not tracked: only the active row is painted.
+        return colors.HP_HEALTHY_ACTIVE if is_active else None
 
     def setData(self, index, value, role=Qt.EditRole):
         if not index.isValid():

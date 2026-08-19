@@ -1,12 +1,23 @@
 # lib/ui/theme.py — QSS stylesheet for the D&D Combat Tracker
-from ui.colors import (
-    BG_DARK, BG_PANEL, TEXT_PRIMARY, TEXT_SECONDARY,
-    ACCENT_GOLD, ACCENT_GOLD_DIM, BORDER, HOVER_HIGHLIGHT,
-    BTN_DAMAGE_BG, BTN_DAMAGE_HOVER, BTN_HEAL_BG, BTN_HEAL_HOVER,
-)
+from ui import colors
 
 
 def get_stylesheet() -> str:
+    # Read through the module, not via `from ... import`: the palette is
+    # rebound at runtime when the user saves custom colours.
+    BG_DARK = colors.BG_DARK
+    BG_PANEL = colors.BG_PANEL
+    TEXT_PRIMARY = colors.TEXT_PRIMARY
+    TEXT_SECONDARY = colors.TEXT_SECONDARY
+    ACCENT_GOLD = colors.ACCENT_GOLD
+    ACCENT_GOLD_DIM = colors.ACCENT_GOLD_DIM
+    BORDER = colors.BORDER
+    HOVER_HIGHLIGHT = colors.HOVER_HIGHLIGHT
+    BTN_DAMAGE_BG = colors.BTN_DAMAGE_BG
+    BTN_DAMAGE_HOVER = colors.BTN_DAMAGE_HOVER
+    BTN_HEAL_BG = colors.BTN_HEAL_BG
+    BTN_HEAL_HOVER = colors.BTN_HEAL_HOVER
+
     return f"""
     /* ── Global ──────────────────────────────────────── */
     QMainWindow, QDialog {{
@@ -34,7 +45,6 @@ def get_stylesheet() -> str:
     QTableView {{
         gridline-color: {BORDER};
         background-color: {BG_DARK};
-        alternate-background-color: {BG_PANEL};
         selection-background-color: {HOVER_HIGHLIGHT};
         color: {TEXT_PRIMARY};
         border: 1px solid {BORDER};
@@ -65,6 +75,18 @@ def get_stylesheet() -> str:
     }}
     QPushButton:pressed {{
         background-color: {HOVER_HIGHLIGHT};
+    }}
+
+    /* Primary action (Next turn) — the most-used control in the window */
+    QPushButton#primaryButton {{
+        background-color: {ACCENT_GOLD_DIM};
+        color: {TEXT_PRIMARY};
+        border-color: {ACCENT_GOLD};
+        font-weight: 600;
+    }}
+    QPushButton#primaryButton:hover {{
+        background-color: {ACCENT_GOLD};
+        color: {BG_DARK};
     }}
 
     /* Damage button */
@@ -131,6 +153,56 @@ def get_stylesheet() -> str:
         background-color: {BG_PANEL};
         border-bottom: 1px solid {BORDER};
         spacing: 4px;
+    }}
+
+    QToolBar QToolButton {{
+        color: {TEXT_PRIMARY};
+        border: 1px solid transparent;
+        border-radius: 4px;
+        padding: 4px 8px;
+    }}
+    QToolBar QToolButton:hover {{
+        border-color: {ACCENT_GOLD};
+        color: {ACCENT_GOLD};
+        background-color: {HOVER_HIGHLIGHT};
+    }}
+    QToolBar QToolButton:pressed {{
+        background-color: {ACCENT_GOLD_DIM};
+    }}
+    QToolBar::separator {{
+        background-color: {BORDER};
+        width: 1px;
+        margin: 4px 6px;
+    }}
+
+    /* ── Dock panels ─────────────────────────────────── */
+    QDockWidget {{
+        color: {ACCENT_GOLD};
+        font-weight: 600;
+    }}
+    QDockWidget::title {{
+        background-color: {BG_PANEL};
+        border: 1px solid {BORDER};
+        border-radius: 4px;
+        padding: 5px 8px;
+        text-align: left;
+    }}
+    QDockWidget::close-button, QDockWidget::float-button {{
+        border: none;
+        background: transparent;
+        padding: 2px;
+    }}
+    QDockWidget::close-button:hover, QDockWidget::float-button:hover {{
+        background-color: {HOVER_HIGHLIGHT};
+        border-radius: 3px;
+    }}
+    QMainWindow::separator {{
+        background-color: {BG_DARK};
+        width: 5px;
+        height: 5px;
+    }}
+    QMainWindow::separator:hover {{
+        background-color: {ACCENT_GOLD_DIM};
     }}
 
     /* ── Status bar ──────────────────────────────────── */
