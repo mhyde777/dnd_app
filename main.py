@@ -11,6 +11,14 @@ def resource_path(relative_path: str) -> str:
 
 if __name__ == "__main__":
     from ui.theme import get_stylesheet
+    from app.app_log import configure as configure_logging
+    from ui.notifications import install_excepthook
+
+    configure_logging()
+    # Without this an exception inside a Qt slot vanishes into a stdout nobody
+    # sees in a packaged build, and the app just looks unresponsive.
+    install_excepthook()
+
     qdarktheme.enable_hi_dpi()
     app = QApplication(sys.argv)
     app.setWindowIcon(QIcon(resource_path("images/d20_icon.png")))
@@ -27,5 +35,9 @@ if __name__ == "__main__":
 
     from ui.ui import InitiativeTracker
     mainWin = InitiativeTracker()
-    mainWin.showMaximized()
+    # Only force-maximize on a first run; otherwise honour the restored geometry.
+    if getattr(mainWin, "_layout_restored", False):
+        mainWin.show()
+    else:
+        mainWin.showMaximized()
     sys.exit(app.exec_())

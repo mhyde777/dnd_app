@@ -18,6 +18,7 @@ from PyQt5.QtWidgets import (
 )
 
 from app.creature import Player
+from ui.notifications import report_error
 
 # Sentinel for the "not a saved group" entry in the roster picker.
 DEFAULT_ROSTER = ""
@@ -167,7 +168,7 @@ class UpdateCharactersWindow(QDialog):
         try:
             players = self.app.get_pc_group_players(self.group_key)
         except Exception as e:
-            QMessageBox.warning(self, "Load Failed", f"Failed to load PC group:\n{e}")
+            report_error(self, "Load Failed", "That PC group could not be loaded.", e)
             return None
         return {"players": [p.to_dict() for p in players]}
 
@@ -191,7 +192,9 @@ class UpdateCharactersWindow(QDialog):
                     return {"players": raw}
                 return {"players": []}
             except Exception as e:
-                QMessageBox.warning(self, "Load Failed", f"Failed to load from Storage API:\n{e}")
+                report_error(self, "Load Failed",
+                             "Could not reach the storage API. Check the address and "
+                             "key under File → Settings.", e)
                 return None
 
         # Local fallback: data/players.json
@@ -207,7 +210,7 @@ class UpdateCharactersWindow(QDialog):
         except FileNotFoundError:
             return {"players": []}
         except Exception as e:
-            QMessageBox.warning(self, "Load Failed", f"Failed to load local players.json:\n{e}")
+            report_error(self, "Load Failed", "Could not read the local players file.", e)
             return None
 
     def _save_group_payload(self, players: List[Player]) -> bool:
@@ -215,7 +218,7 @@ class UpdateCharactersWindow(QDialog):
             self.app.save_pc_group_roster(self.group_key, players)
             return True
         except Exception as e:
-            QMessageBox.warning(self, "Save Failed", f"Failed to save PC group:\n{e}")
+            report_error(self, "Save Failed", "That PC group could not be saved.", e)
             return False
 
     def _save_players_payload(self, payload: Dict[str, Any]) -> bool:
@@ -228,7 +231,9 @@ class UpdateCharactersWindow(QDialog):
                 storage.put_json(filename, payload)
                 return True
             except Exception as e:
-                QMessageBox.warning(self, "Save Failed", f"Failed to save to Storage API:\n{e}")
+                report_error(self, "Save Failed",
+                                 "Could not write to the storage API. Your changes are "
+                                 "not saved.", e)
                 return False
 
         # Local fallback
@@ -238,7 +243,7 @@ class UpdateCharactersWindow(QDialog):
                 json.dump(payload, f, ensure_ascii=False, indent=2, default=str)
             return True
         except Exception as e:
-            QMessageBox.warning(self, "Save Failed", f"Failed to save local players.json:\n{e}")
+            report_error(self, "Save Failed", "Could not write the local players file.", e)
             return False
 
     # -------------------------

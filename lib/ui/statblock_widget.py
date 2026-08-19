@@ -11,9 +11,10 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-from PyQt5.QtCore import QPoint
+from PyQt5.QtCore import QPoint, Qt
 from PyQt5.QtWidgets import QTextBrowser, QToolTip
 
+from app import settings as app_settings
 from app.conditions import get_condition
 from app.spell_parser import spell_key as _spell_key
 
@@ -126,7 +127,63 @@ class StatblockWidget(QTextBrowser):
         # highlighted(str) fires when the mouse moves over/away from a link
         self.highlighted[str].connect(self._on_link_hovered)
 
+        # The HTML uses fixed pixel sizes, so the panel is only as legible as the
+        # window is wide. A persisted zoom decouples readability from layout.
+        self._zoom_steps = 0
+        self._restore_zoom()
+
         self.clear_statblock()
+
+    # ── Zoom ─────────────────────────────────────────────────────────
+
+    ZOOM_SETTING = "statblock_zoom"
+    MIN_ZOOM_STEPS = -4
+    MAX_ZOOM_STEPS = 12
+
+    def _restore_zoom(self) -> None:
+        try:
+            saved = int(app_settings.get(self.ZOOM_SETTING, 0) or 0)
+        except (TypeError, ValueError):
+            saved = 0
+        self.set_zoom_steps(saved, persist=False)
+
+    def set_zoom_steps(self, steps: int, persist: bool = True) -> None:
+        """Zoom relative to the base font size, clamped to a usable range."""
+        steps = max(self.MIN_ZOOM_STEPS, min(self.MAX_ZOOM_STEPS, int(steps)))
+        delta = steps - self._zoom_steps
+        if delta > 0:
+            self.zoomIn(delta)
+        elif delta < 0:
+            self.zoomOut(-delta)
+        self._zoom_steps = steps
+        if persist:
+            app_settings.set(self.ZOOM_SETTING, steps)
+
+    def zoom_in(self) -> None:
+        self.set_zoom_steps(self._zoom_steps + 1)
+
+    def zoom_out(self) -> None:
+        self.set_zoom_steps(self._zoom_steps - 1)
+
+    def reset_zoom(self) -> None:
+        self.set_zoom_steps(0)
+
+    def wheelEvent(self, event) -> None:
+        if event.modifiers() & Qt.ControlModifier:
+            delta = event.angleDelta().y()
+            if delta:
+                self.set_zoom_steps(self._zoom_steps + (1 if delta > 0 else -1))
+            event.accept()
+            return
+        super().wheelEvent(event)
+
+    def contextMenuEvent(self, event) -> None:
+        menu = self.createStandardContextMenu()
+        menu.addSeparator()
+        menu.addAction("Zoom In\tCtrl++", self.zoom_in)
+        menu.addAction("Zoom Out\tCtrl+-", self.zoom_out)
+        menu.addAction("Reset Zoom\tCtrl+0", self.reset_zoom)
+        menu.exec_(event.globalPos())
 
     def set_storage_api(self, api) -> None:
         """Attach a StorageAPI instance for live spell tooltip lookup."""
@@ -138,6 +195,12 @@ class StatblockWidget(QTextBrowser):
     def load_statblock(self, data: dict) -> None:
         """Render a statblock dict as HTML and display it."""
         self.setHtml(self._build_html(data))
+        self._reapply_zoom()
+
+    def _reapply_zoom(self) -> None:
+        """setHtml() resets font scaling, so restate the zoom after each render."""
+        steps, self._zoom_steps = self._zoom_steps, 0
+        self.set_zoom_steps(steps, persist=False)
 
     def clear_statblock(self) -> None:
         """Show an empty placeholder state."""
