@@ -282,6 +282,25 @@ class BridgeClient:
             log_label="prev_turn",
         )
 
+    def send_create_journal(
+        self,
+        name: str,
+        content: str,
+        command_id: Optional[str] = None,
+    ) -> bool:
+        """Create or update a Foundry journal entry (used by the shop generator).
+
+        The Foundry module has handled create_journal all along; the app-side
+        method was simply missing, so the caller hit AttributeError. Payload
+        keys match applyCreateJournal() in foundryvtt-bridge/bridge.js.
+        """
+        return self._post_command(
+            command_type="create_journal",
+            payload={"name": name, "content": content},
+            command_id=command_id,
+            log_label="create_journal",
+        )
+
     def _post_command(
         self,
         command_type: str,

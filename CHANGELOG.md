@@ -15,6 +15,11 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ### Fixed
 
+- **The Shop Generator's "Send to Foundry" button works.** It called a method
+  that does not exist on the bridge client, so it failed with an
+  AttributeError every time. The Foundry module had been handling the
+  `create_journal` command all along — only the app-side call was missing.
+  The button is now hidden entirely when no Foundry bridge is configured.
 - **The Shop Generator no longer locks the window for half a minute.** It
   fetched every item in the library one HTTP request at a time, on the UI
   thread — and did it again on every Generate click. Fetching concurrently and

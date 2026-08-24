@@ -123,10 +123,14 @@ class ShopGeneratorDialog(QDialog):
 
         controls.addStretch()
 
+        # Hidden, not just disabled, when there is no bridge: a greyed-out
+        # "Send to Foundry" invites someone who does not use Foundry to wonder
+        # what they are missing and how to switch it on.
         self._foundry_btn = QPushButton("Send to Foundry")
         self._foundry_btn.setEnabled(False)
         self._foundry_btn.clicked.connect(self._on_send_to_foundry)
         controls.addWidget(self._foundry_btn)
+        self._foundry_btn.setVisible(self._foundry_available())
 
         layout.addLayout(controls)
 
@@ -267,6 +271,20 @@ class ShopGeneratorDialog(QDialog):
 
     # ── Send to Foundry ───────────────────────────────────────────────
 
+    def _foundry_available(self) -> bool:
+        """True only when a bridge exists and is actually configured."""
+        if self.bridge_client is None:
+            return False
+        try:
+            from app.config import foundry_bridge_enabled
+            if not foundry_bridge_enabled():
+                return False
+        except Exception:
+            pass
+        # `enabled` is False without a token, in which case commands are
+        # dropped on the floor rather than sent.
+        return bool(getattr(self.bridge_client, "enabled", False))
+
     def _on_send_to_foundry(self) -> None:
         if self._shop_result is None or self.bridge_client is None:
             return
@@ -275,10 +293,16 @@ class ShopGeneratorDialog(QDialog):
         html_content = _format_shop_html(self._shop_result)
 
         try:
-            self.bridge_client.send_command({
-                "type": "create_journal",
-                "name": f"Shop: {profile_name}",
-                "content": html_content,
-            })
+            sent = self.bridge_client.send_create_journal(
+                name=f"Shop: {profile_name}",
+                content=html_content,
+            )
         except Exception as exc:
             self._status.showMessage(f"Send to Foundry failed: {exc}")
+            return
+
+        self._status.showMessage(
+            f"Sent 'Shop: {profile_name}' to Foundry."
+            if sent
+            else "Could not queue the command — check the bridge connection."
+        )
