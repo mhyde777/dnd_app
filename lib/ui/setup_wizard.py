@@ -3,7 +3,7 @@
 First-run setup wizard (also opened from File → Settings).
 
 Prompts the user to choose between local file storage and a remote API
-server, and saves the result to ~/.dnd_tracker_config/settings.json.
+server, and saves the result to the config directory (see app.paths).
 """
 from __future__ import annotations
 
@@ -27,9 +27,9 @@ from PyQt5.QtWidgets import (
 )
 
 import app.settings as settings
-from app import srd_content
+from app import paths, srd_content
 
-_DEFAULT_DATA_DIR = os.path.join(os.path.expanduser("~"), ".dnd_tracker_config", "data")
+_DEFAULT_DATA_DIR = paths.config_path("data")
 
 
 class SetupWizard(QDialog):

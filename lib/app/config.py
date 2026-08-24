@@ -2,14 +2,14 @@ import os
 from dotenv import load_dotenv
 
 import app.settings as _settings
+from app.paths import config_dir as _config_dir, config_path as _config_path
 
-CONFIG_DIR = os.path.expanduser("~/.dnd_tracker_config")
 
 def get_config_dir() -> str:
-    return CONFIG_DIR
+    return _config_dir()
 
 def get_config_path(filename: str) -> str:
-    return os.path.join(CONFIG_DIR, filename)
+    return _config_path(filename)
 
 load_dotenv(get_config_path(".env"), override=False)
 
@@ -47,6 +47,19 @@ def local_bridge_enabled() -> bool:
     if configured is not None:
         return bool(configured)
     return os.getenv("LOCAL_BRIDGE_ENABLED", "0").strip() not in ("", "0", "false", "False")
+
+def update_check_enabled() -> bool:
+    """Whether to ask GitHub about newer releases on startup.
+
+    On by default so a distributed build tells people about fixes, but a
+    single settings key or env var turns it off for anyone who would rather
+    the app made no network calls of its own.
+    """
+    configured = _settings.get("update_check_enabled")
+    if configured is not None:
+        return bool(configured)
+    return os.getenv("UPDATE_CHECK_ENABLED", "1").strip() not in ("", "0", "false", "False")
+
 
 def bridge_stream_enabled() -> bool:
     return os.getenv("BRIDGE_STREAM_ENABLED", "1").strip() not in ("", "0", "false", "False")

@@ -14,8 +14,9 @@ import os
 from collections import deque
 from typing import Deque
 
-_CONFIG_DIR = os.path.expanduser("~/.dnd_tracker_config")
-_LOG_DIR = os.path.join(_CONFIG_DIR, "logs")
+from app.paths import config_path
+
+_LOG_DIR = config_path("logs")
 LOG_PATH = os.path.join(_LOG_DIR, "tracker.log")
 
 _LOGGER_NAME = "dnd_tracker"

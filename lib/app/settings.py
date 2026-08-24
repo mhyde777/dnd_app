@@ -1,6 +1,8 @@
 # lib/app/settings.py
 """
-Persistent app settings stored in ~/.dnd_tracker_config/settings.json.
+Persistent app settings stored as settings.json in the config directory.
+
+The location comes from app.paths, so DND_TRACKER_CONFIG_DIR redirects it.
 
 Functions here are thin helpers so other modules don't need to import json/os.
 """
@@ -10,23 +12,27 @@ import json
 import os
 from typing import Any
 
-_CONFIG_DIR = os.path.expanduser("~/.dnd_tracker_config")
-_SETTINGS_PATH = os.path.join(_CONFIG_DIR, "settings.json")
+from app.paths import config_dir, config_path
 
 _cache: dict | None = None
 
 
+def settings_path() -> str:
+    return config_path("settings.json")
+
+
 def settings_exist() -> bool:
-    return os.path.exists(_SETTINGS_PATH)
+    return os.path.exists(settings_path())
 
 
 def load() -> dict:
     global _cache
     if _cache is not None:
         return _cache
-    if os.path.exists(_SETTINGS_PATH):
+    path = settings_path()
+    if os.path.exists(path):
         try:
-            with open(_SETTINGS_PATH, "r", encoding="utf-8") as f:
+            with open(path, "r", encoding="utf-8") as f:
                 _cache = json.load(f) or {}
         except Exception:
             _cache = {}
@@ -37,8 +43,8 @@ def load() -> dict:
 
 def save(data: dict) -> None:
     global _cache
-    os.makedirs(_CONFIG_DIR, exist_ok=True)
-    with open(_SETTINGS_PATH, "w", encoding="utf-8") as f:
+    os.makedirs(config_dir(), exist_ok=True)
+    with open(settings_path(), "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
     _cache = dict(data)
 

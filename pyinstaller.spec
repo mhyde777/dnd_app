@@ -14,7 +14,12 @@ datas = [
 # checkout, so the spec has to stay valid without it.
 _srd_content = project_dir / "srd_content"
 if _srd_content.is_dir():
-    datas.append((_srd_content, "srd_content"))
+    # Ship the library and its manifest, not extraction_report.txt -- that is
+    # a dev artefact from scripts/extract_srd.py and means nothing to a user.
+    datas.append((_srd_content / "MANIFEST.json", "srd_content"))
+    for _sub in ("statblocks", "spells"):
+        if (_srd_content / _sub).is_dir():
+            datas.append((_srd_content / _sub, f"srd_content/{_sub}"))
 binaries = []
 hiddenimports = []
 

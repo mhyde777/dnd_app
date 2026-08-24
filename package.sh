@@ -3,7 +3,7 @@
 # Linux build script.
 #
 #   ./package.sh                 build a release tarball in dist/
-#   ./package.sh --dev-install   also install a launcher and .env on THIS machine
+#   ./package.sh --dev-install   also install to ~/.local/opt for daily use
 #
 # The release path deliberately touches nothing outside the repo. Installing a
 # desktop entry and copying the developer's .env into ~/.dnd_tracker_config is a
@@ -15,6 +15,10 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_NAME="combat_tracker"
 DIST_NAME="combat-tracker"
 USER_APPS_DIR="${HOME}/.local/share/applications"
+# A stable home for the dev install. Deliberately NOT under the repo: build/,
+# dist/ and package/ are all deleted at the start of every build, so a launcher
+# pointing into any of them breaks the next time you rebuild.
+DEV_INSTALL_DIR="${DEV_INSTALL_DIR:-${HOME}/.local/opt/combat-tracker}"
 CONFIG_DIR="${HOME}/.dnd_tracker_config"
 CONFIG_ENV="${CONFIG_DIR}/.env"
 
@@ -107,6 +111,9 @@ D&D Combat Tracker ${VERSION} (Linux ${ARCH})
 Run:      ./combat_tracker/combat_tracker
 Launcher: ./install.sh   (adds a desktop entry for your user)
 
+Unpack this somewhere permanent before running install.sh -- the launcher it
+writes points at wherever this folder currently is.
+
 On first launch you'll be asked where to keep your data. Everything the app
 writes lives in ~/.dnd_tracker_config/ -- delete that directory to start over.
 
@@ -135,13 +142,26 @@ if [[ "$DEV_INSTALL" -eq 1 ]]; then
     echo "No .env at repo root; skipping env install" >&2
   fi
 
+  # Replace the payload in place so the launcher path never changes. rsync
+  # --delete keeps removed files from lingering between builds; without it a
+  # module deleted from the source stays in the install forever.
+  mkdir -p "$DEV_INSTALL_DIR"
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -a --delete "$STAGE_DIR/$APP_NAME/" "$DEV_INSTALL_DIR/"
+  else
+    rm -rf "${DEV_INSTALL_DIR:?}/"*
+    cp -r "$STAGE_DIR/$APP_NAME/." "$DEV_INSTALL_DIR/"
+  fi
+  cp "$ROOT_DIR/images/d20_icon.png" "$DEV_INSTALL_DIR/$APP_NAME.png"
+  chmod 755 "$DEV_INSTALL_DIR/$APP_NAME"
+
   mkdir -p "$USER_APPS_DIR"
   cat > "$USER_APPS_DIR/$APP_NAME.desktop" <<EOF
 [Desktop Entry]
 Type=Application
 Name=Combat Tracker
-Exec=$STAGE_DIR/$APP_NAME/$APP_NAME
-Icon=$ROOT_DIR/images/d20_icon.png
+Exec=$DEV_INSTALL_DIR/$APP_NAME
+Icon=$DEV_INSTALL_DIR/$APP_NAME.png
 Terminal=false
 Categories=Game;
 EOF
@@ -149,5 +169,6 @@ EOF
   if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database "$USER_APPS_DIR" >/dev/null 2>&1 || true
   fi
-  echo "Dev launcher -> $USER_APPS_DIR/$APP_NAME.desktop"
+  echo "Installed  -> $DEV_INSTALL_DIR/$APP_NAME"
+  echo "Launcher   -> $USER_APPS_DIR/$APP_NAME.desktop"
 fi

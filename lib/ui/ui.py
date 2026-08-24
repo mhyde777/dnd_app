@@ -11,9 +11,10 @@ from PyQt5.QtWidgets import (
     QDockWidget, QScrollArea, QTabWidget,
 )
 from ui.statblock_widget import StatblockWidget
-from PyQt5.QtCore import Qt, QByteArray, QEvent, QObject, QTimer
+from PyQt5.QtCore import Qt, QByteArray, QEvent, QObject, QTimer, pyqtSignal
 from PyQt5.QtGui import QKeySequence
 from app.app import Application
+from app.config import update_check_enabled
 from app.creature import CreatureType
 from app.manager import CreatureManager
 from app import settings as app_settings
@@ -68,6 +69,12 @@ class _DockResizeWatcher(QObject):
 
 
 class InitiativeTracker(QMainWindow, Application):
+    # Emitted from the update-check worker thread. It has to be a signal:
+    # QTimer.singleShot() called off the GUI thread creates its timer in a
+    # thread with no event loop, so it never fires and the banner silently
+    # never appears.
+    update_available = pyqtSignal(str)
+
     def __init__(self):
         super().__init__()
         self.center()
@@ -101,6 +108,44 @@ class InitiativeTracker(QMainWindow, Application):
                 e,
             )
         self.start_bridge_polling()
+        self.check_for_updates()
+
+    def check_for_updates(self):
+        """Tell the user when a newer release exists. Never blocks, never nags.
+
+        Runs off the GUI thread and fails silently -- someone playing offline
+        should not get a network error about updates mid-session.
+        """
+        if not update_check_enabled():
+            return
+
+        try:
+            from app.update_check import check_in_background
+            # Queued across threads by Qt, so the banner is built on the GUI
+            # thread even though the check finishes on a worker.
+            self.update_available.connect(
+                self._show_update_banner, Qt.QueuedConnection
+            )
+            check_in_background(self.update_available.emit)
+        except Exception as exc:
+            self._log(f"[DBG] Update check could not start: {exc}")
+
+    def _show_update_banner(self, version: str):
+        from app.update_check import RELEASES_PAGE
+        from app.version import __version__
+
+        def open_releases():
+            from PyQt5.QtGui import QDesktopServices
+            from PyQt5.QtCore import QUrl
+            QDesktopServices.openUrl(QUrl(RELEASES_PAGE))
+
+        self.show_banner(
+            "update-available",
+            f"Version {version} is available — you're on {__version__}.",
+            level="info",
+            action_label="Open Releases",
+            action=open_releases,
+        )
 
     def initUI(self):
         # Layout model: the initiative table is the fixed centre of the window;
