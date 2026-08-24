@@ -59,21 +59,29 @@
   "special_traits": [
     {
       "name": "Legendary Resistance (3/Day, or 4/Day in Lair)",
-      "description": "If the dragon fails a saving throw, it can choose to succeed instead."
+      "description": "If\nthe dragon fails a saving throw, it can choose to succeed instead."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The dragon makes three Rend attacks. It can replace one attack with a use of (A) Slowing Breath or (B) Spellcasting to cast Mind Spike (level 4 version)."
+      "description": "The dragon makes three Rend attacks. It\ncan replace one attack with a use of (A) Slowing Breath or (B) Spellcasting to cast Mind Spike (level 4 version)."
     },
     {
       "name": "Rend",
-      "description": "Melee Attack Roll: +11, reach 10 ft. Hit: 17 (2d10 + 6) Slashing damage plus 4 (1d8) Acid damage. Acid Breath (Recharge 5-6). Dexterity Saving Throw: DC 18, each creature in an 60-foot-long, 5-footwide Line. Failure: 54 (12d8) Acid damage. Success: Half damage."
+      "description": "Melee Attack Roll: +11, reach 10 ft. Hit: 17 (2d10\n+ 6) Slashing damage plus 4 (1d8) Acid damage. Acid Breath (Recharge 5-6). Dexterity Saving Throw:"
+    },
+    {
+      "name": "DC 18, each creature in an 60-foot-long, 5-footwide Line",
+      "description": "Failure: 54 (12d8) Acid damage. Success: Half damage."
     },
     {
       "name": "Slowing Breath",
-      "description": "Constitution Saving Throw: DC 18, each creature in a 60-foot Cone. Failure: The target can't take Reactions; its Speed is halved; and it can take either an action or a Bonus Action on its turn, not both. This effect lasts until the end of its next turn."
+      "description": "Constitution Saving Throw: DC 18,"
+    },
+    {
+      "name": "each creature in a 60-foot Cone",
+      "description": "Failure: The target can't take Reactions; its Speed is halved; and it can take either an action or a Bonus Action on its turn, not both. This effect lasts until the end of its next turn."
     }
   ],
   "bonus_actions": [],
@@ -82,17 +90,22 @@
     {
       "name": "Giggling Magic",
       "cost": 1,
-      "description": "Charisma Saving Throw: DC 17, one creature the dragon can see within 90 feet. Failure: 24 (7d6) Psychic damage. Until the end of its next turn, the target rolls 1d6 whenever it makes an ability check or attack roll and subtracts the number rolled from the D20 Test. Failure or Success: The dragon can't take this action again until the start of its next turn."
+      "description": "Charisma Saving Throw: DC 17, one"
+    },
+    {
+      "name": "creature the dragon can see within 90 feet",
+      "cost": 1,
+      "description": "Failure: 24 (7d6) Psychic damage. Until the end of its next turn, the target rolls 1d6 whenever it makes an ability check or attack roll and subtracts the number rolled from the D20 Test. Failure or Success: The dragon can't take this action again until the start of its next turn."
     },
     {
       "name": "Mind Jolt",
       "cost": 1,
-      "description": "The dragon uses Spellcasting to cast Mind Spike (level 4 version). The dragon can't take this action again until the start of its next turn."
+      "description": "The dragon uses Spellcasting to cast Mind Spike (level 4 version). The dragon can't take this action\nagain until the start of its next turn."
     },
     {
       "name": "Pounce",
       "cost": 1,
-      "description": "The dragon moves up to half its Speed, and it makes one Rend attack."
+      "description": "The dragon moves up to half its Speed, and it\nmakes one Rend attack."
     }
   ],
   "legendary_action_count": 3,
@@ -109,7 +122,7 @@
         "detect magic",
         "mind spike (level 4 version)",
         "minor illusion",
-        "shapechange (beast or humanoid form only, no temporary hit points gained from the spell, and no concentration or temporary hit points required to maintain the spell)"
+        "shapechange (beast or humanoid"
       ],
       "1_per_day": [
         "greater restoration",

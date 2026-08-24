@@ -48,7 +48,7 @@
   "actions": [
     {
       "name": "Talons",
-      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 1 Slashing damage."
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 1 Slash-\ning damage."
     }
   ],
   "bonus_actions": [],

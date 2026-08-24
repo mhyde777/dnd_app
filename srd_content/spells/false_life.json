@@ -9,7 +9,7 @@
   "concentration": false,
   "attack_save": "",
   "damage_effect": "",
-  "description": "You gain 2d4 + 4 Temporary Hit Points.\nUsing a Higher-Level Spell Slot. You gain 5 additional Temporary Hit Points for each spell slot level above 1.",
+  "description": "You gain 2d4 + 4 Temporary Hit Points.\nUsing a Higher-Level Spell Slot. You gain 5 addi-\ntional Temporary Hit Points for each spell slot level above 1.",
   "footnotes": [],
   "classes": [
     "Sorcerer",

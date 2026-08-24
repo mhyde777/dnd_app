@@ -48,7 +48,7 @@
   "special_traits": [
     {
       "name": "Illumination",
-      "description": "The beetle sheds Bright Light in a 10-foot radius and Dim Light for an additional 10 feet."
+      "description": "The beetle sheds Bright Light in a 10-foot\nradius and Dim Light for an additional 10 feet."
     }
   ],
   "actions": [

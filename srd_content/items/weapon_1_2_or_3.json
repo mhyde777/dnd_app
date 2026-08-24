@@ -1,0 +1,20 @@
+{
+  "name": "Weapon, +1, +2, or +3",
+  "item_type": "weapon",
+  "subtype": "Any Simple or Martial",
+  "rarity": "",
+  "requires_attunement": false,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "You have a bonus to attack rolls and damage rolls made with this magic weapon. The bonus is determined by the weapon's rarity.",
+  "tags": [
+    "weapon",
+    "melee",
+    "simple"
+  ],
+  "source": "SRD 5.2.1"
+}

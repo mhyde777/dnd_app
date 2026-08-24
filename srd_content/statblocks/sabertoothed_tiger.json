@@ -52,7 +52,7 @@
   "special_traits": [
     {
       "name": "Running Leap",
-      "description": "With a 10-foot running start, the tiger can Long Jump up to 25 feet."
+      "description": "With a 10-foot running start, the tiger\ncan Long Jump up to 25 feet."
     }
   ],
   "actions": [
@@ -62,13 +62,13 @@
     },
     {
       "name": "Rend",
-      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 11 (2d6 + 4) Slashing damage."
+      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 11 (2d6\n+ 4) Slashing damage."
     }
   ],
   "bonus_actions": [
     {
       "name": "Nimble Escape",
-      "description": "The tiger takes the Disengage or Hide action."
+      "description": "The tiger takes the Disengage or Hide\naction."
     }
   ],
   "reactions": [],

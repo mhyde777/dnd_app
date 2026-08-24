@@ -70,49 +70,71 @@
   "special_traits": [
     {
       "name": "Legendary Resistance (4/Day, or 5/Day in Lair)",
-      "description": "If the lich fails a saving throw, it can choose to succeed instead."
+      "description": "If\nthe lich fails a saving throw, it can choose to succeed instead."
     },
     {
       "name": "Spirit Jar",
-      "description": "If destroyed, the lich reforms in 1d10 days if it has a spirit jar, reviving with all its Hit Points. The new body appears in an unoccupied space within the lich's lair."
+      "description": "If destroyed, the lich reforms in 1d10 days"
+    },
+    {
+      "name": "if it has a spirit jar, reviving with all its Hit Points",
+      "description": "The new body appears in an unoccupied space within the lich's lair."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The lich makes three attacks, using Eldritch Burst or Paralyzing Touch in any combination."
+      "description": "The lich makes three attacks, using El-\ndritch Burst or Paralyzing Touch in any combination."
     },
     {
       "name": "Eldritch Burst",
-      "description": "Melee or Ranged Attack Roll: +12, reach 5 ft. or range 120 ft. Hit: 31 (4d12 + 5) Force damage."
+      "description": "Melee or Ranged Attack Roll: +12, reach"
+    },
+    {
+      "name": "5 ft",
+      "description": "or range 120 ft. Hit: 31 (4d12 + 5) Force damage."
     },
     {
       "name": "Paralyzing Touch",
-      "description": "Melee Attack Roll: +12, reach 5 ft. Hit: 15 (3d6 + 5) Cold damage, and the target has the Paralyzed condition until the start of the lich's next turn."
+      "description": "Melee Attack Roll: +12, reach 5"
+    },
+    {
+      "name": "ft",
+      "description": "Hit: 15 (3d6 + 5) Cold damage, and the target has the Paralyzed condition until the start of the lich's next turn."
     }
   ],
   "bonus_actions": [],
   "reactions": [
     {
       "name": "Protective Magic",
-      "description": "The lich casts Counterspell or Shield in response to the spell's trigger, using the same spellcasting ability as Spellcasting."
+      "description": "The lich casts Counterspell or Shield\nin response to the spell's trigger, using the same spellcasting ability as Spellcasting."
     }
   ],
   "legendary_actions": [
     {
       "name": "Deathly Teleport",
       "cost": 1,
-      "description": "The lich teleports up to 60 feet to an unoccupied space it can see, and each creature within 10 feet of the space it left takes 11 (2d10) Necrotic damage."
+      "description": "The lich teleports up to 60 feet to\nan unoccupied space it can see, and each creature within 10 feet of the space it left takes 11 (2d10) Necrotic damage."
     },
     {
       "name": "Disrupt Life",
       "cost": 1,
-      "description": "Constitution Saving Throw: DC 20, each creature that isn't an Undead in a 20-foot Emanation originating from the lich. Failure: 31 (9d6) Necrotic damage. Success: Half damage. Failure or Success: The lich can't take this action again until the start of its next turn."
+      "description": "Constitution Saving Throw: DC 20, each"
+    },
+    {
+      "name": "creature that isn't an Undead in a 20-foot Emanation originating from the lich",
+      "cost": 1,
+      "description": "Failure: 31 (9d6) Necrotic damage. Success: Half damage. Failure or Success: The lich can't take this action again until the start of its next turn."
     },
     {
       "name": "Frightening Gaze",
       "cost": 1,
-      "description": "The lich casts Fear, using the same spellcasting ability as Spellcasting. The lich can't take this action again until the start of its next turn."
+      "description": "The lich casts Fear, using the same"
+    },
+    {
+      "name": "spellcasting ability as Spellcasting",
+      "cost": 1,
+      "description": "The lich can't take this action again until the start of its next turn."
     }
   ],
   "legendary_action_count": 3,
@@ -131,9 +153,7 @@
         "dispel magic",
         "fireball (level 5 version)",
         "invisibility",
-        "lightning bolt (level 5 version)",
-        "mage hand",
-        "prestidigitation"
+        "lightning bolt"
       ],
       "2_per_day": [
         "animate dead",

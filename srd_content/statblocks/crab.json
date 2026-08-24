@@ -54,7 +54,7 @@
   "actions": [
     {
       "name": "Claw",
-      "description": "Melee Attack Roll: +2, reach 5 ft. Hit: 1 Bludgeoning damage."
+      "description": "Melee Attack Roll: +2, reach 5 ft. Hit: 1 Blud-\ngeoning damage."
     }
   ],
   "bonus_actions": [],

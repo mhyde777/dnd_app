@@ -59,21 +59,29 @@
   "special_traits": [
     {
       "name": "Death Burst",
-      "description": "The mephit explodes when it dies. Dexterity Saving Throw: DC 10, each creature in a 5-foot Emanation originating from the mephit. Failure: 5 (2d4) Bludgeoning damage. Success: Half damage."
+      "description": "The mephit explodes when it dies. Dexterity Saving Throw: DC 10, each creature in a 5-foot"
+    },
+    {
+      "name": "Emanation originating from the mephit",
+      "description": "Failure: 5 (2d4) Bludgeoning damage. Success: Half damage."
     }
   ],
   "actions": [
     {
       "name": "Claw",
-      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 4 (1d4 + 2) Slashing damage."
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 4 (1d4 + 2)\nSlashing damage."
     },
     {
       "name": "Blinding Breath (Recharge 6)",
-      "description": "Dexterity Saving Throw: DC 10, each creature in a 15-foot Cone. Failure: The target has the Blinded condition until the end of the mephit's next turn."
+      "description": "Dexterity Saving Throw:"
+    },
+    {
+      "name": "DC 10, each creature in a 15-foot Cone",
+      "description": "Failure: The target has the Blinded condition until the end of the mephit's next turn."
     },
     {
       "name": "Sleep (1/Day)",
-      "description": "The mephit casts the Sleep spell, requiring no spell components and using Charisma as the spellcasting ability (spell save DC 10)."
+      "description": "The mephit casts the Sleep spell, requir-\ning no spell components and using Charisma as the spellcasting ability (spell save DC 10)."
     }
   ],
   "bonus_actions": [],

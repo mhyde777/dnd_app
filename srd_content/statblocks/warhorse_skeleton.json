@@ -54,7 +54,7 @@
   "actions": [
     {
       "name": "Hooves",
-      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 7 (1d6 + 4) Bludgeoning damage. If the target is a Large or smaller creature and the skeleton moved 20+ feet straight toward it immediately before the hit, the target has the Prone condition."
+      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 7 (1d6\n+ 4) Bludgeoning damage. If the target is a Large or smaller creature and the skeleton moved 20+ feet straight toward it immediately before the hit, the target has the Prone condition."
     }
   ],
   "bonus_actions": [],

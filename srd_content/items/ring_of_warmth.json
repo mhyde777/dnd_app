@@ -1,0 +1,20 @@
+{
+  "name": "Ring of Warmth",
+  "item_type": "ring",
+  "subtype": "",
+  "rarity": "uncommon",
+  "requires_attunement": true,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "If you take Cold damage while wearing this ring, the ring reduces the damage you take by 2d8. In addition, while wearing this ring, you and everything you wear and carry are unharmed by temperatures of 0 degrees Fahrenheit or lower.",
+  "tags": [
+    "ring",
+    "uncommon",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

@@ -55,27 +55,39 @@
   "special_traits": [
     {
       "name": "Abduct",
-      "description": "The bugbear needn't spend extra movement to move a creature it is grappling."
+      "description": "The bugbear needn't spend extra movement to\nmove a creature it is grappling."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The bugbear makes two Javelin or Morningstar attacks."
+      "description": "The bugbear makes two Javelin or Morn-\ningstar attacks."
     },
     {
       "name": "Javelin",
-      "description": "Melee or Ranged Attack Roll: +5, reach 10 ft. or range 30/120 ft. Hit: 13 (3d6 + 3) Piercing damage."
+      "description": "Melee or Ranged Attack Roll: +5, reach 10 ft."
+    },
+    {
+      "name": "or range 30/120 ft",
+      "description": "Hit: 13 (3d6 + 3) Piercing damage."
     },
     {
       "name": "Morningstar",
-      "description": "Melee Attack Roll: +5 (with Advantage if the target is Grappled by the bugbear), reach 10 ft. Hit: 12 (2d8 + 3) Piercing damage."
+      "description": "Melee Attack Roll: +5 (with Advantage if"
+    },
+    {
+      "name": "the target is Grappled by the bugbear), reach 10 ft",
+      "description": "Hit: 12 (2d8 + 3) Piercing damage."
     }
   ],
   "bonus_actions": [
     {
       "name": "Quick Grapple",
-      "description": "Dexterity Saving Throw: DC 13, one Medium or smaller creature the bugbear can see within 10 feet. Failure: The target has the Grappled condition (escape DC 13)."
+      "description": "Dexterity Saving Throw: DC 13, one"
+    },
+    {
+      "name": "Medium or smaller creature the bugbear can see within 10 feet",
+      "description": "Failure: The target has the Grappled condition (escape DC 13)."
     }
   ],
   "reactions": [],

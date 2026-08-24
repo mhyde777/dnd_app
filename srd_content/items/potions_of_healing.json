@@ -1,0 +1,19 @@
+{
+  "name": "Potions of Healing",
+  "item_type": "potion",
+  "subtype": "",
+  "rarity": "",
+  "requires_attunement": false,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "You regain Hit Points when you drink this potion. The number of Hit Points depends on the potion's rarity, as shown in the table below. Whatever its potency, the potion's red liquid glimmers when agitated.\nPotion HP Regained Rarity Potion of Healing 2d4 + 2 Common Potion of Healing 4d4 + 4 Uncommon\n(greater) Potion of Healing 8d4 + 8 Rare\n(superior) Potion of Healing 10d4 + 20 Very Rare\n(supreme)",
+  "tags": [
+    "potion",
+    "consumable"
+  ],
+  "source": "SRD 5.2.1"
+}

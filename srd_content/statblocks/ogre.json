@@ -50,11 +50,15 @@
   "actions": [
     {
       "name": "Greatclub",
-      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 13 (2d8 + 4) Bludgeoning damage."
+      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 13\n(2d8 + 4) Bludgeoning damage."
     },
     {
       "name": "Javelin",
-      "description": "Melee or Ranged Attack Roll: +6, reach 5 ft. or range 30/120 ft. Hit: 11 (2d6 + 4) Piercing damage."
+      "description": "Melee or Ranged Attack Roll: +6, reach 5 ft. or"
+    },
+    {
+      "name": "range 30/120 ft",
+      "description": "Hit: 11 (2d6 + 4) Piercing damage."
     }
   ],
   "bonus_actions": [],

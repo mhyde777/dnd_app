@@ -45,19 +45,19 @@
   "special_traits": [
     {
       "name": "Water Breathing",
-      "description": "The seahorse can breathe only underwater."
+      "description": "The seahorse can breathe only\nunderwater."
     }
   ],
   "actions": [
     {
       "name": "Ram",
-      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 9 (2d6 + 2) Bludgeoning damage, or 11 (2d8 + 2) Bludgeoning damage if the seahorse moved 20+ feet straight toward the target immediately before the hit."
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 9 (2d6\n+ 2) Bludgeoning damage, or 11 (2d8 + 2) Bludgeoning damage if the seahorse moved 20+ feet straight toward the target immediately before the hit."
     }
   ],
   "bonus_actions": [
     {
       "name": "Bubble Dash",
-      "description": "While underwater, the seahorse moves up to half its Swim Speed without provoking Opportunity Attacks."
+      "description": "While underwater, the seahorse moves\nup to half its Swim Speed without provoking Opportunity Attacks."
     }
   ],
   "reactions": [],

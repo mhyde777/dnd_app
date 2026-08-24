@@ -63,21 +63,29 @@
     },
     {
       "name": "Legendary Resistance (4/Day, or 5/Day in Lair)",
-      "description": "If the dragon fails a saving throw, it can choose to succeed instead."
+      "description": "If\nthe dragon fails a saving throw, it can choose to succeed instead."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The dragon makes three Rend attacks. It can replace one attack with a use of (A) Repulsion Breath or (B) Spellcasting to cast Guiding Bolt (level 2 version)."
+      "description": "The dragon makes three Rend attacks.\nIt can replace one attack with a use of (A) Repulsion Breath or (B) Spellcasting to cast Guiding Bolt (level 2 version)."
     },
     {
       "name": "Rend",
-      "description": "Melee Attack Roll: +16, reach 15 ft. Hit: 18 (2d8 + 9) Slashing damage plus 9 (2d8) Lightning damage. Lightning Breath (Recharge 5-6). Dexterity Saving Throw: DC 23, each creature in a 120-foot-long, 10-foot-wide Line. Failure: 82 (15d10) Lightning damage. Success: Half damage."
+      "description": "Melee Attack Roll: +16, reach 15 ft. Hit: 18 (2d8\n+ 9) Slashing damage plus 9 (2d8) Lightning damage. Lightning Breath (Recharge 5-6). Dexterity Saving Throw: DC 23, each creature in a 120-foot-long,"
+    },
+    {
+      "name": "10-foot-wide Line",
+      "description": "Failure: 82 (15d10) Lightning damage. Success: Half damage."
     },
     {
       "name": "Repulsion Breath",
-      "description": "Strength Saving Throw: DC 23, each creature in a 30-foot Cone. Failure: The target is pushed up to 60 feet straight away from the dragon and has the Prone condition."
+      "description": "Strength Saving Throw: DC 23, each"
+    },
+    {
+      "name": "creature in a 30-foot Cone",
+      "description": "Failure: The target is pushed up to 60 feet straight away from the dragon and has the Prone condition."
     }
   ],
   "bonus_actions": [],
@@ -91,12 +99,17 @@
     {
       "name": "Pounce",
       "cost": 1,
-      "description": "The dragon moves up to half its Speed, and it makes one Rend attack."
+      "description": "The dragon moves up to half its Speed, and it\nmakes one Rend attack."
     },
     {
       "name": "Thunderclap",
       "cost": 1,
-      "description": "Constitution Saving Throw: DC 22, each creature in a 20-foot-radius Sphere centered on a point the dragon can see within 120 feet. Failure: 13 (3d8) Thunder damage, and the target has the Deafened condition until the end of its next turn."
+      "description": "Constitution Saving Throw: DC 22, each"
+    },
+    {
+      "name": "creature in a 20-foot-radius Sphere centered on a point the dragon can see within 120 feet",
+      "cost": 1,
+      "description": "Failure: 13 (3d8) Thunder damage, and the target has the Deafened condition until the end of its next turn."
     }
   ],
   "legendary_action_count": 3,
@@ -112,9 +125,7 @@
       "at_will": [
         "detect magic",
         "guiding bolt (level 2 version)",
-        "shapechange (beast or humanoid form only, no temporary hit points gained from the spell, and no concentration or temporary hit points required to maintain the spell)",
-        "speak with animals",
-        "thaumaturgy"
+        "shapechange (beast or humanoid form only, no"
       ],
       "1_per_day": [
         "detect thoughts",

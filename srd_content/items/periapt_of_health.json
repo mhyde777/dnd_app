@@ -1,0 +1,20 @@
+{
+  "name": "Periapt of Health",
+  "item_type": "wondrous_item",
+  "subtype": "",
+  "rarity": "uncommon",
+  "requires_attunement": true,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "While wearing this pendant, you can take a Magic action to regain 2d4 + 2 Hit Points. Once used, this property can't be used again until the next dawn. In addition, you have Advantage on saving throws to avoid or end the Poisoned condition while you wear this pendant.",
+  "tags": [
+    "wondrous_item",
+    "uncommon",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

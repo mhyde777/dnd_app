@@ -1,0 +1,20 @@
+{
+  "name": "Elven Chain",
+  "item_type": "armor",
+  "subtype": "Chain Mail or Chain Shirt",
+  "rarity": "rare",
+  "requires_attunement": false,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "You gain a +1 bonus to Armor Class while you wear this armor. You are considered trained with this armor even if you lack training with Medium or Heavy armor.",
+  "tags": [
+    "armor",
+    "rare",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

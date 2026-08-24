@@ -51,15 +51,23 @@
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The pirate makes two Dagger attacks. It can replace one attack with a use of Enthralling Panache."
+      "description": "The pirate makes two Dagger attacks.\nIt can replace one attack with a use of Enthralling Panache."
     },
     {
       "name": "Dagger",
-      "description": "Melee or Ranged Attack Roll: +5, reach 5 ft. or range 20/60 ft. Hit: 5 (1d4 + 3) Piercing damage."
+      "description": "Melee or Ranged Attack Roll: +5, reach 5 ft. or"
+    },
+    {
+      "name": "range 20/60 ft",
+      "description": "Hit: 5 (1d4 + 3) Piercing damage."
     },
     {
       "name": "Enthralling Panache",
-      "description": "Wisdom Saving Throw: DC 12, one creature the pirate can see within 30 feet. Failure: The target has the Charmed condition until the start of the pirate's next turn."
+      "description": "Wisdom Saving Throw: DC 12,"
+    },
+    {
+      "name": "one creature the pirate can see within 30 feet",
+      "description": "Failure: The target has the Charmed condition until the start of the pirate's next turn."
     }
   ],
   "bonus_actions": [],

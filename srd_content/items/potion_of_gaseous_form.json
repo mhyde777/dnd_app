@@ -1,0 +1,21 @@
+{
+  "name": "Potion of Gaseous Form",
+  "item_type": "potion",
+  "subtype": "",
+  "rarity": "rare",
+  "requires_attunement": false,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "When you drink this potion, you gain the effect of the Gaseous Form spell for 1 hour (no Concentration required) or until you end the effect as a Bonus Action. This potion's container seems to hold fog that moves and pours like water.",
+  "tags": [
+    "potion",
+    "rare",
+    "consumable",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

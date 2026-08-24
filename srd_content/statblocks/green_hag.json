@@ -59,11 +59,19 @@
     },
     {
       "name": "Coven Magic",
-      "description": "While within 30 feet of at least two hag allies, the hag can cast one of the following spells, requiring no Material components, using the spell's normal casting time, and using Intelligence as the spellcasting ability (spell save DC 11): Augury, Find Familiar, Identify, Locate Object, Scrying, or Unseen Servant. The hag must finish a Long Rest before using this trait to cast that spell again."
+      "description": "While within 30 feet of at least two hag"
+    },
+    {
+      "name": "allies, the hag can cast one of the following spells, requiring no Material components, using the spell's normal casting time, and using Intelligence as the spellcasting ability (spell save DC 11)",
+      "description": "Augury, Find Familiar, Identify, Locate Object, Scrying, or Unseen Servant.\nThe hag must finish a Long Rest before using this trait to cast that spell again."
     },
     {
       "name": "Mimicry",
-      "description": "The hag can mimic animal sounds and humanoid voices. A creature that hears the sounds can tell they are imitations only with a successful DC 14 Wisdom (Insight) check."
+      "description": "The hag can mimic animal sounds and hu-"
+    },
+    {
+      "name": "manoid voices",
+      "description": "A creature that hears the sounds can tell they are imitations only with a successful DC 14 Wisdom (Insight) check."
     }
   ],
   "actions": [
@@ -73,7 +81,7 @@
     },
     {
       "name": "Claw",
-      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 8 (1d8 + 4) Slashing damage plus 3 (1d6) Poison damage."
+      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 8 (1d8 + 4)\nSlashing damage plus 3 (1d6) Poison damage."
     }
   ],
   "bonus_actions": [],

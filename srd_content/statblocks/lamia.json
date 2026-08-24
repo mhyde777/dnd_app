@@ -54,21 +54,25 @@
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The lamia makes two Claw attacks. It can replace one attack with a use of Corrupting Touch."
+      "description": "The lamia makes two Claw attacks. It can\nreplace one attack with a use of Corrupting Touch."
     },
     {
       "name": "Claw",
-      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 7 (1d8 + 3) Slashing damage plus 7 (2d6) Psychic damage."
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 7 (1d8 + 3)\nSlashing damage plus 7 (2d6) Psychic damage."
     },
     {
       "name": "Corrupting Touch",
-      "description": "Wisdom Saving Throw: DC 13, one creature the lamia can see within 5 feet. Failure: 13 (3d8) Psychic damage, and the target is cursed for 1 hour. Until the curse ends, the target has the Charmed and Poisoned conditions."
+      "description": "Wisdom Saving Throw: DC 13, one"
+    },
+    {
+      "name": "creature the lamia can see within 5 feet",
+      "description": "Failure: 13 (3d8) Psychic damage, and the target is cursed for 1 hour. Until the curse ends, the target has the Charmed and Poisoned conditions."
     }
   ],
   "bonus_actions": [
     {
       "name": "Leap",
-      "description": "The lamia jumps up to 30 feet by spending 10 feet of movement."
+      "description": "The lamia jumps up to 30 feet by spending 10\nfeet of movement."
     }
   ],
   "reactions": [],

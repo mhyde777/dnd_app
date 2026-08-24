@@ -53,17 +53,21 @@
   "special_traits": [
     {
       "name": "Magic Resistance",
-      "description": "The satyr has Advantage on saving throws against spells and other magical effects."
+      "description": "The satyr has Advantage on saving\nthrows against spells and other magical effects."
     }
   ],
   "actions": [
     {
       "name": "Hooves",
-      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 5 (1d4 + 3) Bludgeoning damage. If the target is a Medium or smaller creature, the satyr pushes the target up to 10 feet straight away from itself."
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 5 (1d4\n+ 3) Bludgeoning damage. If the target is a Medium or smaller creature, the satyr pushes the target up to 10 feet straight away from itself."
     },
     {
       "name": "Mockery",
-      "description": "Wisdom Saving Throw: DC 12, one creature the satyr can see within 90 feet. Failure: 5 (1d6 + 2) Psychic damage."
+      "description": "Wisdom Saving Throw: DC 12, one creature"
+    },
+    {
+      "name": "the satyr can see within 90 feet",
+      "description": "Failure: 5 (1d6 + 2) Psychic damage."
     }
   ],
   "bonus_actions": [],

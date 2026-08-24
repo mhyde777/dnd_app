@@ -46,13 +46,13 @@
   "special_traits": [
     {
       "name": "Spider Climb",
-      "description": "The lizard can climb difficult surfaces, including along ceilings, without needing to make an ability check."
+      "description": "The lizard can climb difficult surfaces,\nincluding along ceilings, without needing to make an ability check."
     }
   ],
   "actions": [
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +2, reach 5 ft. Hit: 1 Piercing damage."
+      "description": "Melee Attack Roll: +2, reach 5 ft. Hit: 1 Piercing\ndamage."
     }
   ],
   "bonus_actions": [],

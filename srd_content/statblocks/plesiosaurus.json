@@ -48,13 +48,13 @@
   "special_traits": [
     {
       "name": "Hold Breath",
-      "description": "The plesiosaurus can hold its breath for 1 hour."
+      "description": "The plesiosaurus can hold its breath\nfor 1 hour."
     }
   ],
   "actions": [
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +6, reach 10 ft. Hit: 11 (2d6 + 4) Piercing damage."
+      "description": "Melee Attack Roll: +6, reach 10 ft. Hit: 11 (2d6 +\n4) Piercing damage."
     }
   ],
   "bonus_actions": [],

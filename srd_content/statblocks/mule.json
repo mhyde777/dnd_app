@@ -47,13 +47,13 @@
   "special_traits": [
     {
       "name": "Beast of Burden",
-      "description": "The mule counts as one size larger for the purpose of determining its carrying capacity."
+      "description": "The mule counts as one size larger for\nthe purpose of determining its carrying capacity."
     }
   ],
   "actions": [
     {
       "name": "Hooves",
-      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 4 (1d4 + 2) Bludgeoning damage."
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 4 (1d4\n+ 2) Bludgeoning damage."
     }
   ],
   "bonus_actions": [],

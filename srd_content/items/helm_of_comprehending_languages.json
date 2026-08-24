@@ -1,0 +1,20 @@
+{
+  "name": "Helm of Comprehending Languages",
+  "item_type": "wondrous_item",
+  "subtype": "",
+  "rarity": "uncommon",
+  "requires_attunement": false,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "While wearing this helm, you can cast Comprehend Languages from it.",
+  "tags": [
+    "wondrous_item",
+    "uncommon",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

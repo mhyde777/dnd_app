@@ -47,7 +47,7 @@
   "actions": [
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 6 (1d6 + 3) Piercing damage."
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 6 (1d6 + 3)\nPiercing damage."
     }
   ],
   "bonus_actions": [],

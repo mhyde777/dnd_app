@@ -30,6 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
 
 from srd_pdf import Block, blocks, normalize_chars  # noqa: E402
 
+from app.item_parser import item_key, parse_item, validate_item  # noqa: E402
 from app.spell_parser import parse_spell, spell_key, validate_spell  # noqa: E402
 from app.statblock_parser import (  # noqa: E402
     parse_statblock,
@@ -54,6 +55,7 @@ SPELL_PAGES = (107, 175)
 MONSTER_PAGES = (258, 364)
 # Summon spells embed their own stat blocks (Animated Object, Draconic Spirit,
 # Otherworldly Steed) in the spells chapter, so it is swept for stat blocks too.
+MAGIC_ITEM_PAGES = (209, 253)
 SUMMON_PAGES = SPELL_PAGES
 
 _ABILITY = re.compile(
@@ -143,6 +145,60 @@ def render_spell(block: Block) -> tuple[str, dict]:
     return "\n".join(body), extra
 
 
+# The line under a magic item's name carries its type and rarity:
+#   "Wondrous Item, Legendary"
+#   "Weapon (any sword), Rare, Requires Attunement"
+# item_parser already understands that exact shape, so detection just has to
+# recognise a rarity word in the first line or two.
+_RARITIES = ("common", "uncommon", "rare", "very rare", "legendary", "artifact", "varies")
+
+
+def is_magic_item(block: Block) -> bool:
+    for line in block.lines[:2]:
+        low = line.lower()
+        if any(r in low for r in _RARITIES) and len(line) < 160:
+            return True
+    return False
+
+
+# The SRD appends attunement to the rarity in parentheses --
+#   "Wondrous Item, Rare (Requires Attunement by a Spellcaster)"
+# -- while item_parser splits the type line on top-level commas and expects
+# attunement as its own part. Left alone, "Rare (Requires Attunement)" matches
+# no rarity, so both the rarity and the attunement flag are silently lost.
+_ATTUNEMENT_PAREN = re.compile(r"\s*\((Requires Attunement[^)]*)\)", re.IGNORECASE)
+
+
+def render_item(block: Block) -> str:
+    """Render as the "Name / type line / description" text parse_item accepts."""
+    lines = list(block.lines)
+    if lines:
+        lines[0] = _ATTUNEMENT_PAREN.sub(r", \1", lines[0])
+    return "\n".join([block.title] + lines)
+
+
+def extract_magic_items(pdf: Path, first: int, last: int) -> tuple[dict, list[str]]:
+    entries, report = {}, []
+    for block in blocks(pdf, first, last):
+        if not is_magic_item(block):
+            if len(block.lines) > 4:
+                report.append(f"SKIPPED p{block.page} {block.title!r}: no rarity line")
+            continue
+        data = parse_item(render_item(block))
+        data.setdefault("name", block.title)
+        if not data.get("name"):
+            data["name"] = block.title
+        data["source"] = "SRD 5.2.1"
+        key = item_key(data["name"])
+        if key in entries:
+            report.append(f"DUPLICATE p{block.page} {key}: keeping first")
+            continue
+        entries[key] = data
+        for w in validate_item(data):
+            report.append(f"WARN p{block.page} {key}: {w}")
+    return entries, report
+
+
 def is_statblock(block: Block) -> bool:
     return bool(block.ability_rows) and any(
         _SIZE_TYPE.match(line) for line in block.lines[:2]
@@ -214,7 +270,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--pdf", required=True, type=Path)
     ap.add_argument("--out", default=Path("srd_content"), type=Path)
-    ap.add_argument("--only", choices=("monsters", "spells"), help="limit to one category")
+    ap.add_argument("--only", choices=("monsters", "spells", "items"),
+                    help="limit to one category")
     ap.add_argument("--pages", help="override page range, e.g. 258-262 (for spot checks)")
     ap.add_argument("--dry-run", action="store_true", help="parse and report, write nothing")
     args = ap.parse_args()
@@ -249,12 +306,21 @@ def main() -> int:
         report += rep
         counts["spells"] = len(spells)
 
+    items: dict = {}
+    if args.only not in ("monsters", "spells"):
+        lo, hi = override or MAGIC_ITEM_PAGES
+        items, rep = extract_magic_items(args.pdf, lo, hi)
+        report += rep
+        counts["items"] = len(items)
+
     if not args.dry_run:
         args.out.mkdir(parents=True, exist_ok=True)
         if monsters:
             write_all(args.out, "statblocks", monsters)
         if spells:
             write_all(args.out, "spells", spells)
+        if items:
+            write_all(args.out, "items", items)
         manifest = {
             "source": "System Reference Document 5.2.1",
             "license": "CC-BY-4.0",
@@ -268,6 +334,7 @@ def main() -> int:
             "counts": dict(counts),
             "statblocks": sorted(monsters),
             "spells": sorted(spells),
+            "items": sorted(items),
         }
         (args.out / "MANIFEST.json").write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"

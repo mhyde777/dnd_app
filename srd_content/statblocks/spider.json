@@ -48,17 +48,17 @@
   "special_traits": [
     {
       "name": "Spider Climb",
-      "description": "The spider can climb difficult surfaces, including along ceilings, without needing to make an ability check."
+      "description": "The spider can climb difficult surfaces,\nincluding along ceilings, without needing to make an ability check."
     },
     {
       "name": "Web Walker",
-      "description": "The spider ignores movement restrictions caused by webs, and the spider knows the location of any other creature in contact with the same web."
+      "description": "The spider ignores movement restrictions\ncaused by webs, and the spider knows the location of any other creature in contact with the same web."
     }
   ],
   "actions": [
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 1 Piercing damage plus 2 (1d4) Poison damage."
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 1 Piercing\ndamage plus 2 (1d4) Poison damage."
     }
   ],
   "bonus_actions": [],

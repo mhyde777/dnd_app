@@ -59,17 +59,25 @@
   "special_traits": [
     {
       "name": "Death Burst",
-      "description": "The mephit explodes when it dies. Dexterity Saving Throw: DC 11, each creature in a 5-foot Emanation originating from the mephit. Failure: 7 (2d6) Fire damage. Success: Half damage."
+      "description": "The mephit explodes when it dies. Dexterity Saving Throw: DC 11, each creature in a 5-foot"
+    },
+    {
+      "name": "Emanation originating from the mephit",
+      "description": "Failure: 7 (2d6) Fire damage. Success: Half damage."
     }
   ],
   "actions": [
     {
       "name": "Claw",
-      "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 3 (1d4 + 1) Slashing damage plus 3 (1d6) Fire damage."
+      "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 3 (1d4 + 1)\nSlashing damage plus 3 (1d6) Fire damage."
     },
     {
       "name": "Fire Breath (Recharge 6)",
-      "description": "Dexterity Saving Throw: DC 11, each creature in a 15-foot Cone. Failure: 7 (2d6) Fire damage. Success: Half damage."
+      "description": "Dexterity Saving Throw: DC"
+    },
+    {
+      "name": "11, each creature in a 15-foot Cone",
+      "description": "Failure: 7 (2d6) Fire damage. Success: Half damage."
     }
   ],
   "bonus_actions": [],

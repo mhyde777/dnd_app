@@ -46,13 +46,13 @@
   "special_traits": [
     {
       "name": "Flyby",
-      "description": "The snake doesn't provoke an Opportunity Attack when it flies out of an enemy's reach."
+      "description": "The snake doesn't provoke an Opportunity At-\ntack when it flies out of an enemy's reach."
     }
   ],
   "actions": [
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 1 Piercing damage plus 5 (2d4) Poison damage."
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 1 Piercing\ndamage plus 5 (2d4) Poison damage."
     }
   ],
   "bonus_actions": [],

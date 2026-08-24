@@ -48,13 +48,13 @@
   "special_traits": [
     {
       "name": "Water Breathing",
-      "description": "The seahorse can breathe only underwater."
+      "description": "The seahorse can breathe only\nunderwater."
     }
   ],
   "actions": [
     {
       "name": "Bubble Dash",
-      "description": "While underwater, the seahorse moves up to its Swim Speed without provoking Opportunity Attacks."
+      "description": "While underwater, the seahorse moves\nup to its Swim Speed without provoking Opportunity Attacks."
     }
   ],
   "bonus_actions": [],

@@ -47,13 +47,13 @@
   "special_traits": [
     {
       "name": "Flyby",
-      "description": "The pteranodon doesn't provoke an Opportunity Attack when it flies out of an enemy's reach."
+      "description": "The pteranodon doesn't provoke an Opportunity\nAttack when it flies out of an enemy's reach."
     }
   ],
   "actions": [
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 6 (1d8 + 2) Piercing damage."
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 6 (1d8 + 2)\nPiercing damage."
     }
   ],
   "bonus_actions": [],

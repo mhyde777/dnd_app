@@ -47,13 +47,17 @@
   "special_traits": [
     {
       "name": "Mimicry",
-      "description": "The raven can mimic simple sounds it has heard, such as a whisper or chitter. A hearer can discern the sounds are imitations with a successful DC 10 Wisdom (Insight) check."
+      "description": "The raven can mimic simple sounds it has"
+    },
+    {
+      "name": "heard, such as a whisper or chitter",
+      "description": "A hearer can discern the sounds are imitations with a successful DC 10 Wisdom (Insight) check."
     }
   ],
   "actions": [
     {
       "name": "Beak",
-      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 1 Piercing damage."
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 1 Piercing\ndamage."
     }
   ],
   "bonus_actions": [],

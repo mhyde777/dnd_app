@@ -67,11 +67,19 @@
     },
     {
       "name": "Rend",
-      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 8 (1d10 + 3) Slashing damage. Lightning Breath (Recharge 5-6). Dexterity Saving Throw: DC 12, each creature in a 40-foot-long, 5-footwide Line. Failure: 16 (3d10) Lightning damage. Success: Half damage."
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 8 (1d10\n+ 3) Slashing damage. Lightning Breath (Recharge 5-6). Dexterity Saving Throw: DC 12, each creature in a 40-foot-long, 5-foot-"
+    },
+    {
+      "name": "wide Line",
+      "description": "Failure: 16 (3d10) Lightning damage. Success: Half damage."
     },
     {
       "name": "Repulsion Breath",
-      "description": "Strength Saving Throw: DC 12, each creature in a 30-foot Cone. Failure: The target is pushed up to 30 feet straight away from the dragon and has the Prone condition."
+      "description": "Strength Saving Throw: DC 12, each"
+    },
+    {
+      "name": "creature in a 30-foot Cone",
+      "description": "Failure: The target is pushed up to 30 feet straight away from the dragon and has the Prone condition."
     }
   ],
   "bonus_actions": [],

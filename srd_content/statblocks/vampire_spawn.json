@@ -56,31 +56,43 @@
   "special_traits": [
     {
       "name": "Spider Climb",
-      "description": "The vampire can climb difficult surfaces, including along ceilings, without needing to make an ability check."
+      "description": "The vampire can climb difficult surfaces,\nincluding along ceilings, without needing to make an ability check."
     },
     {
       "name": "Vampire Weakness",
-      "description": "The vampire has these weaknesses: Forbiddance. The vampire can't enter a residence without an invitation from an occupant. Running Water. The vampire takes 20 Acid damage if it ends its turn in running water. Stake to the Heart. The vampire is destroyed if a weapon that deals Piercing damage is driven into the vampire's heart while the vampire has the Incapacitated condition. Sunlight. The vampire takes 20 Radiant damage if it starts its turn in sunlight. While in sunlight, it has Disadvantage on attack rolls and ability checks."
+      "description": "The vampire has these"
+    },
+    {
+      "name": "weaknesses",
+      "description": "Forbiddance. The vampire can't enter a residence without an invitation from an occupant. Running Water. The vampire takes 20 Acid damage if it ends its turn in running water. Stake to the Heart. The vampire is destroyed if a weapon that deals Piercing damage is driven into the vampire's heart while the vampire has the Incapacitated condition. Sunlight. The vampire takes 20 Radiant damage if it starts its turn in sunlight. While in sunlight, it has Disadvantage on attack rolls and ability checks."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The vampire makes two Claw attacks and uses Bite."
+      "description": "The vampire makes two Claw attacks and\nuses Bite."
     },
     {
       "name": "Claw",
-      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 8 (2d4 + 3) Slashing damage. If the target is a Medium or smaller creature, it has the Grappled condition (escape DC 13) from one of two claws."
+      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 8 (2d4 + 3)"
+    },
+    {
+      "name": "Slashing damage",
+      "description": "If the target is a Medium or smaller creature, it has the Grappled condition (escape DC 13) from one of two claws."
     },
     {
       "name": "Bite",
-      "description": "Constitution Saving Throw: DC 14, one creature within 5 feet that is willing or that has the Grappled, Incapacitated, or Restrained condition. Failure: 5 (1d4 + 3) Piercing damage plus 10 (3d6) Necrotic damage. The target's Hit Point maximum decreases by an amount equal to the Necrotic damage taken, and the vampire regains Hit Points equal to that amount."
+      "description": "Constitution Saving Throw: DC 14, one creature"
+    },
+    {
+      "name": "within 5 feet that is willing or that has the Grappled, Incapacitated, or Restrained condition",
+      "description": "Failure: 5 (1d4 + 3) Piercing damage plus 10 (3d6) Necrotic damage. The target's Hit Point maximum decreases by an amount equal to the Necrotic damage taken, and the vampire regains Hit Points equal to that amount."
     }
   ],
   "bonus_actions": [
     {
       "name": "Deathless Agility",
-      "description": "The vampire takes the Dash or Disengage action."
+      "description": "The vampire takes the Dash or Dis-\nengage action."
     }
   ],
   "reactions": [],

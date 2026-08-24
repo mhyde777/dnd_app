@@ -57,7 +57,11 @@
   "special_traits": [
     {
       "name": "Ice Walk",
-      "description": "The dragon can move across and climb icy surfaces without needing to make an ability check. Additionally, Difficult Terrain composed of ice or snow doesn't cost it extra movement."
+      "description": "The dragon can move across and climb icy"
+    },
+    {
+      "name": "surfaces without needing to make an ability check",
+      "description": "Additionally, Difficult Terrain composed of ice or snow doesn't cost it extra movement."
     }
   ],
   "actions": [
@@ -67,11 +71,15 @@
     },
     {
       "name": "Rend",
-      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 6 (1d8 + 2) Slashing damage plus 2 (1d4) Cold damage."
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 6 (1d8 + 2)\nSlashing damage plus 2 (1d4) Cold damage."
     },
     {
       "name": "Cold Breath (Recharge 5-6)",
-      "description": "Constitution Saving Throw: DC 12, each creature in a 15-foot Cone. Failure: 22 (5d8) Cold damage. Success: Half damage."
+      "description": "Constitution Saving Throw: DC 12, each creature in a 15-foot Cone. Failure:"
+    },
+    {
+      "name": "22 (5d8) Cold damage",
+      "description": "Success: Half damage."
     }
   ],
   "bonus_actions": [],

@@ -1,0 +1,20 @@
+{
+  "name": "Gloves of Thievery",
+  "item_type": "wondrous_item",
+  "subtype": "",
+  "rarity": "uncommon",
+  "requires_attunement": false,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "These gloves are imperceptible while worn. While wearing them, you gain a +5 bonus to Dexterity (Sleight of Hand) checks.",
+  "tags": [
+    "wondrous_item",
+    "uncommon",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

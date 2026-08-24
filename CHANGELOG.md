@@ -13,6 +13,13 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ## [Unreleased]
 
+### Added
+
+- **258 SRD magic items** join the bundled library, with rarity, type,
+  attunement and full descriptions. This is what the Magic Shop and Apothecary
+  profiles were always meant to draw on — every rarity-based slot in them
+  previously matched zero items, because the library held only mundane gear.
+
 ### Fixed
 
 - **The Shop Generator's "Send to Foundry" button works.** It called a method

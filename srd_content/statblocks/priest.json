@@ -52,11 +52,11 @@
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The priest makes two attacks, using Mace or Radiant Flame in any combination."
+      "description": "The priest makes two attacks, using Mace\nor Radiant Flame in any combination."
     },
     {
       "name": "Mace",
-      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 6 (1d6 + 3) Bludgeoning damage plus 5 (2d4) Radiant damage."
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 6 (1d6 +\n3) Bludgeoning damage plus 5 (2d4) Radiant damage."
     },
     {
       "name": "Radiant Flame",
@@ -66,7 +66,7 @@
   "bonus_actions": [
     {
       "name": "Divine Aid (3/Day)",
-      "description": "The priest casts Bless, Dispel Magic, Healing Word, or Lesser Restoration, using the same spellcasting ability as Spellcasting."
+      "description": "The priest casts Bless, Dispel Magic, Healing Word, or Lesser Restoration, using the\nsame spellcasting ability as Spellcasting."
     }
   ],
   "reactions": [],

@@ -1,0 +1,20 @@
+{
+  "name": "Boots of Elvenkind",
+  "item_type": "wondrous_item",
+  "subtype": "",
+  "rarity": "uncommon",
+  "requires_attunement": false,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "While you wear these boots, your steps make no sound, regardless of the surface you are moving across. You also have Advantage on Dexterity (Stealth) checks.",
+  "tags": [
+    "wondrous_item",
+    "uncommon",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

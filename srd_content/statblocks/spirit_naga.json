@@ -59,21 +59,25 @@
   "special_traits": [
     {
       "name": "Fiendish Restoration",
-      "description": "If it dies, the naga returns to life in 1d6 days and regains all its Hit Points. Only a Wish spell can prevent this trait from functioning."
+      "description": "If it dies, the naga returns to life"
+    },
+    {
+      "name": "in 1d6 days and regains all its Hit Points",
+      "description": "Only a Wish spell can prevent this trait from functioning."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The naga makes three attacks, using Bite or Necrotic Ray in any combination."
+      "description": "The naga makes three attacks, using Bite\nor Necrotic Ray in any combination."
     },
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +7, reach 10 ft. Hit: 7 (1d6 + 4) Piercing damage plus 14 (4d6) Poison damage."
+      "description": "Melee Attack Roll: +7, reach 10 ft. Hit: 7 (1d6 + 4)\nPiercing damage plus 14 (4d6) Poison damage."
     },
     {
       "name": "Necrotic Ray",
-      "description": "Ranged Attack Roll: +6, range 60 ft. Hit: 21 (6d6) Necrotic damage."
+      "description": "Ranged Attack Roll: +6, range 60 ft. Hit:\n21 (6d6) Necrotic damage."
     }
   ],
   "bonus_actions": [],
@@ -99,7 +103,7 @@
         "detect thoughts",
         "dimension door",
         "hold person (level 3 version)",
-        "lightning bolt (level 4 version)"
+        "lightning bolt (level"
       ]
     }
   }

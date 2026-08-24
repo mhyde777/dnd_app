@@ -49,25 +49,29 @@
   "special_traits": [
     {
       "name": "Spider Climb",
-      "description": "The roper can climb difficult surfaces, including along ceilings, without needing to make an ability check."
+      "description": "The roper can climb difficult surfaces,\nincluding along ceilings, without needing to make an ability check."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The roper makes two Tentacle attacks, uses Reel, and makes two Bite attacks."
+      "description": "The roper makes two Tentacle attacks,\nuses Reel, and makes two Bite attacks."
     },
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 17 (3d8 + 4) Piercing damage."
+      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 17 (3d8 + 4)\nPiercing damage."
     },
     {
       "name": "Tentacle",
-      "description": "Melee Attack Roll: +7, reach 60 ft. Hit: The target has the Grappled condition (escape DC 14) from one of six tentacles, and the target has the Poisoned condition until the grapple ends. The tentacle can be damaged, freeing a creature it has Grappled when destroyed (AC 20, HP 10, Immunity to Poison and Psychic damage). Damaging the tentacle deals no damage to the roper, and a destroyed tentacle regrows at the start of the roper's next turn."
+      "description": "Melee Attack Roll: +7, reach 60 ft. Hit: The"
+    },
+    {
+      "name": "target has the Grappled condition (escape DC 14) from one of six tentacles, and the target has the Poisoned condition until the grapple ends",
+      "description": "The tentacle can be damaged, freeing a creature it has Grappled when destroyed (AC 20, HP 10, Immunity to Poison and Psychic damage). Damaging the tentacle deals no damage to the roper, and a destroyed tentacle regrows at the start of the roper's next turn."
     },
     {
       "name": "Reel",
-      "description": "The roper pulls each creature Grappled by it up to 30 feet straight toward it."
+      "description": "The roper pulls each creature Grappled by it up\nto 30 feet straight toward it."
     }
   ],
   "bonus_actions": [],

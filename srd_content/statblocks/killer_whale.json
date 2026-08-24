@@ -49,13 +49,13 @@
   "special_traits": [
     {
       "name": "Hold Breath",
-      "description": "The whale can hold its breath for 30 minutes."
+      "description": "The whale can hold its breath for\n30 minutes."
     }
   ],
   "actions": [
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 21 (5d6 + 4) Piercing damage."
+      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 21 (5d6\n+ 4) Piercing damage."
     }
   ],
   "bonus_actions": [],

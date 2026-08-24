@@ -62,11 +62,15 @@
   "special_traits": [
     {
       "name": "Inscrutable",
-      "description": "No magic can observe the sphinx remotely or detect its thoughts without its permission. Wisdom (Insight) checks made to ascertain its intentions or sincerity are made with Disadvantage."
+      "description": "No magic can observe the sphinx remotely"
+    },
+    {
+      "name": "or detect its thoughts without its permission",
+      "description": "Wisdom (Insight) checks made to ascertain its intentions or sincerity are made with Disadvantage."
     },
     {
       "name": "Legendary Resistance (3/Day, or 4/Day in Lair)",
-      "description": "If the sphinx fails a saving throw, it can choose to succeed instead."
+      "description": "If\nthe sphinx fails a saving throw, it can choose to succeed instead."
     }
   ],
   "actions": [
@@ -76,11 +80,15 @@
     },
     {
       "name": "Claw",
-      "description": "Melee Attack Roll: +8, reach 5 ft. Hit: 14 (3d6 + 4) Slashing damage."
+      "description": "Melee Attack Roll: +8, reach 5 ft. Hit: 14 (3d6\n+ 4) Slashing damage."
     },
     {
       "name": "Mind-Rending Roar (Recharge 5-6)",
-      "description": "Wisdom Saving Throw: DC 16, each enemy in a 300-foot Emanation originating from the sphinx. Failure: 35 (10d6) Psychic damage, and the target has the Incapacitated condition until the start of the sphinx's next turn."
+      "description": "Wisdom Saving Throw: DC 16, each enemy in a 300-foot Emanation"
+    },
+    {
+      "name": "originating from the sphinx",
+      "description": "Failure: 35 (10d6) Psychic damage, and the target has the Incapacitated condition until the start of the sphinx's next turn."
     }
   ],
   "bonus_actions": [],
@@ -89,12 +97,17 @@
     {
       "name": "Arcane Prowl",
       "cost": 1,
-      "description": "The sphinx can teleport up to 30 feet to an unoccupied space it can see, and it makes one Claw attack."
+      "description": "The sphinx can teleport up to 30 feet\nto an unoccupied space it can see, and it makes one Claw attack."
     },
     {
       "name": "Weight of Years",
       "cost": 1,
-      "description": "Constitution Saving Throw: DC 16, one creature the sphinx can see within 120 feet. Failure: The target gains 1 Exhaustion level. While the target has any Exhaustion levels, it appears 3d10 years older. Failure or Success: The sphinx can't take this action again until the start of its next turn."
+      "description": "Constitution Saving Throw: DC 16,"
+    },
+    {
+      "name": "one creature the sphinx can see within 120 feet",
+      "cost": 1,
+      "description": "Failure: The target gains 1 Exhaustion level. While the target has any Exhaustion levels, it appears 3d10 years older. Failure or Success: The sphinx can't take this action again\nuntil the start of its next turn."
     }
   ],
   "legendary_action_count": 3,

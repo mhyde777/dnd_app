@@ -59,23 +59,27 @@
   "special_traits": [
     {
       "name": "Shielded Mind",
-      "description": "The couatl's thoughts can't be read by any means, and other creatures can communicate with it telepathically only if it allows them."
+      "description": "The couatl's thoughts can't be read by\nany means, and other creatures can communicate with it telepathically only if it allows them."
     }
   ],
   "actions": [
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 11 (1d12 + 5) Piercing damage, and the target has the Poisoned condition until the end of the couatl's next turn."
+      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 11 (1d12\n+ 5) Piercing damage, and the target has the Poisoned condition until the end of the couatl's next turn."
     },
     {
       "name": "Constrict",
-      "description": "Strength Saving Throw: DC 15, one Medium or smaller creature the couatl can see within 5 feet. Failure: 8 (1d6 + 5) Bludgeoning damage. The target has the Grappled condition (escape DC 13), and it has the Restrained condition until the grapple ends."
+      "description": "Strength Saving Throw: DC 15, one Medium"
+    },
+    {
+      "name": "or smaller creature the couatl can see within 5 feet",
+      "description": "Failure: 8 (1d6 + 5) Bludgeoning damage. The target has\nthe Grappled condition (escape DC 13), and it has the Restrained condition until the grapple ends."
     }
   ],
   "bonus_actions": [
     {
       "name": "Divine Aid (2/Day)",
-      "description": "The couatl casts Bless, Lesser Restoration, or Sanctuary, requiring no spell components and using the same spellcasting ability as Spellcasting."
+      "description": "The couatl casts Bless, Lesser Restoration, or Sanctuary, requiring no spell components\nand using the same spellcasting ability as Spellcasting."
     }
   ],
   "reactions": [],
@@ -94,7 +98,7 @@
         "detect evil and good",
         "detect magic",
         "detect thoughts",
-        "shapechange (beast or humanoid form only, no temporary hit points gained from the spell, and no concentration or temporary hit points required to maintain the spell)"
+        "shapechange (beast or humanoid form"
       ],
       "1_per_day": [
         "create food and water",

@@ -54,13 +54,13 @@
   "actions": [
     {
       "name": "Pact Blade",
-      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 6 (1d8 + 2) Slashing damage plus 7 (2d6) Necrotic damage."
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 6 (1d8 + 2) Slashing damage plus 7 (2d6) Ne-\ncrotic damage."
     }
   ],
   "bonus_actions": [
     {
       "name": "Spiritual Weapon (2/Day)",
-      "description": "The cultist casts the Spiritual Weapon spell, using the same spellcasting ability as Spellcasting."
+      "description": "The cultist casts the Spiritual Weapon spell, using the same spellcasting ability as\nSpellcasting."
     }
   ],
   "reactions": [],

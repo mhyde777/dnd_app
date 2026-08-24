@@ -49,11 +49,11 @@
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The manticore makes three attacks, using Rend or Tail Spike in any combination."
+      "description": "The manticore makes three attacks, using\nRend or Tail Spike in any combination."
     },
     {
       "name": "Rend",
-      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 7 (1d8 + 3) Slashing damage."
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 7 (1d8 + 3)\nSlashing damage."
     },
     {
       "name": "Tail Spike",

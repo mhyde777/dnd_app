@@ -60,21 +60,29 @@
   "special_traits": [
     {
       "name": "Death Burst",
-      "description": "The mephit explodes when it dies. Constitution Saving Throw: DC 10, each creature in a 5-foot Emanation originating from the mephit. Failure: 5 (2d4) Cold damage. Success: Half damage."
+      "description": "The mephit explodes when it dies. Constitution Saving Throw: DC 10, each creature in a 5-foot"
+    },
+    {
+      "name": "Emanation originating from the mephit",
+      "description": "Failure: 5 (2d4) Cold damage. Success: Half damage."
     }
   ],
   "actions": [
     {
       "name": "Claw",
-      "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 3 (1d4 + 1) Slashing damage plus 2 (1d4) Cold damage."
+      "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 3 (1d4 + 1)\nSlashing damage plus 2 (1d4) Cold damage."
     },
     {
       "name": "Fog Cloud (1/Day)",
-      "description": "The mephit casts Fog Cloud, requiring no spell components and using Charisma as the spellcasting ability."
+      "description": "The mephit casts Fog Cloud, re-\nquiring no spell components and using Charisma as the spellcasting ability."
     },
     {
       "name": "Frost Breath (Recharge 6)",
-      "description": "Constitution Saving Throw: DC 10, each creature in a 15-foot Cone. Failure: 7 (3d4) Cold damage. Success: Half damage."
+      "description": "Constitution Saving Throw:"
+    },
+    {
+      "name": "DC 10, each creature in a 15-foot Cone",
+      "description": "Failure: 7 (3d4) Cold damage. Success: Half damage."
     }
   ],
   "bonus_actions": [],

@@ -66,21 +66,25 @@
   "special_traits": [
     {
       "name": "Celestial Restoration",
-      "description": "If the naga dies, it returns to life in 1d6 days and regains all its Hit Points unless Dispel Evil and Good is cast on its remains."
+      "description": "If the naga dies, it returns to life\nin 1d6 days and regains all its Hit Points unless Dispel Evil and Good is cast on its remains."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The naga makes two Bite attacks. It can replace any attack with a use of Poisonous Spittle."
+      "description": "The naga makes two Bite attacks. It can\nreplace any attack with a use of Poisonous Spittle."
     },
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +8, reach 10 ft. Hit: 17 (2d12 + 4) Piercing damage plus 22 (4d10) Poison damage."
+      "description": "Melee Attack Roll: +8, reach 10 ft. Hit: 17 (2d12\n+ 4) Piercing damage plus 22 (4d10) Poison damage."
     },
     {
       "name": "Poisonous Spittle",
-      "description": "Constitution Saving Throw: DC 16, one creature the naga can see within 60 feet. Failure: 31 (7d8) Poison damage, and the target has the Blinded condition until the start of the naga's next turn. Success: Half damage only."
+      "description": "Constitution Saving Throw: DC 16,"
+    },
+    {
+      "name": "one creature the naga can see within 60 feet",
+      "description": "Failure: 31 (7d8) Poison damage, and the target has the Blinded condition until the start of the naga's next turn. Success: Half damage only."
     }
   ],
   "bonus_actions": [],

@@ -49,7 +49,7 @@
   "special_traits": [
     {
       "name": "Hold Breath",
-      "description": "The hippopotamus can hold its breath for 10 minutes."
+      "description": "The hippopotamus can hold its breath for\n10 minutes."
     }
   ],
   "actions": [
@@ -59,7 +59,7 @@
     },
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 16 (2d10 + 5) Piercing damage."
+      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 16 (2d10 +\n5) Piercing damage."
     }
   ],
   "bonus_actions": [],

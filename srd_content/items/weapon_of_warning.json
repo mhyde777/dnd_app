@@ -1,0 +1,22 @@
+{
+  "name": "Weapon of Warning",
+  "item_type": "weapon",
+  "subtype": "Any Simple or Martial",
+  "rarity": "uncommon",
+  "requires_attunement": true,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "As long as this weapon is within your reach and you are attuned to it, you and allies within 30 feet of you gain the following benefits.\nAlarm. The weapon magically awakens each sub-\nject who is sleeping naturally when combat begins. This benefit doesn't wake a subject from magically induced sleep.\nSupernatural Readiness. Each subject has Advan-\ntage on its Initiative rolls.",
+  "tags": [
+    "weapon",
+    "uncommon",
+    "melee",
+    "simple",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

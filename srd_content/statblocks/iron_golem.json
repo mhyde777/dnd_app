@@ -59,7 +59,7 @@
   "special_traits": [
     {
       "name": "Fire Absorption",
-      "description": "Whenever the golem is subjected to Fire damage, it regains a number of Hit Points equal to the Fire damage dealt."
+      "description": "Whenever the golem is subjected to\nFire damage, it regains a number of Hit Points equal to the Fire damage dealt."
     },
     {
       "name": "Immutable Form",
@@ -67,21 +67,21 @@
     },
     {
       "name": "Magic Resistance",
-      "description": "The golem has Advantage on saving throws against spells and other magical effects."
+      "description": "The golem has Advantage on saving\nthrows against spells and other magical effects."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The golem makes two attacks, using Bladed Arm or Fiery Bolt in any combination."
+      "description": "The golem makes two attacks, using\nBladed Arm or Fiery Bolt in any combination."
     },
     {
       "name": "Bladed Arm",
-      "description": "Melee Attack Roll: +12, reach 10 ft. Hit: 20 (3d8 + 7) Slashing damage plus 10 (3d6) Fire damage."
+      "description": "Melee Attack Roll: +12, reach 10 ft. Hit: 20 (3d8 + 7) Slashing damage plus 10 (3d6)\nFire damage."
     },
     {
       "name": "Fiery Bolt",
-      "description": "Ranged Attack Roll: +10, range 120 ft. Hit: 36 (8d8) Fire damage."
+      "description": "Ranged Attack Roll: +10, range 120 ft. Hit:\n36 (8d8) Fire damage."
     },
     {
       "name": "Poison Breath (Recharge 6)",

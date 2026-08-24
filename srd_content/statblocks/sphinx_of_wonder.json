@@ -57,20 +57,24 @@
   "special_traits": [
     {
       "name": "Magic Resistance",
-      "description": "The sphinx has Advantage on saving throws against spells and other magical effects."
+      "description": "The sphinx has Advantage on saving\nthrows against spells and other magical effects."
     }
   ],
   "actions": [
     {
       "name": "Rend",
-      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 5 (1d4 + 3) Slashing damage plus 7 (2d6) Radiant damage."
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 5 (1d4 + 3)\nSlashing damage plus 7 (2d6) Radiant damage."
     }
   ],
   "bonus_actions": [],
   "reactions": [
     {
       "name": "Burst of Ingenuity (2/Day)",
-      "description": "Trigger: The sphinx or another creature within 30 feet makes an ability check or a saving throw. Response: The sphinx adds 2 to the roll."
+      "description": "Trigger: The sphinx or an-"
+    },
+    {
+      "name": "other creature within 30 feet makes an ability check or a saving throw",
+      "description": "Response: The sphinx adds 2 to the roll."
     }
   ],
   "legendary_actions": null,

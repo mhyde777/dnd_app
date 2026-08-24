@@ -1,0 +1,21 @@
+{
+  "name": "Potion of Heroism",
+  "item_type": "potion",
+  "subtype": "",
+  "rarity": "rare",
+  "requires_attunement": false,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "When you drink this potion, you gain 10 Temporary Hit Points that last for 1 hour. For the same duration, you are under the effect of the Bless spell (no Concentration required). This potion's blue liquid bubbles and steams as if boiling.",
+  "tags": [
+    "potion",
+    "rare",
+    "consumable",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

@@ -61,15 +61,19 @@
   "special_traits": [
     {
       "name": "Demonic Restoration",
-      "description": "If the hezrou dies outside the Abyss, its body dissolves into ichor, and it gains a new body instantly, reviving with all its Hit Points somewhere in the Abyss."
+      "description": "If the hezrou dies outside the\nAbyss, its body dissolves into ichor, and it gains a new body instantly, reviving with all its Hit Points somewhere in the Abyss."
     },
     {
       "name": "Magic Resistance",
-      "description": "The hezrou has Advantage on saving throws against spells and other magical effects."
+      "description": "The hezrou has Advantage on saving\nthrows against spells and other magical effects."
     },
     {
       "name": "Stench",
-      "description": "Constitution Saving Throw: DC 16, any creature that starts its turn in a 10-foot Emanation originating from the hezrou. Failure: The target has the Poisoned condition until the start of its next turn."
+      "description": "Constitution Saving Throw: DC 16, any creature"
+    },
+    {
+      "name": "that starts its turn in a 10-foot Emanation originating from the hezrou",
+      "description": "Failure: The target has the Poisoned condition until the start of its next turn."
     }
   ],
   "actions": [
@@ -79,13 +83,13 @@
     },
     {
       "name": "Rend",
-      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 6 (1d4 + 4) Slashing damage plus 9 (2d8) Poison damage."
+      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 6 (1d4 + 4)\nSlashing damage plus 9 (2d8) Poison damage."
     }
   ],
   "bonus_actions": [
     {
       "name": "Leap",
-      "description": "The hezrou jumps up to 30 feet by spending 10 feet of movement."
+      "description": "The hezrou jumps up to 30 feet by spending 10\nfeet of movement."
     }
   ],
   "reactions": [],

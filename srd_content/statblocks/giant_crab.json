@@ -54,7 +54,11 @@
   "actions": [
     {
       "name": "Claw",
-      "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 4 (1d6 + 1) Bludgeoning damage. If the target is a Medium or smaller creature, it has the Grappled condition (escape DC 11) from one of two claws."
+      "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 4 (1d6 + 1)"
+    },
+    {
+      "name": "Bludgeoning damage",
+      "description": "If the target is a Medium or smaller creature, it has the Grappled condition (escape DC 11) from one of two claws."
     }
   ],
   "bonus_actions": [],

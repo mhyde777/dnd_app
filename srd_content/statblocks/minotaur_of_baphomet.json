@@ -52,11 +52,15 @@
   "actions": [
     {
       "name": "Abyssal Glaive",
-      "description": "Melee Attack Roll: +6, reach 10 ft. Hit: 10 (1d12 + 4) Slashing damage plus 10 (3d6) Necrotic damage."
+      "description": "Melee Attack Roll: +6, reach 10 ft. Hit: 10 (1d12 + 4) Slashing damage plus 10 (3d6) Ne-\ncrotic damage."
     },
     {
       "name": "Gore (Recharge 5-6)",
-      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 18 (4d6 + 4) Piercing damage. If the target is a Large or smaller creature and the minotaur moved 10+ feet straight toward it immediately before the hit, the target takes an extra 10 (3d6) Piercing damage and has the Prone condition."
+      "description": "Melee Attack Roll: +6, reach"
+    },
+    {
+      "name": "5 ft",
+      "description": "Hit: 18 (4d6 + 4) Piercing damage. If the target is a Large or smaller creature and the minotaur moved 10+ feet straight toward it immediately before the hit, the target takes an extra 10 (3d6) Piercing damage and has the Prone condition."
     }
   ],
   "bonus_actions": [],

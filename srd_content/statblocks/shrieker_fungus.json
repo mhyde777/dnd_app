@@ -54,7 +54,11 @@
   "reactions": [
     {
       "name": "Shriek",
-      "description": "Trigger: A creature or a source of Bright Light moves within 30 feet of the shrieker. Response: The shrieker emits a shriek audible within 300 feet of itself for 1 minute or until the shrieker dies."
+      "description": "Trigger: A creature or a source of Bright Light"
+    },
+    {
+      "name": "moves within 30 feet of the shrieker",
+      "description": "Response: The shrieker emits a shriek audible within 300 feet of itself for 1 minute or until the shrieker dies."
     }
   ],
   "legendary_actions": null,

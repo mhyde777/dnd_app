@@ -1,0 +1,20 @@
+{
+  "name": "Periapt of Proof against Poison",
+  "item_type": "wondrous_item",
+  "subtype": "",
+  "rarity": "rare",
+  "requires_attunement": true,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "This delicate silver chain has a brilliant-cut black gem pendant. While you wear it, you have Immunity to the Poisoned condition and Poison damage.",
+  "tags": [
+    "wondrous_item",
+    "rare",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

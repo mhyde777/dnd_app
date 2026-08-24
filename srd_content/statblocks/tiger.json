@@ -50,13 +50,13 @@
   "actions": [
     {
       "name": "Rend",
-      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 10 (2d6 + 3) Slashing damage. If the target is a Large or smaller creature, it has the Prone condition."
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 10 (2d6\n+ 3) Slashing damage. If the target is a Large or smaller creature, it has the Prone condition."
     }
   ],
   "bonus_actions": [
     {
       "name": "Nimble Escape",
-      "description": "The tiger takes the Disengage or Hide action."
+      "description": "The tiger takes the Disengage or\nHide action."
     }
   ],
   "reactions": [],

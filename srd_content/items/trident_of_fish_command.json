@@ -1,0 +1,21 @@
+{
+  "name": "Trident of Fish Command",
+  "item_type": "weapon",
+  "subtype": "Trident",
+  "rarity": "uncommon",
+  "requires_attunement": true,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "This magic weapon has 3 charges, and it regains 1d3 expended charges daily at dawn. While you carry it, you can expend 1 charge to cast Dominate Beast (save DC 15) from it on a Beast that has a\nSwim Speed.",
+  "tags": [
+    "weapon",
+    "uncommon",
+    "melee",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

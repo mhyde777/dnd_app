@@ -58,7 +58,7 @@
     },
     {
       "name": "Rend",
-      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 5 (1d4 + 3) Slashing damage plus 3 (1d6) Radiant damage."
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 5 (1d4 + 3)\nSlashing damage plus 3 (1d6) Radiant damage."
     }
   ],
   "bonus_actions": [],

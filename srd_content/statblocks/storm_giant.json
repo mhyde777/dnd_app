@@ -71,19 +71,23 @@
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The giant makes two attacks, using Storm Sword or Thunderbolt in any combination."
+      "description": "The giant makes two attacks, using Storm\nSword or Thunderbolt in any combination."
     },
     {
       "name": "Storm Sword",
-      "description": "Melee Attack Roll: +14, reach 10 ft. Hit: 23 (4d6 + 9) Slashing damage plus 13 (3d8) Lightning damage."
+      "description": "Melee Attack Roll: +14, reach 10 ft. Hit: 23 (4d6 + 9) Slashing damage plus 13 (3d8) Light-\nning damage."
     },
     {
       "name": "Thunderbolt",
-      "description": "Ranged Attack Roll: +14, range 500 ft. Hit: 22 (2d12 + 9) Lightning damage, and the target has the Blinded and Deafened conditions until the start of the giant's next turn."
+      "description": "Ranged Attack Roll: +14, range 500 ft. Hit: 22 (2d12 + 9) Lightning damage, and the target has\nthe Blinded and Deafened conditions until the start of the giant's next turn."
     },
     {
       "name": "Lightning Storm (Recharge 5-6)",
-      "description": "Dexterity Saving Throw: DC 18, each creature in a 10-foot-radius, 40-foot-high Cylinder originating from a point the giant can see within 500 feet. Failure: 55 (10d10) Lightning damage. Success: Half damage."
+      "description": "Dexterity Saving Throw: DC 18, each creature in a 10-foot-radius,"
+    },
+    {
+      "name": "40-foot-high Cylinder originating from a point the giant can see within 500 feet",
+      "description": "Failure: 55 (10d10) Lightning damage. Success: Half damage."
     }
   ],
   "bonus_actions": [],

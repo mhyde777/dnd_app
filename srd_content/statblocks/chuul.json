@@ -58,21 +58,29 @@
     },
     {
       "name": "Sense Magic",
-      "description": "The chuul senses magic within 120 feet of itself. This trait otherwise works like the Detect Magic spell but isn't itself magical."
+      "description": "The chuul senses magic within 120 feet of"
+    },
+    {
+      "name": "itself",
+      "description": "This trait otherwise works like the Detect Magic spell but isn't itself magical."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The chuul makes two Pincer attacks and uses Paralyzing Tentacles."
+      "description": "The chuul makes two Pincer attacks and\nuses Paralyzing Tentacles."
     },
     {
       "name": "Pincer",
-      "description": "Melee Attack Roll: +6, reach 10 ft. Hit: 9 (1d10 + 4) Bludgeoning damage. If the target is a Large or smaller creature, it has the Grappled condition (escape DC 14) from one of two pincers."
+      "description": "Melee Attack Roll: +6, reach 10 ft. Hit: 9 (1d10\n+ 4) Bludgeoning damage. If the target is a Large or smaller creature, it has the Grappled condition (escape DC 14) from one of two pincers."
     },
     {
       "name": "Paralyzing Tentacles",
-      "description": "Constitution Saving Throw: DC 13, one creature Grappled by the chuul. Failure: The target has the Poisoned condition and repeats the save at the end of each of its turns, ending the effect on itself on a success. After 1 minute, it succeeds automatically. While Poisoned, the target has the Paralyzed condition."
+      "description": "Constitution Saving Throw: DC"
+    },
+    {
+      "name": "13, one creature Grappled by the chuul",
+      "description": "Failure: The target has the Poisoned condition and repeats the save at the end of each of its turns, ending the effect on itself on a success. After 1 minute, it succeeds automatically. While Poisoned, the target has the Paralyzed condition."
     }
   ],
   "bonus_actions": [],

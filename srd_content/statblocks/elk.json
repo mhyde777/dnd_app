@@ -49,7 +49,7 @@
   "actions": [
     {
       "name": "Ram",
-      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 6 (1d6 + 3) Bludgeoning damage. If the target is a Large or smaller creature and the elk moved 20+ feet straight toward it immediately before the hit, the target takes an extra 3 (1d6) Bludgeoning damage and has the Prone condition."
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 6 (1d6\n+ 3) Bludgeoning damage. If the target is a Large or smaller creature and the elk moved 20+ feet straight toward it immediately before the hit, the target takes an extra 3 (1d6) Bludgeoning damage and has the Prone condition."
     }
   ],
   "bonus_actions": [],

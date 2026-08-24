@@ -52,17 +52,21 @@
   "special_traits": [
     {
       "name": "Abduct",
-      "description": "The bugbear needn't spend extra movement to move a creature it is grappling."
+      "description": "The bugbear needn't spend extra movement to\nmove a creature it is grappling."
     }
   ],
   "actions": [
     {
       "name": "Grab",
-      "description": "Melee Attack Roll: +4, reach 10 ft. Hit: 9 (2d6 + 2) Bludgeoning damage. If the target is a Medium or smaller creature, it has the Grappled condition (escape DC 12)."
+      "description": "Melee Attack Roll: +4, reach 10 ft. Hit: 9 (2d6\n+ 2) Bludgeoning damage. If the target is a Medium or smaller creature, it has the Grappled condition (escape DC 12)."
     },
     {
       "name": "Light Hammer",
-      "description": "Melee or Ranged Attack Roll: +4 (with Advantage if the target is Grappled by the bugbear), reach 10 ft. or range 20/60 ft. Hit: 9 (3d4 + 2) Bludgeoning damage."
+      "description": "Melee or Ranged Attack Roll: +4 (with"
+    },
+    {
+      "name": "Advantage if the target is Grappled by the bugbear), reach 10 ft",
+      "description": "or range 20/60 ft. Hit: 9 (3d4 + 2) Bludgeoning damage."
     }
   ],
   "bonus_actions": [],

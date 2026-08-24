@@ -47,13 +47,13 @@
   "special_traits": [
     {
       "name": "Training",
-      "description": "The commoner has proficiency in one skill of the GM's choice and has Advantage whenever it makes an ability check using that skill."
+      "description": "The commoner has proficiency in one skill of\nthe GM's choice and has Advantage whenever it makes an ability check using that skill."
     }
   ],
   "actions": [
     {
       "name": "Club",
-      "description": "Melee Attack Roll: +2, reach 5 ft. Hit: 2 (1d4) Bludgeoning damage."
+      "description": "Melee Attack Roll: +2, reach 5 ft. Hit: 2 (1d4)\nBludgeoning damage."
     }
   ],
   "bonus_actions": [],

@@ -49,7 +49,7 @@
   "actions": [
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 4 (1d4 + 2) Bludgeoning damage."
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 4 (1d4 + 2)\nBludgeoning damage."
     }
   ],
   "bonus_actions": [],

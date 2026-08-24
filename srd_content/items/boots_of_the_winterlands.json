@@ -1,0 +1,20 @@
+{
+  "name": "Boots of the Winterlands",
+  "item_type": "wondrous_item",
+  "subtype": "",
+  "rarity": "uncommon",
+  "requires_attunement": true,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "These furred boots are snug and feel warm. While wearing them, you gain the following benefits.\nCold Resistance. You have Resistance to Cold\ndamage and can tolerate temperatures of 0 degrees Fahrenheit or lower without any additional protection.\nWinter Strider. You ignore Difficult Terrain cre-\nated by ice or snow.",
+  "tags": [
+    "wondrous_item",
+    "uncommon",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

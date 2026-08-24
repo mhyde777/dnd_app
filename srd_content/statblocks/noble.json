@@ -52,14 +52,18 @@
   "actions": [
     {
       "name": "Rapier",
-      "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 5 (1d8 + 1) Piercing damage."
+      "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 5 (1d8\n+ 1) Piercing damage."
     }
   ],
   "bonus_actions": [],
   "reactions": [
     {
       "name": "Parry",
-      "description": "Trigger: The noble is hit by a melee attack roll while holding a weapon. Response: The noble adds 2 to its AC against that attack, possibly causing it to miss."
+      "description": "Trigger: The noble is hit by a melee attack roll"
+    },
+    {
+      "name": "while holding a weapon",
+      "description": "Response: The noble adds 2 to its AC against that attack, possibly causing it to miss."
     }
   ],
   "legendary_actions": null,

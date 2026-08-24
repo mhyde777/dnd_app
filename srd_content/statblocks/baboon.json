@@ -45,13 +45,13 @@
   "special_traits": [
     {
       "name": "Pack Tactics",
-      "description": "The baboon has Advantage on an attack roll against a creature if at least one of the baboon's allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition."
+      "description": "The baboon has Advantage on an attack\nroll against a creature if at least one of the baboon's allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition."
     }
   ],
   "actions": [
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +1, reach 5 ft. Hit: 1 (1d4 - 1) Piercing damage."
+      "description": "Melee Attack Roll: +1, reach 5 ft. Hit: 1 (1d4 - 1)\nPiercing damage."
     }
   ],
   "bonus_actions": [],

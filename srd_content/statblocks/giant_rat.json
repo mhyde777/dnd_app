@@ -50,13 +50,13 @@
   "special_traits": [
     {
       "name": "Pack Tactics",
-      "description": "The rat has Advantage on an attack roll against a creature if at least one of the rat's allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition."
+      "description": "The rat has Advantage on an attack roll\nagainst a creature if at least one of the rat's allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition."
     }
   ],
   "actions": [
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +5, reach 5 feet. Hit: 5 (1d4 + 3) Piercing damage."
+      "description": "Melee Attack Roll: +5, reach 5 feet. Hit: 5 (1d4\n+ 3) Piercing damage."
     }
   ],
   "bonus_actions": [],

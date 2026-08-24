@@ -50,13 +50,13 @@
   "actions": [
     {
       "name": "Rend",
-      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 6 (1d6 + 3) Slashing damage."
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 6 (1d6 + 3)\nSlashing damage."
     }
   ],
   "bonus_actions": [
     {
       "name": "Nimble Escape",
-      "description": "The panther takes the Disengage or Hide action."
+      "description": "The panther takes the Disengage or\nHide action."
     }
   ],
   "reactions": [],

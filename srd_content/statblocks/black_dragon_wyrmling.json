@@ -67,11 +67,15 @@
     },
     {
       "name": "Rend",
-      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 5 (1d6 + 2) Slashing damage plus 2 (1d4) Acid damage."
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 5 (1d6 + 2)\nSlashing damage plus 2 (1d4) Acid damage."
     },
     {
       "name": "Acid Breath (Recharge 5-6)",
-      "description": "Dexterity Saving Throw: DC 11, each creature in a 15-foot-long, 5-footwide Line. Failure: 22 (5d8) Acid damage. Success: Half damage."
+      "description": "Dexterity Saving Throw:"
+    },
+    {
+      "name": "DC 11, each creature in a 15-foot-long, 5-footwide Line",
+      "description": "Failure: 22 (5d8) Acid damage. Success: Half damage."
     }
   ],
   "bonus_actions": [],

@@ -58,25 +58,33 @@
   "special_traits": [
     {
       "name": "Greater Magic Resistance",
-      "description": "The rakshasa automatically succeeds on saving throws against spells and other magical effects, and the attack rolls of spells automatically miss it. Without the rakshasa's permission, no spell can observe the rakshasa remotely or detect its thoughts, creature type, or alignment."
+      "description": "The rakshasa automatically"
+    },
+    {
+      "name": "succeeds on saving throws against spells and other magical effects, and the attack rolls of spells automatically miss it",
+      "description": "Without the rakshasa's permission, no spell can observe the rakshasa remotely or detect its thoughts, creature type, or alignment."
     },
     {
       "name": "Fiendish Restoration",
-      "description": "If the rakshasa dies outside the Nine Hells, its body turns to ichor, and it gains a new body instantly, reviving with all its Hit Points somewhere in the Nine Hells."
+      "description": "If the rakshasa dies outside the\nNine Hells, its body turns to ichor, and it gains a new body instantly, reviving with all its Hit Points somewhere in the Nine Hells."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The rakshasa makes three Cursed Touch attacks."
+      "description": "The rakshasa makes three Cursed\nTouch attacks."
     },
     {
       "name": "Cursed Touch",
-      "description": "Melee Attack Roll: +10, reach 5 ft. Hit: 12 (2d6 + 5) Slashing damage plus 19 (3d12) Necrotic damage. If the target is a creature, it is cursed. While cursed, the target gains no benefit from finishing a Short or Long Rest."
+      "description": "Melee Attack Roll: +10, reach 5 ft. Hit:\n12 (2d6 + 5) Slashing damage plus 19 (3d12) Necrotic damage. If the target is a creature, it is cursed. While cursed, the target gains no benefit from finishing a Short or Long Rest."
     },
     {
       "name": "Baleful Command (Recharge 5-6)",
-      "description": "Wisdom Saving Throw: DC 18, each enemy in a 30-foot Emanation originating from the rakshasa. Failure: 28 (8d6) Psychic damage, and the target has the Frightened and Incapacitated conditions until the start of the rakshasa's next turn."
+      "description": "Wisdom Saving Throw: DC 18, each enemy in a 30-foot Emanation orig-"
+    },
+    {
+      "name": "inating from the rakshasa",
+      "description": "Failure: 28 (8d6) Psychic damage, and the target has the Frightened and Incapacitated conditions until the start of the rakshasa's next turn."
     }
   ],
   "bonus_actions": [],

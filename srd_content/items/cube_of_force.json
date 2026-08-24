@@ -1,0 +1,20 @@
+{
+  "name": "Cube of Force",
+  "item_type": "wondrous_item",
+  "subtype": "",
+  "rarity": "rare",
+  "requires_attunement": true,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "This cube is about an inch across. Each face has a distinct marking on it. You can press one of those faces, expend the number of charges required for it, and thereby cast the spell associated with it (save DC 17), as shown in the Cube of Force Faces table. The cube starts with 10 charges, and it regains 1d6 expended charges daily at dawn.\nCube of Force Faces\nSpell Charge Cost Mage Armor 1 Shield 1 Tiny Hut 3 Private Sanctum 4 Resilient Sphere 4 Wall of Force 5",
+  "tags": [
+    "wondrous_item",
+    "rare",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

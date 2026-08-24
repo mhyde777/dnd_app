@@ -64,25 +64,25 @@
   "special_traits": [
     {
       "name": "Diabolical Restoration",
-      "description": "If the devil dies outside the Nine Hells, its body disappears in sulfurous smoke, and it gains a new body instantly, reviving with all its Hit Points somewhere in the Nine Hells."
+      "description": "If the devil dies outside the\nNine Hells, its body disappears in sulfurous smoke, and it gains a new body instantly, reviving with all its Hit Points somewhere in the Nine Hells."
     },
     {
       "name": "Magic Resistance",
-      "description": "The devil has Advantage on saving throws against spells and other magical effects."
+      "description": "The devil has Advantage on saving\nthrows against spells and other magical effects."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The devil makes two Claw attacks and one Infernal Sting attack."
+      "description": "The devil makes two Claw attacks and one\nInfernal Sting attack."
     },
     {
       "name": "Claw",
-      "description": "Melee Attack Roll: +8, reach 10 ft. Hit: 13 (2d8 + 4) Slashing damage."
+      "description": "Melee Attack Roll: +8, reach 10 ft. Hit: 13 (2d8\n+ 4) Slashing damage."
     },
     {
       "name": "Infernal Sting",
-      "description": "Melee Attack Roll: +8, reach 10 ft. Hit: 15 (2d10 + 4) Piercing damage plus 18 (4d8) Poison damage, and the target has the Poisoned condition until the start of the devil's next turn. While Poisoned, the target can't regain Hit Points."
+      "description": "Melee Attack Roll: +8, reach 10 ft. Hit:\n15 (2d10 + 4) Piercing damage plus 18 (4d8) Poison damage, and the target has the Poisoned condition until the start of the devil's next turn. While Poisoned, the target can't regain Hit Points."
     }
   ],
   "bonus_actions": [],

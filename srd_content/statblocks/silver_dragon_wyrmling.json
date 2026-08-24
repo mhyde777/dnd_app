@@ -62,11 +62,19 @@
     },
     {
       "name": "Rend",
-      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 9 (1d10 + 4) Piercing damage. Cold Breath (Recharge 5-6). Constitution Saving Throw: DC 13, each creature in a 15-foot Cone. Failure: 18 (4d8) Cold damage. Success: Half damage."
+      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 9 (1d10\n+ 4) Piercing damage. Cold Breath (Recharge 5-6). Constitution Saving Throw: DC 13, each creature in a 15-foot Cone. Failure:"
+    },
+    {
+      "name": "18 (4d8) Cold damage",
+      "description": "Success: Half damage."
     },
     {
       "name": "Paralyzing Breath",
-      "description": "Constitution Saving Throw: DC 13, each creature in a 15-foot Cone. First Failure: The target has the Incapacitated condition until the end of its next turn, when it repeats the save. Second Failure: The target has the Paralyzed condition, and it repeats the save at the end of each of its turns, ending the effect on itself on a success. After 1 minute, it succeeds automatically."
+      "description": "Constitution Saving Throw: DC 13,"
+    },
+    {
+      "name": "each creature in a 15-foot Cone",
+      "description": "First Failure: The target has the Incapacitated condition until the end of its next turn, when it repeats the save. Second Failure: The target has the Paralyzed condition, and it repeats the save at the end of each of its turns, ending the effect on itself on a success. After 1 minute, it succeeds automatically."
     }
   ],
   "bonus_actions": [],

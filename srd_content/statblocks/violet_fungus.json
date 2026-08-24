@@ -52,11 +52,11 @@
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The fungus makes two Rotting Touch attacks."
+      "description": "The fungus makes two Rotting\nTouch attacks."
     },
     {
       "name": "Rotting Touch",
-      "description": "Melee Attack Roll: +2, reach 10 ft. Hit: 4 (1d8) Necrotic damage."
+      "description": "Melee Attack Roll: +2, reach 10 ft. Hit:\n4 (1d8) Necrotic damage."
     }
   ],
   "bonus_actions": [],

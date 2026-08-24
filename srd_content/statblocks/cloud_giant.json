@@ -55,21 +55,33 @@
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The giant makes two attacks, using Thunderous Mace or Thundercloud in any combination. It can replace one attack with a use of Spellcasting to cast Fog Cloud."
+      "description": "The giant makes two attacks, using Thun-"
+    },
+    {
+      "name": "derous Mace or Thundercloud in any combination",
+      "description": "It can replace one attack with a use of Spellcasting to cast Fog Cloud."
     },
     {
       "name": "Thunderous Mace",
-      "description": "Melee Attack Roll: +12, reach 10 ft. Hit: 21 (3d8 + 8) Bludgeoning damage plus 7 (2d6) Thunder damage."
+      "description": "Melee Attack Roll: +12, reach 10"
+    },
+    {
+      "name": "ft",
+      "description": "Hit: 21 (3d8 + 8) Bludgeoning damage plus 7 (2d6) Thunder damage."
     },
     {
       "name": "Thundercloud",
-      "description": "Ranged Attack Roll: +12, range 240 ft. Hit: 18 (3d6 + 8) Thunder damage, and the target has the Incapacitated condition until the end of its next turn."
+      "description": "Ranged Attack Roll: +12, range 240"
+    },
+    {
+      "name": "ft",
+      "description": "Hit: 18 (3d6 + 8) Thunder damage, and the target has the Incapacitated condition until the end of its next turn."
     }
   ],
   "bonus_actions": [
     {
       "name": "Misty Step",
-      "description": "The giant casts the Misty Step spell, using the same spellcasting ability as Spellcasting."
+      "description": "The giant casts the Misty Step spell, using\nthe same spellcasting ability as Spellcasting."
     }
   ],
   "reactions": [],

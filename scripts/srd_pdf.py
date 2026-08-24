@@ -389,6 +389,7 @@ def blocks(pdf: Path, first: int, last: int) -> list[Block]:
     current: Optional[Block] = None
     pending: list[str] = []
     prev_font: Optional[tuple[str, int]] = None
+    prev_italic = False
 
     def close() -> None:
         nonlocal current
@@ -411,6 +412,7 @@ def blocks(pdf: Path, first: int, last: int) -> list[Block]:
             close()
             current = Block(title=text, page=line.page)
             prev_font = None
+            prev_italic = False
             continue
 
         if current is None:
@@ -422,13 +424,21 @@ def blocks(pdf: Path, first: int, last: int) -> list[Block]:
             current.ability_rows.append(text)
             continue
 
+        # An italic line followed by a roman one is a paragraph break: a magic
+        # item's "Wondrous Item, Legendary" is italic and its description is
+        # not, and they share a typeface, so the font test alone merges the
+        # two. Weight is deliberately not treated this way -- a wrapped
+        # "Components:" value is roman under a bold label and must stay joined.
+        italic_lead = "i" in head.lead_style
         starts_line = (
             head.is_section
             or head.is_entry_start
             or head.is_attribute
             or (prev_font is not None and line.font_key != prev_font)
+            or (prev_italic and not italic_lead)
         )
         prev_font = line.font_key
+        prev_italic = italic_lead
         pending.append(("\0" if starts_line else "") + text)
 
     close()

@@ -49,11 +49,15 @@
   "actions": [
     {
       "name": "Scimitar",
-      "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 4 (1d6 + 1) Slashing damage."
+      "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 4 (1d6\n+ 1) Slashing damage."
     },
     {
       "name": "Light Crossbow",
-      "description": "Ranged Attack Roll: +3, range 80/320 ft. Hit: 5 (1d8 + 1) Piercing damage."
+      "description": "Ranged Attack Roll: +3, range 80/320"
+    },
+    {
+      "name": "ft",
+      "description": "Hit: 5 (1d8 + 1) Piercing damage."
     }
   ],
   "bonus_actions": [],

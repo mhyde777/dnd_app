@@ -53,7 +53,7 @@
   "actions": [
     {
       "name": "Slam",
-      "description": "Melee Attack Roll: +6, reach 10 ft. Hit: 14 (3d6 + 4) Bludgeoning damage."
+      "description": "Melee Attack Roll: +6, reach 10 ft. Hit: 14 (3d6\n+ 4) Bludgeoning damage."
     }
   ],
   "bonus_actions": [],

@@ -49,13 +49,13 @@
   "actions": [
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 10 (2d6 + 3) Piercing damage."
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 10 (2d6 + 3)\nPiercing damage."
     }
   ],
   "bonus_actions": [
     {
       "name": "Rampage (1/Day)",
-      "description": "Immediately after dealing damage to a creature that was already Bloodied, the hyena can move up to half its Speed, and it makes one Bite attack."
+      "description": "Immediately after dealing damage\nto a creature that was already Bloodied, the hyena can move up to half its Speed, and it makes one Bite attack."
     }
   ],
   "reactions": [],

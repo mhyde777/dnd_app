@@ -14,11 +14,11 @@
     "dice": "8d8 + 48"
   },
   "speed": {
-    "walk": 20,
+    "walk": null,
     "fly": null,
     "swim": null,
     "climb": null,
-    "burrow": 20
+    "burrow": null
   },
   "initiative_bonus": 0,
   "ability_scores": {
@@ -58,31 +58,35 @@
   "special_traits": [
     {
       "name": "Earth Glide",
-      "description": "The xorn can burrow through nonmagical, unworked earth and stone. While doing so, the xorn doesn't disturb the material it moves through."
+      "description": "The xorn can burrow through nonmagical,"
+    },
+    {
+      "name": "unworked earth and stone",
+      "description": "While doing so, the xorn doesn't disturb the material it moves through."
     },
     {
       "name": "Treasure Sense",
-      "description": "The xorn can pinpoint the location of precious metals and stones within 60 feet of itself."
+      "description": "The xorn can pinpoint the location of\nprecious metals and stones within 60 feet of itself."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The xorn makes one Bite attack and three Claw attacks."
+      "description": "The xorn makes one Bite attack and three\nClaw attacks."
     },
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 17 (4d6 + 3) Piercing damage."
+      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 17 (4d6 + 3)\nPiercing damage."
     },
     {
       "name": "Claw",
-      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 8 (1d10 + 3) Slashing damage."
+      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 8 (1d10 +\n3) Slashing damage."
     }
   ],
   "bonus_actions": [
     {
       "name": "Charge",
-      "description": "The xorn moves up to its Speed or Burrow Speed straight toward an enemy it can sense."
+      "description": "The xorn moves up to its Speed or Burrow\nSpeed straight toward an enemy it can sense."
     }
   ],
   "reactions": [],

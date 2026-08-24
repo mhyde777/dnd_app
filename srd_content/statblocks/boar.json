@@ -45,13 +45,17 @@
   "special_traits": [
     {
       "name": "Bloodied Fury",
-      "description": "While Bloodied, the boar has Advantage on attack rolls."
+      "description": "While Bloodied, the boar has Advan-\ntage on attack rolls."
     }
   ],
   "actions": [
     {
       "name": "Gore",
-      "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 4 (1d6 + 1) Piercing damage. If the target is a Medium or smaller creature and the boar moved 20+ feet straight toward it immediately before the hit, the target takes an extra 3 (1d6) Piercing damage and has the Prone condition."
+      "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 4 (1d6 + 1)"
+    },
+    {
+      "name": "Piercing damage",
+      "description": "If the target is a Medium or smaller creature and the boar moved 20+ feet straight toward it immediately before the hit, the target takes an extra 3 (1d6) Piercing damage and has the Prone condition."
     }
   ],
   "bonus_actions": [],

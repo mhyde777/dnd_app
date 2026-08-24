@@ -1,0 +1,21 @@
+{
+  "name": "Luck Blade",
+  "item_type": "weapon",
+  "subtype": "Glaive Greatsword Longsword Rapier Scimitar Sickle or Shortsword",
+  "rarity": "legendary",
+  "requires_attunement": true,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "You gain a +1 bonus to attack rolls and damage rolls made with this magic weapon. While the weapon is on your person, you also gain a +1 bonus to saving throws.\nLuck. If the weapon is on your person, you can call\non its luck (no action required) to reroll one failed D20 Test if you don't have the Incapacitated condition. You must use the second roll. Once used, this property can't be used again until the next dawn.\nWish. The weapon has 1d3 charges. While holding\nit, you can expend 1 charge and cast Wish from it. Once used, this property can't be used again until the next dawn. The weapon loses this property if it has no charges.",
+  "tags": [
+    "weapon",
+    "legendary",
+    "melee",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

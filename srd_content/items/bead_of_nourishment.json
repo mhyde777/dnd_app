@@ -1,0 +1,20 @@
+{
+  "name": "Bead of Nourishment",
+  "item_type": "wondrous_item",
+  "subtype": "",
+  "rarity": "common",
+  "requires_attunement": false,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "This flavorless, gelatinous bead dissolves on your tongue and provides as much nourishment as 1 day of Rations.",
+  "tags": [
+    "wondrous_item",
+    "common",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

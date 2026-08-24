@@ -49,13 +49,17 @@
   "special_traits": [
     {
       "name": "Pack Tactics",
-      "description": "The wolf has Advantage on an attack roll against a creature if at least one of the wolf's allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition."
+      "description": "The wolf has Advantage on an attack roll\nagainst a creature if at least one of the wolf's allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition."
     }
   ],
   "actions": [
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 8 (1d10 + 3) Piercing damage. If the target is a Large or smaller creature, it has the Prone condition."
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 8 (1d10 + 3)"
+    },
+    {
+      "name": "Piercing damage",
+      "description": "If the target is a Large or smaller creature, it has the Prone condition."
     }
   ],
   "bonus_actions": [],

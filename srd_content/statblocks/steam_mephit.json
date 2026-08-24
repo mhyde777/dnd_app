@@ -57,21 +57,29 @@
   "special_traits": [
     {
       "name": "Blurred Form",
-      "description": "Attack rolls against the mephit are made with Disadvantage unless the mephit has the Incapacitated condition."
+      "description": "Attack rolls against the mephit are made\nwith Disadvantage unless the mephit has the Incapacitated condition."
     },
     {
       "name": "Death Burst",
-      "description": "The mephit explodes when it dies. Dexterity Saving Throw: DC 10, each creature in a 5-foot Emanation originating from the mephit. Failure: 5 (2d4) Fire damage. Success: Half damage."
+      "description": "The mephit explodes when it dies. Dexterity Saving Throw: DC 10, each creature in a 5-foot"
+    },
+    {
+      "name": "Emanation originating from the mephit",
+      "description": "Failure: 5 (2d4) Fire damage. Success: Half damage."
     }
   ],
   "actions": [
     {
       "name": "Claw",
-      "description": "Melee Attack Roll: +2, reach 5 ft. Hit: 2 (1d4) Slashing damage plus 2 (1d4) Fire damage."
+      "description": "Melee Attack Roll: +2, reach 5 ft. Hit: 2 (1d4)\nSlashing damage plus 2 (1d4) Fire damage."
     },
     {
       "name": "Steam Breath (Recharge 6)",
-      "description": "Constitution Saving Throw: DC 10, each creature in a 15-foot Cone. Failure: 5 (2d4) Fire damage, and the target's Speed decreases by 10 feet until the end of the mephit's next turn. Success: Half damage only. Failure or Success: Being underwater doesn't grant Resistance to this Fire damage."
+      "description": "Constitution Saving Throw:"
+    },
+    {
+      "name": "DC 10, each creature in a 15-foot Cone",
+      "description": "Failure: 5 (2d4) Fire damage, and the target's Speed decreases by 10 feet until the end of the mephit's next turn. Success: Half damage only. Failure or Success: Being underwater doesn't grant Resistance to this Fire damage."
     }
   ],
   "bonus_actions": [],

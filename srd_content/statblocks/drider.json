@@ -52,35 +52,35 @@
   "special_traits": [
     {
       "name": "Spider Climb",
-      "description": "The drider can climb difficult surfaces, including along ceilings, without needing to make an ability check."
+      "description": "The drider can climb difficult surfaces,\nincluding along ceilings, without needing to make an ability check."
     },
     {
       "name": "Sunlight Sensitivity",
-      "description": "While in sunlight, the drider has Disadvantage on ability checks and attack rolls."
+      "description": "While in sunlight, the drider has\nDisadvantage on ability checks and attack rolls."
     },
     {
       "name": "Web Walker",
-      "description": "The drider ignores movement restrictions caused by webs, and the drider knows the location of any other creature in contact with the same web."
+      "description": "The drider ignores movement restrictions\ncaused by webs, and the drider knows the location of any other creature in contact with the same web."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The drider makes three attacks, using Foreleg or Poison Burst in any combination."
+      "description": "The drider makes three attacks, using\nForeleg or Poison Burst in any combination."
     },
     {
       "name": "Foreleg",
-      "description": "Melee Attack Roll: +7, reach 10 ft. Hit: 13 (2d8 + 4) Piercing damage."
+      "description": "Melee Attack Roll: +7, reach 10 ft. Hit: 13 (2d8\n+ 4) Piercing damage."
     },
     {
       "name": "Poison Burst",
-      "description": "Ranged Attack Roll: +6, range 120 ft. Hit: 13 (3d6 + 3) Poison damage."
+      "description": "Ranged Attack Roll: +6, range 120 ft. Hit:\n13 (3d6 + 3) Poison damage."
     }
   ],
   "bonus_actions": [
     {
       "name": "Magic of the Spider Queen (Recharge 5-6)",
-      "description": "The drider casts Darkness, Faerie Fire, or Web, requiring no Material components and using Wisdom as the spellcasting ability (spell save DC 14)."
+      "description": "The drider\ncasts Darkness, Faerie Fire, or Web, requiring no Material components and using Wisdom as the spellcasting ability (spell save DC 14)."
     }
   ],
   "reactions": [],

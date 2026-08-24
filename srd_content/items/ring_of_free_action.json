@@ -1,0 +1,20 @@
+{
+  "name": "Ring of Free Action",
+  "item_type": "ring",
+  "subtype": "",
+  "rarity": "rare",
+  "requires_attunement": true,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "While you wear this ring, Difficult Terrain doesn't cost you extra movement. In addition, magic can neither reduce any of your Speeds nor cause you to have the Paralyzed or Restrained condition.",
+  "tags": [
+    "ring",
+    "rare",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

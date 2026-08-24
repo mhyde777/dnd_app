@@ -59,25 +59,29 @@
   "special_traits": [
     {
       "name": "Earth Glide",
-      "description": "The elemental can burrow through nonmagical, unworked earth and stone. While doing so, the elemental doesn't disturb the material it moves through."
+      "description": "The elemental can burrow through"
+    },
+    {
+      "name": "nonmagical, unworked earth and stone",
+      "description": "While doing so, the elemental doesn't disturb the material it moves through."
     },
     {
       "name": "Siege Monster",
-      "description": "The elemental deals double damage to objects and structures."
+      "description": "The elemental deals double damage to\nobjects and structures."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The elemental makes two attacks, using Slam or Rock Launch in any combination."
+      "description": "The elemental makes two attacks, using\nSlam or Rock Launch in any combination."
     },
     {
       "name": "Slam",
-      "description": "Melee Attack Roll: +8, reach 10 ft. Hit: 14 (2d8 + 5) Bludgeoning damage."
+      "description": "Melee Attack Roll: +8, reach 10 ft. Hit: 14 (2d8\n+ 5) Bludgeoning damage."
     },
     {
       "name": "Rock Launch",
-      "description": "Ranged Attack Roll: +8, range 60 ft. Hit: 8 (1d6 + 5) Bludgeoning damage. If the target is a Large or smaller creature, it has the Prone condition."
+      "description": "Ranged Attack Roll: +8, range 60 ft. Hit:\n8 (1d6 + 5) Bludgeoning damage. If the target is a Large or smaller creature, it has the Prone condition."
     }
   ],
   "bonus_actions": [],

@@ -1,0 +1,20 @@
+{
+  "name": "Dwarven Plate",
+  "item_type": "armor",
+  "subtype": "Half Plate Armor or Plate Armor",
+  "rarity": "very_rare",
+  "requires_attunement": false,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "While wearing this armor, you gain a +2 bonus to Armor Class. In addition, if an effect moves you against your will along the ground, you can take a Reaction to reduce the distance you are moved by up to 10 feet.",
+  "tags": [
+    "armor",
+    "very_rare",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

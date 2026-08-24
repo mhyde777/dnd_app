@@ -66,31 +66,35 @@
     },
     {
       "name": "Exalted Restoration",
-      "description": "If the planetar dies outside Mount Celestia, its body disappears, and it gains a new body instantly, reviving with all its Hit Points somewhere in Mount Celestia."
+      "description": "If the planetar dies outside Mount\nCelestia, its body disappears, and it gains a new body instantly, reviving with all its Hit Points somewhere in Mount Celestia."
     },
     {
       "name": "Magic Resistance",
-      "description": "The planetar has Advantage on saving throws against spells and other magical effects."
+      "description": "The planetar has Advantage on sav-\ning throws against spells and other magical effects."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The planetar makes three Radiant Sword attacks or uses Holy Burst twice."
+      "description": "The planetar makes three Radiant Sword\nattacks or uses Holy Burst twice."
     },
     {
       "name": "Radiant Sword",
-      "description": "Melee Attack Roll: +12, reach 10 ft. Hit: 14 (2d6 + 7) Slashing damage plus 18 (4d8) Radiant damage."
+      "description": "Melee Attack Roll: +12, reach 10 ft. Hit: 14 (2d6 + 7) Slashing damage plus 18 (4d8) Radi-\nant damage."
     },
     {
       "name": "Holy Burst",
-      "description": "Dexterity Saving Throw: DC 20, each enemy in a 20-foot-radius Sphere centered on a point the planetar can see within 120 feet. Failure: 24 (7d6) Radiant damage. Success: Half damage."
+      "description": "Dexterity Saving Throw: DC 20, each en-"
+    },
+    {
+      "name": "emy in a 20-foot-radius Sphere centered on a point the planetar can see within 120 feet",
+      "description": "Failure: 24 (7d6) Radiant damage. Success: Half damage."
     }
   ],
   "bonus_actions": [
     {
       "name": "Divine Aid (2/Day)",
-      "description": "The planetar casts Cure Wounds, Invisibility, Lesser Restoration, or Remove Curse, using the same spellcasting ability as Spellcasting."
+      "description": "The planetar casts Cure Wounds, Invisibility, Lesser Restoration, or Remove Curse, using\nthe same spellcasting ability as Spellcasting."
     }
   ],
   "reactions": [],

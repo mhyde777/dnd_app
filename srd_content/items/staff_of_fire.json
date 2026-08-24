@@ -1,0 +1,20 @@
+{
+  "name": "Staff of Fire",
+  "item_type": "staff",
+  "subtype": "",
+  "rarity": "very_rare",
+  "requires_attunement": "by a druid",
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "You have Resistance to Fire damage while you hold this staff.\nSpells. The staff has 10 charges. While holding the\nstaff, you can cast one of the spells on the following table from it, using your spell save DC. The table indicates how many charges you must expend to cast the spell.\nCharge Charge\nSpell Cost Spell Cost Burning Hands 1 Wall of Fire 4 Fireball 3\nRegaining Charges. The staff regains 1d6 + 4\nexpended charges daily at dawn. If you expend the last charge, roll 1d20. On a 1, the staff crumbles into cinders and is destroyed.",
+  "tags": [
+    "staff",
+    "very_rare",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

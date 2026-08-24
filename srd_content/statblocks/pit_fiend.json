@@ -62,41 +62,53 @@
   "special_traits": [
     {
       "name": "Diabolical Restoration",
-      "description": "If the pit fiend dies outside the Nine Hells, its body disappears in sulfurous smoke, and it gains a new body instantly, reviving with all its Hit Points somewhere in the Nine Hells."
+      "description": "If the pit fiend dies outside the\nNine Hells, its body disappears in sulfurous smoke, and it gains a new body instantly, reviving with all its Hit Points somewhere in the Nine Hells."
     },
     {
       "name": "Fear Aura",
-      "description": "The pit fiend emanates an aura in a 20foot Emanation while it doesn't have the Incapacitated condition. Wisdom Saving Throw: DC 21, any enemy that starts its turn in the aura. Failure: The target has the Frightened condition until the start of its next turn. Success: The target is immune to this pit fiend's aura for 24 hours."
+      "description": "The pit fiend emanates an aura in a 20-"
+    },
+    {
+      "name": "foot Emanation while it doesn't have the Incapacitated condition",
+      "description": "Wisdom Saving Throw: DC 21, any enemy that starts its turn in the aura. Failure: The target has the Frightened condition until the start of its next turn. Success: The target is immune to this pit fiend's aura\nfor 24 hours."
     },
     {
       "name": "Legendary Resistance (4/Day)",
-      "description": "If the pit fiend fails a saving throw, it can choose to succeed instead."
+      "description": "If the pit fiend fails a\nsaving throw, it can choose to succeed instead."
     },
     {
       "name": "Magic Resistance",
-      "description": "The pit fiend has Advantage on saving throws against spells and other magical effects."
+      "description": "The pit fiend has Advantage on sav-\ning throws against spells and other magical effects."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The pit fiend makes one Bite attack, two Devilish Claw attacks, and one Fiery Mace attack."
+      "description": "The pit fiend makes one Bite attack, two\nDevilish Claw attacks, and one Fiery Mace attack."
     },
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +14, reach 10 ft. Hit: 18 (3d6 + 8) Piercing damage. If the target is a creature, it must make the following saving throw. Constitution Saving Throw: DC 21. Failure: The target has the Poisoned condition. While Poisoned, the target can't regain Hit Points and takes 21 (6d6) Poison damage at the start of each of its turns, and it repeats the save at the end of each of its turns, ending the effect on itself on a success. After 1 minute, it succeeds automatically."
+      "description": "Melee Attack Roll: +14, reach 10 ft. Hit: 18 (3d6\n+ 8) Piercing damage. If the target is a creature, it must make the following saving throw. Constitution Saving Throw: DC 21. Failure: The target has the Poisoned"
+    },
+    {
+      "name": "condition",
+      "description": "While Poisoned, the target can't regain Hit Points and takes 21 (6d6) Poison damage at the start of each of its turns, and it repeats the save at the end of each of its turns, ending the effect on itself on a success. After 1 minute, it succeeds automatically."
     },
     {
       "name": "Devilish Claw",
-      "description": "Melee Attack Roll: +14, reach 10 ft. Hit: 26 (4d8 + 8) Necrotic damage."
+      "description": "Melee Attack Roll: +14, reach 10 ft. Hit:\n26 (4d8 + 8) Necrotic damage."
     },
     {
       "name": "Fiery Mace",
-      "description": "Melee Attack Roll: +14, reach 10 ft. Hit: 22 (4d6 + 8) Force damage plus 21 (6d6) Fire damage."
+      "description": "Melee Attack Roll: +14, reach 10 ft. Hit: 22\n(4d6 + 8) Force damage plus 21 (6d6) Fire damage."
     },
     {
       "name": "Hellfire Spellcasting (Recharge 4-6)",
-      "description": "The pit fiend casts Fireball (level 5 version) twice, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 21). It can replace one Fireball with Hold Monster (level 7 version) or Wall of Fire."
+      "description": "The pit fiend"
+    },
+    {
+      "name": "casts Fireball (level 5 version) twice, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 21)",
+      "description": "It can replace one Fireball with Hold Monster (level 7 version) or Wall of Fire."
     }
   ],
   "bonus_actions": [],

@@ -57,27 +57,35 @@
   "special_traits": [
     {
       "name": "Evasion",
-      "description": "If the assassin is subjected to an effect that allows it to make a Dexterity saving throw to take only half damage, the assassin instead takes no damage if it succeeds on the save and only half damage if it fails. It can't use this trait if it has the Incapacitated condition."
+      "description": "If the assassin is subjected to an effect that"
+    },
+    {
+      "name": "allows it to make a Dexterity saving throw to take only half damage, the assassin instead takes no damage if it succeeds on the save and only half damage if it fails",
+      "description": "It can't use this trait if it has the Incapacitated condition."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The assassin makes three attacks, using Shortsword or Light Crossbow in any combination."
+      "description": "The assassin makes three attacks, using\nShortsword or Light Crossbow in any combination."
     },
     {
       "name": "Shortsword",
-      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 7 (1d6 + 4) Piercing damage plus 17 (5d6) Poison damage, and the target has the Poisoned condition until the start of the assassin's next turn."
+      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 7\n(1d6 + 4) Piercing damage plus 17 (5d6) Poison damage, and the target has the Poisoned condition until the start of the assassin's next turn."
     },
     {
       "name": "Light Crossbow",
-      "description": "Ranged Attack Roll: +7, range 80/320 ft. Hit: 8 (1d8 + 4) Piercing damage plus 21 (6d6) Poison damage."
+      "description": "Ranged Attack Roll: +7, range"
+    },
+    {
+      "name": "80/320 ft",
+      "description": "Hit: 8 (1d8 + 4) Piercing damage plus 21 (6d6) Poison damage."
     }
   ],
   "bonus_actions": [
     {
       "name": "Cunning Action",
-      "description": "The assassin takes the Dash, Disengage, or Hide action."
+      "description": "The assassin takes the Dash, Disen-\ngage, or Hide action."
     }
   ],
   "reactions": [],

@@ -60,21 +60,37 @@
   "special_traits": [
     {
       "name": "Shared Resistances",
-      "description": "When you summon the spirit, choose one of its Resistances. You have Resistance to the chosen damage type until the spell ends."
+      "description": "When you summon the spirit,"
+    },
+    {
+      "name": "choose one of its Resistances",
+      "description": "You have Resistance to the chosen damage type until the spell ends."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The spirit makes a number of Rend attacks equal to half the spell's level (round down), and it uses Breath Weapon."
+      "description": "The spirit makes a number of Rend attacks\nequal to half the spell's level (round down), and it uses Breath Weapon."
     },
     {
       "name": "Rend",
-      "description": "Melee Attack Roll: Bonus equals your spell attack modifier, reach 10 feet. Hit: 1d6 + 4 + the spell's level Piercing damage."
+      "description": "Melee Attack Roll: Bonus equals your spell attack"
+    },
+    {
+      "name": "modifier, reach 10 feet",
+      "description": "Hit: 1d6 + 4 + the spell's level Piercing damage."
     },
     {
       "name": "Breath Weapon",
-      "description": "Dexterity Saving Throw: DC equals your spell save DC, each creature in a 30-foot Cone. Failure: 2d6 damage of a type this spirit has Resistance to (your choice when you cast the spell). Success: Half damage."
+      "description": "Dexterity Saving Throw: DC equals"
+    },
+    {
+      "name": "your spell save DC, each creature in a 30-foot Cone",
+      "description": "Failure: 2d6 damage of a type this spirit has Resistance"
+    },
+    {
+      "name": "to (your choice when you cast the spell)",
+      "description": "Success: Half damage."
     }
   ],
   "bonus_actions": [],

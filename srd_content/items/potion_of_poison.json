@@ -1,0 +1,21 @@
+{
+  "name": "Potion of Poison",
+  "item_type": "potion",
+  "subtype": "",
+  "rarity": "uncommon",
+  "requires_attunement": false,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "This concoction looks, smells, and tastes like a Potion of Healing or another beneficial potion. How-\never, it is actually poison masked by illusion magic. Identify reveals its true nature.\nIf you drink this potion, you take 4d6 Poison damage and must succeed on a DC 13 Constitution saving throw or have the Poisoned condition for 1 hour.",
+  "tags": [
+    "potion",
+    "uncommon",
+    "consumable",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

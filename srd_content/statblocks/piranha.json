@@ -46,13 +46,17 @@
   "special_traits": [
     {
       "name": "Water Breathing",
-      "description": "The piranha can breathe only underwater."
+      "description": "The piranha can breathe only\nunderwater."
     }
   ],
   "actions": [
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +5 (with Advantage if the target doesn't have all its Hit Points), reach 5 ft. Hit: 1 Piercing damage."
+      "description": "Melee Attack Roll: +5 (with Advantage if the target"
+    },
+    {
+      "name": "doesn't have all its Hit Points), reach 5 ft",
+      "description": "Hit: 1 Piercing damage."
     }
   ],
   "bonus_actions": [],

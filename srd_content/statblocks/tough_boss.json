@@ -51,21 +51,25 @@
   "special_traits": [
     {
       "name": "Pack Tactics",
-      "description": "The tough has Advantage on an attack roll against a creature if at least one of the tough's allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition."
+      "description": "The tough has Advantage on an attack\nroll against a creature if at least one of the tough's allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The tough makes two attacks, using Warhammer or Heavy Crossbow in any combination."
+      "description": "The tough makes two attacks, using War-\nhammer or Heavy Crossbow in any combination."
     },
     {
       "name": "Warhammer",
-      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 12 (2d8 + 3) Bludgeoning damage. If the target is a Large or smaller creature, the tough pushes the target up to 10 feet straight away from itself."
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 12\n(2d8 + 3) Bludgeoning damage. If the target is a Large or smaller creature, the tough pushes the target up to 10 feet straight away from itself."
     },
     {
       "name": "Heavy Crossbow",
-      "description": "Ranged Attack Roll: +4, range 100/400 ft. Hit: 13 (2d10 + 2) Piercing damage."
+      "description": "Ranged Attack Roll: +4, range"
+    },
+    {
+      "name": "100/400 ft",
+      "description": "Hit: 13 (2d10 + 2) Piercing damage."
     }
   ],
   "bonus_actions": [],

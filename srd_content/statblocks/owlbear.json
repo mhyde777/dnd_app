@@ -53,7 +53,7 @@
     },
     {
       "name": "Rend",
-      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 14 (2d8 + 5) Slashing damage."
+      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 14 (2d8\n+ 5) Slashing damage."
     }
   ],
   "bonus_actions": [],

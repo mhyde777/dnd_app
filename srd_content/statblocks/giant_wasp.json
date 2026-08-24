@@ -45,13 +45,13 @@
   "special_traits": [
     {
       "name": "Flyby",
-      "description": "The wasp doesn't provoke an Opportunity Attack when it flies out of an enemy's reach."
+      "description": "The wasp doesn't provoke an Opportunity At-\ntack when it flies out of an enemy's reach."
     }
   ],
   "actions": [
     {
       "name": "Sting",
-      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 5 (1d6 + 2) Piercing damage plus 5 (2d4) Poison damage."
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 5 (1d6 + 2)\nPiercing damage plus 5 (2d4) Poison damage."
     }
   ],
   "bonus_actions": [],

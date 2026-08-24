@@ -56,7 +56,7 @@
   "special_traits": [
     {
       "name": "Flyby",
-      "description": "The gargoyle doesn't provoke an Opportunity Attack when it flies out of an enemy's reach."
+      "description": "The gargoyle doesn't provoke an Opportunity\nAttack when it flies out of an enemy's reach."
     }
   ],
   "actions": [
@@ -66,7 +66,7 @@
     },
     {
       "name": "Claw",
-      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 7 (2d4 + 2) Slashing damage."
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 7 (2d4 + 2)\nSlashing damage."
     }
   ],
   "bonus_actions": [],

@@ -51,13 +51,13 @@
   "special_traits": [
     {
       "name": "Jumper",
-      "description": "The cat's jump distance is determined using its Dexterity rather than its Strength."
+      "description": "The cat's jump distance is determined using its\nDexterity rather than its Strength."
     }
   ],
   "actions": [
     {
       "name": "Scratch",
-      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 1 Slashing damage."
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 1 Slash-\ning damage."
     }
   ],
   "bonus_actions": [],

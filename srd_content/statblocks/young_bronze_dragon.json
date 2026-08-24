@@ -65,15 +65,23 @@
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The dragon makes three Rend attacks. It can replace one attack with a use of Repulsion Breath."
+      "description": "The dragon makes three Rend attacks. It\ncan replace one attack with a use of Repulsion Breath."
     },
     {
       "name": "Rend",
-      "description": "Melee Attack Roll: +8, reach 10 ft. Hit: 16 (2d10 + 5) Slashing damage. Lightning Breath (Recharge 5-6). Dexterity Saving Throw: DC 15, each creature in a 60-foot-long, 5-footwide Line. Failure: 49 (9d10) Lightning damage. Success: Half damage."
+      "description": "Melee Attack Roll: +8, reach 10 ft. Hit: 16 (2d10\n+ 5) Slashing damage. Lightning Breath (Recharge 5-6). Dexterity Saving Throw: DC 15, each creature in a 60-foot-long, 5-foot-"
+    },
+    {
+      "name": "wide Line",
+      "description": "Failure: 49 (9d10) Lightning damage. Success: Half damage."
     },
     {
       "name": "Repulsion Breath",
-      "description": "Strength Saving Throw: DC 15, each creature in a 30-foot Cone. Failure: The target is pushed up to 40 feet straight away from the dragon and has the Prone condition."
+      "description": "Strength Saving Throw: DC 15, each"
+    },
+    {
+      "name": "creature in a 30-foot Cone",
+      "description": "Failure: The target is pushed up to 40 feet straight away from the dragon and has the Prone condition."
     }
   ],
   "bonus_actions": [],

@@ -58,21 +58,25 @@
   "special_traits": [
     {
       "name": "Legendary Resistance (3/Day, or 4/Day in Lair)",
-      "description": "If the dragon fails a saving throw, it can choose to succeed instead."
+      "description": "If\nthe dragon fails a saving throw, it can choose to succeed instead."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The dragon makes three Rend attacks. It can replace one attack with a use of Spellcasting to cast Shatter."
+      "description": "The dragon makes three Rend attacks. It\ncan replace one attack with a use of Spellcasting to cast Shatter."
     },
     {
       "name": "Rend",
-      "description": "Melee Attack Roll: +12, reach 10 ft. Hit: 16 (2d8 + 7) Slashing damage plus 5 (1d10) Lightning damage."
+      "description": "Melee Attack Roll: +12, reach 10 ft. Hit: 16 (2d8\n+ 7) Slashing damage plus 5 (1d10) Lightning damage."
     },
     {
       "name": "Lightning Breath (Recharge 5-6)",
-      "description": "Dexterity Saving Throw: DC 19, each creature in a 90-foot-long, 5-footwide Line. Failure: 60 (11d10) Lightning damage. Success: Half damage."
+      "description": "Dexterity Saving Throw: DC 19, each creature in a 90-foot-long, 5-foot-"
+    },
+    {
+      "name": "wide Line",
+      "description": "Failure: 60 (11d10) Lightning damage. Success: Half damage."
     }
   ],
   "bonus_actions": [],
@@ -81,12 +85,12 @@
     {
       "name": "Cloaked Flight",
       "cost": 1,
-      "description": "The dragon uses Spellcasting to cast Invisibility on itself, and it can fly up to half its Fly Speed. The dragon can't take this action again until the start of its next turn."
+      "description": "The dragon uses Spellcasting to cast Invisibility on itself, and it can fly up to half its Fly Speed.\nThe dragon can't take this action again until the start of its next turn."
     },
     {
       "name": "Sonic Boom",
       "cost": 1,
-      "description": "The dragon uses Spellcasting to cast Shatter. The dragon can't take this action again until the start of its next turn."
+      "description": "The dragon uses Spellcasting to cast Shatter. The dragon can't take this action again until the\nstart of its next turn."
     },
     {
       "name": "Tail Swipe",

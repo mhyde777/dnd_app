@@ -62,27 +62,27 @@
     },
     {
       "name": "Magic Resistance",
-      "description": "The golem has Advantage on saving throws against spells and other magical effects."
+      "description": "The golem has Advantage on saving\nthrows against spells and other magical effects."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The golem makes two attacks, using Slam or Force Bolt in any combination."
+      "description": "The golem makes two attacks, using Slam\nor Force Bolt in any combination."
     },
     {
       "name": "Slam",
-      "description": "Melee Attack Roll: +10, reach 5 ft. Hit: 15 (2d8 + 6) Bludgeoning damage plus 9 (2d8) Force damage."
+      "description": "Melee Attack Roll: +10, reach 5 ft. Hit: 15 (2d8\n+ 6) Bludgeoning damage plus 9 (2d8) Force damage."
     },
     {
       "name": "Force Bolt",
-      "description": "Ranged Attack Roll: +9, range 120 ft. Hit: 22 (4d10) Force damage."
+      "description": "Ranged Attack Roll: +9, range 120 ft. Hit:\n22 (4d10) Force damage."
     }
   ],
   "bonus_actions": [
     {
       "name": "Slow (Recharge 5-6)",
-      "description": "The golem casts the Slow spell, requiring no spell components and using Constitution as the spellcasting ability (spell save DC 17)."
+      "description": "The golem casts the Slow spell,\nrequiring no spell components and using Constitution as the spellcasting ability (spell save DC 17)."
     }
   ],
   "reactions": [],

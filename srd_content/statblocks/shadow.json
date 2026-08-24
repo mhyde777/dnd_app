@@ -69,23 +69,23 @@
   "special_traits": [
     {
       "name": "Amorphous",
-      "description": "The shadow can move through a space as narrow as 1 inch without expending extra movement to do so."
+      "description": "The shadow can move through a space\nas narrow as 1 inch without expending extra movement to do so."
     },
     {
       "name": "Sunlight Weakness",
-      "description": "While in sunlight, the shadow has Disadvantage on D20 Tests."
+      "description": "While in sunlight, the shadow has\nDisadvantage on D20 Tests."
     }
   ],
   "actions": [
     {
       "name": "Draining Swipe",
-      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 5 (1d6 + 2) Necrotic damage, and the target's Strength score decreases by 1d4. The target dies if this reduces that score to 0. If a Humanoid is slain by this attack, a\nShadow rises from the corpse 1d4 hours later."
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit:\n5 (1d6 + 2) Necrotic damage, and the target's Strength score decreases by 1d4. The target dies if this reduces that score to 0. If a Humanoid is slain by this attack, a\nShadow rises from the corpse 1d4 hours later."
     }
   ],
   "bonus_actions": [
     {
       "name": "Shadow Stealth",
-      "description": "While in Dim Light or Darkness, the shadow takes the Hide action."
+      "description": "While in Dim Light or Darkness, the\nshadow takes the Hide action."
     }
   ],
   "reactions": [],

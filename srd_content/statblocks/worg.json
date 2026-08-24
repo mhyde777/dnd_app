@@ -52,7 +52,7 @@
   "actions": [
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 7 (1d8 + 3) Piercing damage, and the next attack roll made against the target before the start of the worg's next turn has Advantage."
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 7 (1d8 + 3)\nPiercing damage, and the next attack roll made against the target before the start of the worg's next turn has Advantage."
     }
   ],
   "bonus_actions": [],

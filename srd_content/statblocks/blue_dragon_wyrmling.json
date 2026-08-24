@@ -62,11 +62,15 @@
     },
     {
       "name": "Rend",
-      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 8 (1d10 + 3) Slashing damage plus 3 (1d6) Lightning damage."
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 8 (1d10\n+ 3) Slashing damage plus 3 (1d6) Lightning damage."
     },
     {
       "name": "Lightning Breath (Recharge 5-6)",
-      "description": "Dexterity Saving Throw: DC 12, each creature in a 30-foot-long, 5-footwide Line. Failure: 21 (6d6) Lightning damage. Success: Half damage."
+      "description": "Dexterity Saving Throw: DC 12, each creature in a 30-foot-long, 5-foot-"
+    },
+    {
+      "name": "wide Line",
+      "description": "Failure: 21 (6d6) Lightning damage. Success: Half damage."
     }
   ],
   "bonus_actions": [],

@@ -52,31 +52,31 @@
   "special_traits": [
     {
       "name": "Magic Resistance",
-      "description": "The dryad has Advantage on saving throws against spells and other magical effects."
+      "description": "The dryad has Advantage on saving\nthrows against spells and other magical effects."
     },
     {
       "name": "Speak with Beasts and Plants",
-      "description": "The dryad can communicate with Beasts and Plants as if they shared a language."
+      "description": "The dryad can com-\nmunicate with Beasts and Plants as if they shared a language."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The dryad makes one Vine Lash or Thorn Burst attack, and it can use Spellcasting to cast Charm Monster."
+      "description": "The dryad makes one Vine Lash or\nThorn Burst attack, and it can use Spellcasting to cast Charm Monster."
     },
     {
       "name": "Vine Lash",
-      "description": "Melee Attack Roll: +6, reach 10 ft. Hit: 8 (1d8 + 4) Slashing damage."
+      "description": "Melee Attack Roll: +6, reach 10 ft. Hit: 8\n(1d8 + 4) Slashing damage."
     },
     {
       "name": "Thorn Burst",
-      "description": "Ranged Attack Roll: +6, range 60 ft. Hit: 7 (1d6 + 4) Piercing damage."
+      "description": "Ranged Attack Roll: +6, range 60 ft. Hit: 7\n(1d6 + 4) Piercing damage."
     }
   ],
   "bonus_actions": [
     {
       "name": "Tree Stride",
-      "description": "If within 5 feet of a Large or bigger tree, the dryad teleports to an unoccupied space within 5 feet of a second Large or bigger tree that is within 60 feet of the previous tree."
+      "description": "If within 5 feet of a Large or bigger tree, the\ndryad teleports to an unoccupied space within 5 feet of a second Large or bigger tree that is within 60 feet of the previous tree."
     }
   ],
   "reactions": [],

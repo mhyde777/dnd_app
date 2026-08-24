@@ -48,15 +48,15 @@
   "special_traits": [
     {
       "name": "Ethereal Sight",
-      "description": "The spider can see 60 feet into the Ethereal Plane while on the Material Plane and vice versa."
+      "description": "The spider can see 60 feet into the Ethe-\nreal Plane while on the Material Plane and vice versa."
     },
     {
       "name": "Spider Climb",
-      "description": "The spider can climb difficult surfaces, including along ceilings, without needing to make an ability check."
+      "description": "The spider can climb difficult surfaces,\nincluding along ceilings, without needing to make an ability check."
     },
     {
       "name": "Web Walker",
-      "description": "The spider ignores movement restrictions caused by webs, and the spider knows the location of any other creature in contact with the same web."
+      "description": "The spider ignores movement restrictions\ncaused by webs, and the spider knows the location of any other creature in contact with the same web."
     }
   ],
   "actions": [
@@ -66,13 +66,17 @@
     },
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 8 (1d10 + 3) Piercing damage plus 9 (2d8) Poison damage. If this damage reduces the target to 0 Hit Points, the target becomes Stable, and it has the Poisoned condition for 1 hour. While Poisoned, the target also has the Paralyzed condition."
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 8 (1d10 +"
+    },
+    {
+      "name": "3) Piercing damage plus 9 (2d8) Poison damage",
+      "description": "If this damage reduces the target to 0 Hit Points, the target becomes Stable, and it has the Poisoned condition for 1 hour. While Poisoned, the target also has the Paralyzed condition."
     }
   ],
   "bonus_actions": [
     {
       "name": "Ethereal Jaunt",
-      "description": "The spider teleports from the Material Plane to the Ethereal Plane or vice versa."
+      "description": "The spider teleports from the Material\nPlane to the Ethereal Plane or vice versa."
     }
   ],
   "reactions": [],

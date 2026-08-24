@@ -61,11 +61,11 @@
   "special_traits": [
     {
       "name": "Exalted Restoration",
-      "description": "If the deva dies outside Mount Celestia, its body disappears, and it gains a new body instantly, reviving with all its Hit Points somewhere in Mount Celestia."
+      "description": "If the deva dies outside Mount\nCelestia, its body disappears, and it gains a new body instantly, reviving with all its Hit Points somewhere in Mount Celestia."
     },
     {
       "name": "Magic Resistance",
-      "description": "The deva has Advantage on saving throws against spells and other magical effects."
+      "description": "The deva has Advantage on saving\nthrows against spells and other magical effects."
     }
   ],
   "actions": [
@@ -75,13 +75,13 @@
     },
     {
       "name": "Holy Mace",
-      "description": "Melee Attack Roll: +8, reach 5 ft. Hit: 7 (1d6 + 4) Bludgeoning damage plus 18 (4d8) Radiant damage."
+      "description": "Melee Attack Roll: +8, reach 5 ft. Hit:\n7 (1d6 + 4) Bludgeoning damage plus 18 (4d8) Radiant damage."
     }
   ],
   "bonus_actions": [
     {
       "name": "Divine Aid (2/Day)",
-      "description": "The deva casts Cure Wounds, Lesser Restoration, or Remove Curse, using the same spellcasting ability as Spellcasting."
+      "description": "The deva casts Cure Wounds, Lesser Restoration, or Remove Curse, using the same\nspellcasting ability as Spellcasting."
     }
   ],
   "reactions": [],

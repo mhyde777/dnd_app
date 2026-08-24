@@ -69,11 +69,15 @@
     },
     {
       "name": "Rend",
-      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 7 (1d10 + 2) Slashing damage plus 3 (1d6) Poison damage."
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 7 (1d10\n+ 2) Slashing damage plus 3 (1d6) Poison damage."
     },
     {
       "name": "Poison Breath (Recharge 5-6)",
-      "description": "Constitution Saving Throw: DC 11, each creature in a 15-foot Cone. Failure: 21 (6d6) Poison damage. Success: Half damage."
+      "description": "Constitution Saving Throw: DC 11, each creature in a 15-foot Cone. Failure:"
+    },
+    {
+      "name": "21 (6d6) Poison damage",
+      "description": "Success: Half damage."
     }
   ],
   "bonus_actions": [],

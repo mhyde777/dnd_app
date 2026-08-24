@@ -1,0 +1,20 @@
+{
+  "name": "Ring of Three Wishes",
+  "item_type": "ring",
+  "subtype": "",
+  "rarity": "legendary",
+  "requires_attunement": false,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "While wearing this ring, you can expend 1 of its 3 charges to cast Wish from it. The ring becomes nonmagical when you use the last charge.",
+  "tags": [
+    "ring",
+    "legendary",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

@@ -52,21 +52,37 @@
   "special_traits": [
     {
       "name": "Fire Aura",
-      "description": "At the end of each of the salamander's turns, each creature of the salamander's choice in a 5-foot Emanation originating from the salamander takes 7 (2d6) Fire damage."
+      "description": "At the end of each of the salamander's turns,\neach creature of the salamander's choice in a 5-foot Emanation originating from the salamander takes 7 (2d6) Fire damage."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The salamander makes two Flame Spear attacks. It can replace one attack with a use of Constrict."
+      "description": "The salamander makes two Flame"
+    },
+    {
+      "name": "Spear attacks",
+      "description": "It can replace one attack with a use of Constrict."
     },
     {
       "name": "Flame Spear",
-      "description": "Melee or Ranged Attack Roll: +7, reach 5 ft. or range 20/60 ft. Hit: 13 (2d8 + 4) Piercing damage plus 7 (2d6) Fire damage. Hit or Miss: The spear magically returns to the salamander's hand immediately after a ranged attack."
+      "description": "Melee or Ranged Attack Roll: +7, reach 5"
+    },
+    {
+      "name": "ft",
+      "description": "or range 20/60 ft. Hit: 13 (2d8 + 4) Piercing damage plus 7 (2d6) Fire damage. Hit or Miss: The spear magically returns to the salamander's hand immediately after a ranged attack."
     },
     {
       "name": "Constrict",
-      "description": "Strength Saving Throw: DC 15, one Large or smaller creature the salamander can see within 10 feet. Failure: 11 (2d6 + 4) Bludgeoning damage plus 7 (2d6) Fire damage. The target has the Grappled condition (escape DC 14), and it has the Restrained condition until the grapple ends."
+      "description": "Strength Saving Throw: DC 15, one Large or"
+    },
+    {
+      "name": "smaller creature the salamander can see within 10 feet",
+      "description": "Failure: 11 (2d6 + 4) Bludgeoning damage plus 7 (2d6)"
+    },
+    {
+      "name": "Fire damage",
+      "description": "The target has the Grappled condition (escape DC 14), and it has the Restrained condition until the grapple ends."
     }
   ],
   "bonus_actions": [],

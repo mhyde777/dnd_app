@@ -1,0 +1,22 @@
+{
+  "name": "Giant Slayer",
+  "item_type": "weapon",
+  "subtype": "Any Simple or Martial",
+  "rarity": "rare",
+  "requires_attunement": false,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "You gain a +1 bonus to attack rolls and damage rolls made with this magic weapon. When you hit a Giant with this weapon, the Giant takes an extra 2d6 damage of the weapon's type and must succeed on a DC 15 Strength saving throw or have the Prone condition.",
+  "tags": [
+    "weapon",
+    "rare",
+    "melee",
+    "simple",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

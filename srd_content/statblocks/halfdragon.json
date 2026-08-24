@@ -59,7 +59,11 @@
   "special_traits": [
     {
       "name": "Draconic Origin",
-      "description": "The half-dragon is related to a type of dragon associated with one of the following damage types (GM's choice): Acid, Cold, Fire, Lightning, or Poison. This choice affects other aspects of the stat block."
+      "description": "The half-dragon is related to a type"
+    },
+    {
+      "name": "of dragon associated with one of the following damage types (GM's choice)",
+      "description": "Acid, Cold, Fire, Lightning, or Poison. This choice affects other aspects of the stat block."
     }
   ],
   "actions": [
@@ -69,17 +73,21 @@
     },
     {
       "name": "Claw",
-      "description": "Melee Attack Roll: +7, reach 10 ft. Hit: 6 (1d4 + 4) Slashing damage plus 7 (2d6) damage of the type chosen for the Draconic Origin trait."
+      "description": "Melee Attack Roll: +7, reach 10 ft. Hit: 6 (1d4\n+ 4) Slashing damage plus 7 (2d6) damage of the type chosen for the Draconic Origin trait."
     },
     {
       "name": "Dragon's Breath (Recharge 5-6)",
-      "description": "Dexterity Saving Throw: DC 14, each creature in a 30-foot Cone. Failure: 28 (8d6) damage of the type chosen for the Draconic Origin trait. Success: Half damage."
+      "description": "Dexterity Saving Throw: DC 14, each creature in a 30-foot Cone. Failure:"
+    },
+    {
+      "name": "28 (8d6) damage of the type chosen for the Draconic Origin trait",
+      "description": "Success: Half damage."
     }
   ],
   "bonus_actions": [
     {
       "name": "Leap",
-      "description": "The half-dragon jumps up to 30 feet by spending 10 feet of movement."
+      "description": "The half-dragon jumps up to 30 feet by spending\n10 feet of movement."
     }
   ],
   "reactions": [],

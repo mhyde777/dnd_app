@@ -62,11 +62,15 @@
     },
     {
       "name": "Rend",
-      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 9 (1d10 + 4) Slashing damage plus 3 (1d6) Fire damage."
+      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 9 (1d10\n+ 4) Slashing damage plus 3 (1d6) Fire damage."
     },
     {
       "name": "Fire Breath (Recharge 5-6)",
-      "description": "Dexterity Saving Throw: DC 13, each creature in a 15-foot Cone. Failure: 24 (7d6) Fire damage. Success: Half damage."
+      "description": "Dexterity Saving Throw:"
+    },
+    {
+      "name": "DC 13, each creature in a 15-foot Cone",
+      "description": "Failure: 24 (7d6) Fire damage. Success: Half damage."
     }
   ],
   "bonus_actions": [],

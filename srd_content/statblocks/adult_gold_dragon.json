@@ -64,21 +64,29 @@
     },
     {
       "name": "Legendary Resistance (3/Day, or 4/Day in Lair)",
-      "description": "If the dragon fails a saving throw, it can choose to succeed instead."
+      "description": "If\nthe dragon fails a saving throw, it can choose to succeed instead."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The dragon makes three Rend attacks. It can replace one attack with a use of (A) Spellcasting to cast Guiding Bolt (level 2 version) or (B) Weakening Breath."
+      "description": "The dragon makes three Rend attacks. It\ncan replace one attack with a use of (A) Spellcasting to cast Guiding Bolt (level 2 version) or (B) Weakening Breath."
     },
     {
       "name": "Rend",
-      "description": "Melee Attack Roll: +14, reach 10 ft. Hit: 17 (2d8 + 8) Slashing damage plus 4 (1d8) Fire damage. Fire Breath (Recharge 5-6). Dexterity Saving Throw: DC 21, each creature in a 60-foot Cone. Failure: 66 (12d10) Fire damage. Success: Half damage."
+      "description": "Melee Attack Roll: +14, reach 10 ft. Hit: 17 (2d8\n+ 8) Slashing damage plus 4 (1d8) Fire damage. Fire Breath (Recharge 5-6). Dexterity Saving Throw:"
+    },
+    {
+      "name": "DC 21, each creature in a 60-foot Cone",
+      "description": "Failure: 66 (12d10) Fire damage. Success: Half damage."
     },
     {
       "name": "Weakening Breath",
-      "description": "Strength Saving Throw: DC 21, each creature that isn't currently affected by this breath in a 60-foot Cone. Failure: The target has Disadvantage on Strength-based D20 Tests and subtracts 3 (1d6) from its damage rolls. It repeats the save at the end of each of its turns, ending the effect on itself on a success. After 1 minute, it succeeds automatically."
+      "description": "Strength Saving Throw: DC 21,"
+    },
+    {
+      "name": "each creature that isn't currently affected by this breath in a 60-foot Cone",
+      "description": "Failure: The target has Disadvantage on Strength-based D20 Tests and subtracts 3 (1d6) from its damage rolls. It repeats the save at the end of each of its turns, ending the effect on itself on a success. After 1 minute, it succeeds automatically."
     }
   ],
   "bonus_actions": [],
@@ -87,7 +95,12 @@
     {
       "name": "Banish",
       "cost": 1,
-      "description": "Charisma Saving Throw: DC 21, one creature the dragon can see within 120 feet. Failure: 10 (3d6) Force damage, and the target has the Incapacitated condition and is transported to a harmless demiplane until the start of the dragon's next turn, at which point it re appears in an unoccupied space of the dragon's choice within 120 feet of the dragon. Failure or Success: The dragon can't take this action again until the start of its next turn."
+      "description": "Charisma Saving Throw: DC 21, one creature"
+    },
+    {
+      "name": "the dragon can see within 120 feet",
+      "cost": 1,
+      "description": "Failure: 10 (3d6) Force damage, and the target has the Incapacitated condition and is transported to a harmless demiplane until the start of the dragon's next turn, at which point it re appears in an unoccupied space of the dragon's choice within 120 feet of the dragon. Failure or Success: The dragon can't take this action again until the start of its next turn."
     },
     {
       "name": "Guiding Light",
@@ -97,7 +110,7 @@
     {
       "name": "Pounce",
       "cost": 1,
-      "description": "The dragon moves up to half its Speed, and it makes one Rend attack."
+      "description": "The dragon moves up to half its Speed, and it\nmakes one Rend attack."
     }
   ],
   "legendary_action_count": 3,
@@ -113,7 +126,7 @@
       "at_will": [
         "detect magic",
         "guiding bolt (level 2 version)",
-        "shapechange (beast or humanoid form only, no temporary hit points gained from the spell, and no concentration or temporary hit points required to maintain the spell)"
+        "shapechange (beast or humanoid form only, no"
       ],
       "1_per_day": [
         "flame strike",

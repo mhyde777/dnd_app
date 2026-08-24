@@ -56,11 +56,11 @@
   "actions": [
     {
       "name": "Shortsword",
-      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 6 (1d6 + 3) Piercing damage."
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 6\n(1d6 + 3) Piercing damage."
     },
     {
       "name": "Shortbow",
-      "description": "Ranged Attack Roll: +5, range 80/320 ft. Hit: 6 (1d6 + 3) Piercing damage."
+      "description": "Ranged Attack Roll: +5, range 80/320 ft. Hit:\n6 (1d6 + 3) Piercing damage."
     }
   ],
   "bonus_actions": [],

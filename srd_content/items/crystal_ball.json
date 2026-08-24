@@ -1,0 +1,20 @@
+{
+  "name": "Crystal Ball",
+  "item_type": "wondrous_item",
+  "subtype": "",
+  "rarity": "very_rare",
+  "requires_attunement": true,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "While touching this crystal orb, you can cast Scrying (save DC 17) with it.",
+  "tags": [
+    "wondrous_item",
+    "very_rare",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

@@ -14,9 +14,9 @@
     "dice": "4d8 + 4"
   },
   "speed": {
-    "walk": 30,
+    "walk": null,
     "fly": null,
-    "swim": 40,
+    "swim": null,
     "climb": null,
     "burrow": null
   },
@@ -53,15 +53,15 @@
   "special_traits": [
     {
       "name": "Blood Frenzy",
-      "description": "The sahuagin has Advantage on attack rolls against any creature that doesn't have all its Hit Points."
+      "description": "The sahuagin has Advantage on at-\ntack rolls against any creature that doesn't have all its Hit Points."
     },
     {
       "name": "Limited Amphibiousness",
-      "description": "The sahuagin can breathe air and water, but it must be submerged at least once every 4 hours to avoid suffocating outside water."
+      "description": "The sahuagin can breathe air\nand water, but it must be submerged at least once every 4 hours to avoid suffocating outside water."
     },
     {
       "name": "Shark Telepathy",
-      "description": "The sahuagin can magically control sharks within 120 feet of itself, using a special telepathy."
+      "description": "The sahuagin can magically control\nsharks within 120 feet of itself, using a special telepathy."
     }
   ],
   "actions": [
@@ -71,13 +71,13 @@
     },
     {
       "name": "Claw",
-      "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 4 (1d6 + 1) Slashing damage."
+      "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 4 (1d6 + 1)\nSlashing damage."
     }
   ],
   "bonus_actions": [
     {
       "name": "Aquatic Charge",
-      "description": "The sahuagin swims up to its Swim Speed straight toward an enemy it can see."
+      "description": "The sahuagin swims up to its Swim\nSpeed straight toward an enemy it can see."
     }
   ],
   "reactions": [],

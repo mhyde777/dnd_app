@@ -59,13 +59,17 @@
   "special_traits": [
     {
       "name": "Swarm",
-      "description": "The swarm can occupy another creature's space and vice versa, and the swarm can move through any opening large enough for a Tiny bat. The swarm can't regain Hit Points or gain Temporary Hit Points."
+      "description": "The swarm can occupy another creature's"
+    },
+    {
+      "name": "space and vice versa, and the swarm can move through any opening large enough for a Tiny bat",
+      "description": "The swarm can't regain Hit Points or gain Temporary Hit Points."
     }
   ],
   "actions": [
     {
       "name": "Bites",
-      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 5 (2d4) Piercing damage, or 2 (1d4) Piercing damage if the swarm is Bloodied."
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 5 (2d4)\nPiercing damage, or 2 (1d4) Piercing damage if the swarm is Bloodied."
     }
   ],
   "bonus_actions": [],

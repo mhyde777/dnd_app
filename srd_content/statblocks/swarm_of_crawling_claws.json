@@ -67,13 +67,21 @@
   "special_traits": [
     {
       "name": "Swarm",
-      "description": "The swarm can occupy another creature's space and vice versa, and the swarm can move through any opening large enough for a Tiny creature. The swarm can't regain Hit Points or gain Temporary Hit Points."
+      "description": "The swarm can occupy another creature's"
+    },
+    {
+      "name": "space and vice versa, and the swarm can move through any opening large enough for a Tiny creature",
+      "description": "The swarm can't regain Hit Points or gain Temporary Hit Points."
     }
   ],
   "actions": [
     {
       "name": "Swarm of Grasping Hands",
-      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 20 (4d8 + 2) Necrotic damage, or 11 (2d8 + 2) Necrotic damage if the swarm is Bloodied. If the target is a Medium or smaller creature, it has the Prone condition."
+      "description": "Melee Attack Roll: +4,"
+    },
+    {
+      "name": "reach 5 ft",
+      "description": "Hit: 20 (4d8 + 2) Necrotic damage, or 11 (2d8 + 2) Necrotic damage if the swarm is Bloodied. If the target is a Medium or smaller creature, it has the Prone condition."
     }
   ],
   "bonus_actions": [],

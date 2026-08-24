@@ -1,0 +1,21 @@
+{
+  "name": "Potion of Animal Friendship",
+  "item_type": "potion",
+  "subtype": "",
+  "rarity": "uncommon",
+  "requires_attunement": false,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "When you drink this potion, you can cast the level 3 version of the Animal Friendship spell (save DC 13). Agitating this potion's muddy liquid brings little bits into view: a fish scale, a hummingbird feather, a cat claw, or a squirrel hair.",
+  "tags": [
+    "potion",
+    "uncommon",
+    "consumable",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

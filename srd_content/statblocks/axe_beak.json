@@ -46,7 +46,7 @@
   "actions": [
     {
       "name": "Beak",
-      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 6 (1d8 + 2) Slashing damage."
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 6 (1d8 + 2)\nSlashing damage."
     }
   ],
   "bonus_actions": [],

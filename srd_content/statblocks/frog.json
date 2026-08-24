@@ -53,13 +53,13 @@
     },
     {
       "name": "Standing Leap",
-      "description": "The frog's Long Jump is up to 10 feet and its High Jump is up to 5 feet with or without a running start."
+      "description": "The frog's Long Jump is up to 10 feet\nand its High Jump is up to 5 feet with or without a running start."
     }
   ],
   "actions": [
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 1 Piercing damage."
+      "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 1 Piercing\ndamage."
     }
   ],
   "bonus_actions": [],

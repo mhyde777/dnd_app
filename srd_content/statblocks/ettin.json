@@ -58,15 +58,15 @@
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The ettin makes one Battleaxe attack and one Morningstar attack."
+      "description": "The ettin makes one Battleaxe attack and\none Morningstar attack."
     },
     {
       "name": "Battleaxe",
-      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 14 (2d8 + 5) Slashing damage. If the target is a Large or smaller creature, it has the Prone condition."
+      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 14\n(2d8 + 5) Slashing damage. If the target is a Large or smaller creature, it has the Prone condition."
     },
     {
       "name": "Morningstar",
-      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 14 (2d8 + 5) Piercing damage, and the target has Disadvantage on the next attack roll it makes before the end of its next turn."
+      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 14\n(2d8 + 5) Piercing damage, and the target has Disadvantage on the next attack roll it makes before the end of its next turn."
     }
   ],
   "bonus_actions": [],

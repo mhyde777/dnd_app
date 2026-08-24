@@ -52,11 +52,11 @@
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The centaur makes two attacks, using Pike or Longbow in any combination."
+      "description": "The centaur makes two attacks, using Pike\nor Longbow in any combination."
     },
     {
       "name": "Pike",
-      "description": "Melee Attack Roll: +6, reach 10 ft. Hit: 9 (1d10 + 4) Piercing damage."
+      "description": "Melee Attack Roll: +6, reach 10 ft. Hit: 9 (1d10\n+ 4) Piercing damage."
     },
     {
       "name": "Longbow",
@@ -66,7 +66,11 @@
   "bonus_actions": [
     {
       "name": "Trampling Charge (Recharge 5-6)",
-      "description": "The centaur moves up to its Speed without provoking Opportunity Attacks and can move through the spaces of Medium or smaller creatures. Each creature whose space the centaur enters is targeted once by the following effect. Strength Saving Throw: DC 14. Failure: 7 (1d6 + 4) Bludgeoning damage, and the target has the Prone condition."
+      "description": "The centaur moves"
+    },
+    {
+      "name": "up to its Speed without provoking Opportunity Attacks and can move through the spaces of Medium or smaller creatures",
+      "description": "Each creature whose space the centaur enters is targeted once by the following effect. Strength Saving Throw: DC 14. Failure: 7 (1d6 + 4) Bludgeoning\ndamage, and the target has the Prone condition."
     }
   ],
   "reactions": [],

@@ -1,0 +1,20 @@
+{
+  "name": "Chime of Opening",
+  "item_type": "wondrous_item",
+  "subtype": "",
+  "rarity": "rare",
+  "requires_attunement": false,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "This hollow metal tube measures about 1 foot long and weighs 1 pound. As a Magic action, you can strike the chime to cast Knock. The spell's customary knocking sound is replaced by the clear, ringing tone of the chime, which is audible out to 300 feet. The chime can be used 10 times. After the tenth time, it cracks and becomes useless.",
+  "tags": [
+    "wondrous_item",
+    "rare",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

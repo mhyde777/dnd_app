@@ -47,17 +47,21 @@
   "special_traits": [
     {
       "name": "Pack Tactics",
-      "description": "The tough has Advantage on an attack roll against a creature if at least one of the tough's allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition."
+      "description": "The tough has Advantage on an attack\nroll against a creature if at least one of the tough's allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition."
     }
   ],
   "actions": [
     {
       "name": "Mace",
-      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 5 (1d6 + 2) Bludgeoning damage."
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 5 (1d6\n+ 2) Bludgeoning damage."
     },
     {
       "name": "Heavy Crossbow",
-      "description": "Ranged Attack Roll: +3, range 100/400 ft. Hit: 6 (1d10 + 1) Piercing damage."
+      "description": "Ranged Attack Roll: +3, range"
+    },
+    {
+      "name": "100/400 ft",
+      "description": "Hit: 6 (1d10 + 1) Piercing damage."
     }
   ],
   "bonus_actions": [],

@@ -53,13 +53,13 @@
   "actions": [
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 5 (1d4 + 3) Piercing damage."
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 5 (1d4 + 3)\nPiercing damage."
     }
   ],
   "bonus_actions": [
     {
       "name": "Teleport (Recharge 4-6)",
-      "description": "The dog teleports up to 40 feet to an unoccupied space it can see."
+      "description": "The dog teleports up to 40\nfeet to an unoccupied space it can see."
     }
   ],
   "reactions": [],

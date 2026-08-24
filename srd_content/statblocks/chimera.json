@@ -51,23 +51,31 @@
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The chimera makes one Ram attack, one Bite attack, and one Claw attack. It can replace the Claw attack with a use of Fire Breath if available."
+      "description": "The chimera makes one Ram attack, one"
+    },
+    {
+      "name": "Bite attack, and one Claw attack",
+      "description": "It can replace the Claw attack with a use of Fire Breath if available."
     },
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 11 (2d6 + 4) Piercing damage, or 18 (4d6 + 4) Piercing damage if the chimera had Advantage on the attack roll."
+      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 11 (2d6 + 4)\nPiercing damage, or 18 (4d6 + 4) Piercing damage if the chimera had Advantage on the attack roll."
     },
     {
       "name": "Claw",
-      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 7 (1d6 + 4) Slashing damage."
+      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 7 (1d6 + 4)\nSlashing damage."
     },
     {
       "name": "Ram",
-      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 10 (1d12 + 4) Bludgeoning damage. If the target is a Medium or smaller creature, it has the Prone condition."
+      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 10 (1d12\n+ 4) Bludgeoning damage. If the target is a Medium or smaller creature, it has the Prone condition."
     },
     {
       "name": "Fire Breath (Recharge 5-6)",
-      "description": "Dexterity Saving Throw: DC 15, each creature in a 15-foot Cone. Failure: 31 (7d8) Fire damage. Success: Half damage."
+      "description": "Dexterity Saving Throw:"
+    },
+    {
+      "name": "DC 15, each creature in a 15-foot Cone",
+      "description": "Failure: 31 (7d8) Fire damage. Success: Half damage."
     }
   ],
   "bonus_actions": [],

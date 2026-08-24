@@ -59,24 +59,24 @@
   "special_traits": [
     {
       "name": "Amorphous",
-      "description": "The jelly can move through a space as narrow as 1 inch without expending extra movement to do so."
+      "description": "The jelly can move through a space\nas narrow as 1 inch without expending extra movement to do so."
     },
     {
       "name": "Spider Climb",
-      "description": "The jelly can climb difficult surfaces, including along ceilings, without needing to make an ability check."
+      "description": "The jelly can climb difficult surfaces,\nincluding along ceilings, without needing to make an ability check."
     }
   ],
   "actions": [
     {
       "name": "Pseudopod",
-      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 12 (3d6 + 2) Acid damage."
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 12\n(3d6 + 2) Acid damage."
     }
   ],
   "bonus_actions": [],
   "reactions": [
     {
       "name": "Split",
-      "description": "Trigger: While the jelly is Large or Medium and has 10+ Hit Points, it becomes Bloodied or is subjected to Lightning or Slashing damage. Response: The jelly splits into two new Ochre Jellies. Each new jelly is one size smaller than the original jelly and acts on its Initiative. The original jelly's Hit Points are divided evenly between the new jellies (round down)."
+      "description": "Trigger: While the jelly is Large or Medium and\nhas 10+ Hit Points, it becomes Bloodied or is subjected to Lightning or Slashing damage. Response: The jelly splits into two new Ochre Jellies. Each new jelly is one size smaller than the original jelly and acts on its Initiative. The original jelly's Hit Points are divided evenly between the new jellies (round down)."
     }
   ],
   "legendary_actions": null,

@@ -49,13 +49,13 @@
   "special_traits": [
     {
       "name": "Hold Breath",
-      "description": "The crocodile can hold its breath for 1 hour."
+      "description": "The crocodile can hold its breath\nfor 1 hour."
     }
   ],
   "actions": [
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 6 (1d8 + 2) Piercing damage. If the target is a Medium or smaller creature, it has the Grappled condition (escape DC 12). While Grappled, the target has the Restrained condition."
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 6 (1d8\n+ 2) Piercing damage. If the target is a Medium or smaller creature, it has the Grappled condition (escape DC 12). While Grappled, the target has the Restrained condition."
     }
   ],
   "bonus_actions": [],

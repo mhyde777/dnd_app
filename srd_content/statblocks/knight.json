@@ -53,22 +53,30 @@
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The knight makes two attacks, using Greatsword or Heavy Crossbow in any combination."
+      "description": "The knight makes two attacks, using\nGreatsword or Heavy Crossbow in any combination."
     },
     {
       "name": "Greatsword",
-      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 10 (2d6 + 3) Slashing damage plus 4 (1d8) Radiant damage."
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 10\n(2d6 + 3) Slashing damage plus 4 (1d8) Radiant damage."
     },
     {
       "name": "Heavy Crossbow",
-      "description": "Ranged Attack Roll: +2, range 100/400 ft. Hit: 11 (2d10) Piercing damage plus 4 (1d8) Radiant damage."
+      "description": "Ranged Attack Roll: +2, range"
+    },
+    {
+      "name": "100/400 ft",
+      "description": "Hit: 11 (2d10) Piercing damage plus 4 (1d8) Radiant damage."
     }
   ],
   "bonus_actions": [],
   "reactions": [
     {
       "name": "Parry",
-      "description": "Trigger: The knight is hit by a melee attack roll while holding a weapon. Response: The knight adds 2 to its AC against that attack, possibly causing it to miss."
+      "description": "Trigger: The knight is hit by a melee attack roll"
+    },
+    {
+      "name": "while holding a weapon",
+      "description": "Response: The knight adds 2 to its AC against that attack, possibly causing it to miss."
     }
   ],
   "legendary_actions": null,

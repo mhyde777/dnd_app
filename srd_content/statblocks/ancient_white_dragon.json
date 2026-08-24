@@ -58,11 +58,15 @@
   "special_traits": [
     {
       "name": "Ice Walk",
-      "description": "The dragon can move across and climb icy surfaces without needing to make an ability check. Additionally, Difficult Terrain composed of ice or snow doesn't cost it extra movement."
+      "description": "The dragon can move across and climb icy"
+    },
+    {
+      "name": "surfaces without needing to make an ability check",
+      "description": "Additionally, Difficult Terrain composed of ice or snow doesn't cost it extra movement."
     },
     {
       "name": "Legendary Resistance (4/Day, or 5/Day in Lair)",
-      "description": "If the dragon fails a saving throw, it can choose to succeed instead."
+      "description": "If\nthe dragon fails a saving throw, it can choose to succeed instead."
     }
   ],
   "actions": [
@@ -72,7 +76,7 @@
     },
     {
       "name": "Rend",
-      "description": "Melee Attack Roll: +14, reach 15 ft. Hit: 17 (2d8 + 8) Slashing damage plus 7 (2d6) Cold damage."
+      "description": "Melee Attack Roll: +14, reach 15 ft. Hit: 17 (2d8\n+ 8) Slashing damage plus 7 (2d6) Cold damage."
     },
     {
       "name": "Cold Breath (Recharge 5-6)",
@@ -85,17 +89,27 @@
     {
       "name": "Freezing Burst",
       "cost": 1,
-      "description": "Constitution Saving Throw: DC 20, each creature in a 30-foot-radius Sphere centered on a point the dragon can see within 120 feet. Failure: 14 (4d6) Cold damage, and the target's Speed is 0 until the end of the target's next turn. Failure or Success: The dragon can't take this action again until the start of its next turn."
+      "description": "Constitution Saving Throw: DC 20,"
+    },
+    {
+      "name": "each creature in a 30-foot-radius Sphere centered on a point the dragon can see within 120 feet",
+      "cost": 1,
+      "description": "Failure: 14 (4d6) Cold damage, and the target's Speed is 0 until the end of the target's next turn. Failure or Success: The dragon can't take this action again until the start of its next turn."
     },
     {
       "name": "Frightful Presence",
       "cost": 1,
-      "description": "The dragon casts Fear, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 18). The dragon can't take this action again until the start of its next turn."
+      "description": "The dragon casts Fear, requiring no"
+    },
+    {
+      "name": "Material components and using Charisma as the spellcasting ability (spell save DC 18)",
+      "cost": 1,
+      "description": "The dragon can't take this action again until the start of its next turn."
     },
     {
       "name": "Pounce",
       "cost": 1,
-      "description": "The dragon moves up to half its Speed, and it makes one Rend attack."
+      "description": "The dragon moves up to half its Speed, and it\nmakes one Rend attack."
     }
   ],
   "legendary_action_count": 3,

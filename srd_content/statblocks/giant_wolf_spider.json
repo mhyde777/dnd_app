@@ -50,13 +50,13 @@
   "special_traits": [
     {
       "name": "Spider Climb",
-      "description": "The spider can climb difficult surfaces, including along ceilings, without needing to make an ability check."
+      "description": "The spider can climb difficult surfaces,\nincluding along ceilings, without needing to make an ability check."
     }
   ],
   "actions": [
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 5 (1d4 + 3) Piercing damage plus 5 (2d4) Poison damage."
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 5 (1d4 + 3)\nPiercing damage plus 5 (2d4) Poison damage."
     }
   ],
   "bonus_actions": [],

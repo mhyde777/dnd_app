@@ -51,21 +51,21 @@
   "special_traits": [
     {
       "name": "Confer Fire Resistance",
-      "description": "The nightmare can grant Resistance to Fire damage to a rider while it is on the nightmare."
+      "description": "The nightmare can grant Re-\nsistance to Fire damage to a rider while it is on the nightmare."
     },
     {
       "name": "Illumination",
-      "description": "The nightmare sheds Bright Light in a 10foot radius and Dim Light for an additional 10 feet."
+      "description": "The nightmare sheds Bright Light in a 10-\nfoot radius and Dim Light for an additional 10 feet."
     }
   ],
   "actions": [
     {
       "name": "Hooves",
-      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 13 (2d8 + 4) Bludgeoning damage plus 10 (3d6) Fire damage."
+      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 13 (2d8\n+ 4) Bludgeoning damage plus 10 (3d6) Fire damage."
     },
     {
       "name": "Ethereal Stride",
-      "description": "The nightmare and up to three willing creatures within 5 feet of it teleport to the Ethereal Plane from the Material Plane or vice versa."
+      "description": "The nightmare and up to three willing\ncreatures within 5 feet of it teleport to the Ethereal Plane from the Material Plane or vice versa."
     }
   ],
   "bonus_actions": [],

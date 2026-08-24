@@ -65,25 +65,29 @@
   "special_traits": [
     {
       "name": "Demonic Restoration",
-      "description": "If the glabrezu dies outside the Abyss, its body dissolves into ichor, and it gains a new body instantly, reviving with all its Hit Points somewhere in the Abyss."
+      "description": "If the glabrezu dies outside the\nAbyss, its body dissolves into ichor, and it gains a new body instantly, reviving with all its Hit Points somewhere in the Abyss."
     },
     {
       "name": "Magic Resistance",
-      "description": "The glabrezu has Advantage on saving throws against spells and other magical effects."
+      "description": "The glabrezu has Advantage on sav-\ning throws against spells and other magical effects."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The glabrezu makes two Pincer attacks and uses Pummel or Spellcasting."
+      "description": "The glabrezu makes two Pincer attacks\nand uses Pummel or Spellcasting."
     },
     {
       "name": "Pincer",
-      "description": "Melee Attack Roll: +9, reach 10 ft. Hit: 16 (2d10 + 5) Slashing damage. If the target is a Medium or smaller creature, it has the Grappled condition (escape DC 15) from one of two pincers."
+      "description": "Melee Attack Roll: +9, reach 10 ft. Hit: 16 (2d10\n+ 5) Slashing damage. If the target is a Medium or smaller creature, it has the Grappled condition (escape DC 15) from one of two pincers."
     },
     {
       "name": "Pummel",
-      "description": "Dexterity Saving Throw: DC 17, one creature Grappled by the glabrezu. Failure: 15 (3d6 + 5) Bludgeoning damage. Success: Half damage."
+      "description": "Dexterity Saving Throw: DC 17, one creature"
+    },
+    {
+      "name": "Grappled by the glabrezu",
+      "description": "Failure: 15 (3d6 + 5) Bludgeoning damage. Success: Half damage."
     }
   ],
   "bonus_actions": [],

@@ -1,0 +1,21 @@
+{
+  "name": "Scimitar of Speed",
+  "item_type": "weapon",
+  "subtype": "Scimitar",
+  "rarity": "very_rare",
+  "requires_attunement": true,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "You gain a +2 bonus to attack rolls and damage rolls made with this magic weapon. In addition, you can make one attack with it as a Bonus Action on each of your turns.",
+  "tags": [
+    "weapon",
+    "very_rare",
+    "melee",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

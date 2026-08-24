@@ -1,0 +1,20 @@
+{
+  "name": "Armor of Resistance",
+  "item_type": "armor",
+  "subtype": "Any Light Medium or Heavy",
+  "rarity": "rare",
+  "requires_attunement": true,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "You have Resistance to one type of damage while you wear this armor. The GM chooses the type or determines it randomly by rolling on the following table.\n1d10 Damage Type 1d10 Damage Type 1 Acid 6 Necrotic 2 Cold 7 Poison 3 Fire 8 Psychic 4 Force 9 Radiant 5 Lightning 10 Thunder\nDown Speed to 0 and making it unable to benefit from bonuses to speed. Forward window shutter closes. Side window shutters close (two per side). The claws retract. Each extended claw makes the following melee attack: +8 to hit, reach 5 ft. Hit: The target has the Grappled condition (escape DC 15). The apparatus walks or swims backward provided its legs are extended. The apparatus turns 90 degrees clockwise provided its legs are extended. The light turns off. The apparatus rises up to 20 feet if it's in liquid. The rear hatch closes and seals.",
+  "tags": [
+    "armor",
+    "rare",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

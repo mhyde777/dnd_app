@@ -60,21 +60,29 @@
   "special_traits": [
     {
       "name": "Legendary Resistance (4/Day, or 5/Day in Lair)",
-      "description": "If the dragon fails a saving throw, it can choose to succeed instead."
+      "description": "If\nthe dragon fails a saving throw, it can choose to succeed instead."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The dragon makes three Rend attacks. It can replace one attack with a use of (A) Sleep Breath or (B) Spellcasting to cast Scorching Ray (level 3 version)."
+      "description": "The dragon makes three Rend attacks. It\ncan replace one attack with a use of (A) Sleep Breath or (B) Spellcasting to cast Scorching Ray (level 3 version)."
     },
     {
       "name": "Rend",
-      "description": "Melee Attack Roll: +14, reach 15 ft. Hit: 19 (2d10 + 8) Slashing damage plus 7 (2d6) Fire damage. Fire Breath (Recharge 5-6). Dexterity Saving Throw: DC 21, each creature in a 90-foot-long, 5-footwide Line. Failure: 58 (13d8) Fire damage. Success: Half damage."
+      "description": "Melee Attack Roll: +14, reach 15 ft. Hit: 19 (2d10\n+ 8) Slashing damage plus 7 (2d6) Fire damage. Fire Breath (Recharge 5-6). Dexterity Saving Throw:"
+    },
+    {
+      "name": "DC 21, each creature in a 90-foot-long, 5-footwide Line",
+      "description": "Failure: 58 (13d8) Fire damage. Success: Half damage."
     },
     {
       "name": "Sleep Breath",
-      "description": "Constitution Saving Throw: DC 21, each creature in a 90-foot Cone. Failure: The target has the Incapacitated condition until the end of its next turn, at which point it repeats the save. Second Failure: The target has the Unconscious condition for 10 minutes. This effect ends for the target if it takes damage or a creature within 5 feet of it takes an action to wake it."
+      "description": "Constitution Saving Throw: DC 21, each"
+    },
+    {
+      "name": "creature in a 90-foot Cone",
+      "description": "Failure: The target has the Incapacitated condition until the end of its next turn, at which point it repeats the save. Second Failure: The target has the Unconscious condition for 10 minutes. This effect ends for the target if it takes damage or a creature within 5 feet of it takes an action to wake it."
     }
   ],
   "bonus_actions": [],
@@ -88,12 +96,17 @@
     {
       "name": "Pounce",
       "cost": 1,
-      "description": "The dragon moves up to half its Speed, and it makes one Rend attack."
+      "description": "The dragon moves up to half its Speed, and it\nmakes one Rend attack."
     },
     {
       "name": "Scorching Sands",
       "cost": 1,
-      "description": "Dexterity Saving Throw: DC 20, one creature the dragon can see within 120 feet. Failure: 36 (8d8) Fire damage, and the target's Speed is halved until the end of its next turn. Failure or Success: The dragon can't take this action again until the start of its next turn."
+      "description": "Dexterity Saving Throw: DC 20, one"
+    },
+    {
+      "name": "creature the dragon can see within 120 feet",
+      "cost": 1,
+      "description": "Failure: 36 (8d8) Fire damage, and the target's Speed is halved until the end of its next turn. Failure or Success: The dragon can't take this action again until the start of its next turn."
     }
   ],
   "legendary_action_count": 3,

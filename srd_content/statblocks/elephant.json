@@ -46,13 +46,17 @@
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The elephant makes two Gore attacks. Gore. Melee Attack Roll: +8, reach 5 ft. Hit: 15 (2d8 + 6) Piercing damage. If the target is a Huge or smaller creature and the elephant moved 20+ feet straight toward it immediately before the hit, the target has the Prone condition."
+      "description": "The elephant makes two Gore attacks. Gore. Melee Attack Roll: +8, reach 5 ft. Hit: 15 (2d8\n+ 6) Piercing damage. If the target is a Huge or smaller creature and the elephant moved 20+ feet straight toward it immediately before the hit, the target has the Prone condition."
     }
   ],
   "bonus_actions": [
     {
       "name": "Trample",
-      "description": "Dexterity Saving Throw: DC 16, one creature within 5 feet that has the Prone condition. Failure: 17 (2d10 + 6) Bludgeoning damage. Success: Half damage."
+      "description": "Dexterity Saving Throw: DC 16, one creature"
+    },
+    {
+      "name": "within 5 feet that has the Prone condition",
+      "description": "Failure: 17 (2d10 + 6) Bludgeoning damage. Success: Half damage."
     }
   ],
   "reactions": [],

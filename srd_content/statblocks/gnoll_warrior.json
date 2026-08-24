@@ -49,7 +49,7 @@
   "actions": [
     {
       "name": "Rend",
-      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 5 (1d6 + 2) Piercing damage."
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 5 (1d6 + 2)\nPiercing damage."
     },
     {
       "name": "Bone Bow",
@@ -59,7 +59,7 @@
   "bonus_actions": [
     {
       "name": "Rampage (1/Day)",
-      "description": "Immediately after dealing damage to a creature that is already Bloodied, the gnoll moves up to half its Speed, and it makes one Rend attack."
+      "description": "Immediately after dealing damage to\na creature that is already Bloodied, the gnoll moves up to half its Speed, and it makes one Rend attack."
     }
   ],
   "reactions": [],

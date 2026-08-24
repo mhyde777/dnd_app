@@ -1,0 +1,20 @@
+{
+  "name": "Ring of Invisibility",
+  "item_type": "ring",
+  "subtype": "",
+  "rarity": "legendary",
+  "requires_attunement": true,
+  "cost": "",
+  "cost_gp": 0.0,
+  "weight": 0.0,
+  "properties": [],
+  "damage": "",
+  "ac": "",
+  "description": "While wearing this ring, you can take a Magic action to give yourself the Invisible condition. You remain Invisible until the ring is removed or until you take a Bonus Action to become visible again.",
+  "tags": [
+    "ring",
+    "legendary",
+    "magic_item"
+  ],
+  "source": "SRD 5.2.1"
+}

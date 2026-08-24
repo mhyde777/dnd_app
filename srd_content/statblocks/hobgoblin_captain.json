@@ -49,21 +49,25 @@
   "special_traits": [
     {
       "name": "Aura of Authority",
-      "description": "While in a 10-foot Emanation originating from the hobgoblin, the hobgoblin and its allies have Advantage on attack rolls and saving throws, provided the hobgoblin doesn't have the Incapacitated condition."
+      "description": "While in a 10-foot Emanation origi-\nnating from the hobgoblin, the hobgoblin and its allies have Advantage on attack rolls and saving throws, provided the hobgoblin doesn't have the Incapacitated condition."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The hobgoblin makes two attacks, using Greatsword or Longbow in any combination."
+      "description": "The hobgoblin makes two attacks, using\nGreatsword or Longbow in any combination."
     },
     {
       "name": "Greatsword",
-      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 9 (2d6 + 2) Slashing damage plus 3 (1d6) Poison damage."
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 9\n(2d6 + 2) Slashing damage plus 3 (1d6) Poison damage."
     },
     {
       "name": "Longbow",
-      "description": "Ranged Attack Roll: +4, range 150/600 ft. Hit: 6 (1d8 + 2) Piercing damage plus 5 (2d4) Poison damage."
+      "description": "Ranged Attack Roll: +4, range 150/600"
+    },
+    {
+      "name": "ft",
+      "description": "Hit: 6 (1d8 + 2) Piercing damage plus 5 (2d4) Poison damage."
     }
   ],
   "bonus_actions": [],

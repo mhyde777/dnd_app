@@ -54,15 +54,15 @@
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The druid makes two attacks, using Vine Staff or Verdant Wisp in any combination."
+      "description": "The druid makes two attacks, using Vine\nStaff or Verdant Wisp in any combination."
     },
     {
       "name": "Vine Staff",
-      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 7 (1d8 + 3) Bludgeoning damage plus 2 (1d4) Poison damage."
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 7 (1d8\n+ 3) Bludgeoning damage plus 2 (1d4) Poison damage."
     },
     {
       "name": "Verdant Wisp",
-      "description": "Ranged Attack Roll: +5, range 90 ft. Hit: 10 (3d6) Radiant damage."
+      "description": "Ranged Attack Roll: +5, range 90 ft. Hit:\n10 (3d6) Radiant damage."
     }
   ],
   "bonus_actions": [],

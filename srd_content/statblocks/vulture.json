@@ -47,13 +47,13 @@
   "special_traits": [
     {
       "name": "Pack Tactics",
-      "description": "The vulture has Advantage on an attack roll against a creature if at least one of the vulture's allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition."
+      "description": "The vulture has Advantage on an attack\nroll against a creature if at least one of the vulture's allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition."
     }
   ],
   "actions": [
     {
       "name": "Beak",
-      "description": "Melee Attack Roll: +2, reach 5 ft. Hit: 2 (1d4) Piercing damage."
+      "description": "Melee Attack Roll: +2, reach 5 ft. Hit: 2 (1d4)\nPiercing damage."
     }
   ],
   "bonus_actions": [],

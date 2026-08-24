@@ -52,7 +52,7 @@
     },
     {
       "name": "Tail",
-      "description": "Melee Attack Roll: +6, reach 10 ft. Hit: 9 (1d10 + 4) Bludgeoning damage. If the target is a Huge or smaller creature, it has the Prone condition."
+      "description": "Melee Attack Roll: +6, reach 10 ft. Hit: 9 (1d10\n+ 4) Bludgeoning damage. If the target is a Huge or smaller creature, it has the Prone condition."
     }
   ],
   "bonus_actions": [],

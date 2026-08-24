@@ -58,21 +58,25 @@
   "special_traits": [
     {
       "name": "Legendary Resistance (3/Day, or 4/Day in Lair)",
-      "description": "If the dragon fails a saving throw, it can choose to succeed instead."
+      "description": "If\nthe dragon fails a saving throw, it can choose to succeed instead."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The dragon makes three Rend attacks. It can replace one attack with a use of Spellcasting to cast Scorching Ray."
+      "description": "The dragon makes three Rend attacks. It\ncan replace one attack with a use of Spellcasting to cast Scorching Ray."
     },
     {
       "name": "Rend",
-      "description": "Melee Attack Roll: +14, reach 10 ft. Hit: 13 (1d10 + 8) Slashing damage plus 5 (2d4) Fire damage."
+      "description": "Melee Attack Roll: +14, reach 10 ft. Hit: 13 (1d10\n+ 8) Slashing damage plus 5 (2d4) Fire damage."
     },
     {
       "name": "Fire Breath (Recharge 5-6)",
-      "description": "Dexterity Saving Throw: DC 21, each creature in a 60-foot Cone. Failure: 59 (17d6) Fire damage. Success: Half damage."
+      "description": "Dexterity Saving Throw:"
+    },
+    {
+      "name": "DC 21, each creature in a 60-foot Cone",
+      "description": "Failure: 59 (17d6) Fire damage. Success: Half damage."
     }
   ],
   "bonus_actions": [],
@@ -81,17 +85,22 @@
     {
       "name": "Commanding Presence",
       "cost": 1,
-      "description": "The dragon uses Spellcasting to cast Command (level 2 version). The dragon can't take this action again until the start of its next turn."
+      "description": "The dragon uses Spellcasting"
+    },
+    {
+      "name": "to cast Command (level 2 version)",
+      "cost": 1,
+      "description": "The dragon can't take this action again until the start of its next turn."
     },
     {
       "name": "Fiery Rays",
       "cost": 1,
-      "description": "The dragon uses Spellcasting to cast Scorching Ray. The dragon can't take this action again until the start of its next turn."
+      "description": "The dragon uses Spellcasting to cast Scorching Ray. The dragon can't take this action again until the\nstart of its next turn."
     },
     {
       "name": "Pounce",
       "cost": 1,
-      "description": "The dragon moves up to half its Speed, and it makes one Rend attack."
+      "description": "The dragon moves up to half its Speed, and it\nmakes one Rend attack."
     }
   ],
   "legendary_action_count": 3,

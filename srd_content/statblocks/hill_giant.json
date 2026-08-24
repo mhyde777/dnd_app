@@ -50,15 +50,19 @@
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The giant makes two attacks, using Tree Club or Trash Lob in any combination."
+      "description": "The giant makes two attacks, using Tree\nClub or Trash Lob in any combination."
     },
     {
       "name": "Tree Club",
-      "description": "Melee Attack Roll: +8, reach 10 ft. Hit: 18 (3d8 + 5) Bludgeoning damage. If the target is a Large or smaller creature, it has the Prone condition."
+      "description": "Melee Attack Roll: +8, reach 10 ft. Hit: 18\n(3d8 + 5) Bludgeoning damage. If the target is a Large or smaller creature, it has the Prone condition."
     },
     {
       "name": "Trash Lob",
-      "description": "Ranged Attack Roll: +8, range 60/240 ft. Hit: 16 (2d10 + 5) Bludgeoning damage, and the target has the Poisoned condition until the end of its next turn."
+      "description": "Ranged Attack Roll: +8, range 60/240"
+    },
+    {
+      "name": "ft",
+      "description": "Hit: 16 (2d10 + 5) Bludgeoning damage, and the target has the Poisoned condition until the end of its next turn."
     }
   ],
   "bonus_actions": [],

@@ -59,21 +59,25 @@
     },
     {
       "name": "Multiple Heads",
-      "description": "The hydra has five heads. Whenever the hydra takes 25 damage or more on a single turn, one of its heads dies. The hydra dies if all its heads are dead. At the end of each of its turns when it has at least one living head, the hydra grows two heads for each of its heads that died since its last turn, unless it has taken Fire damage since its last turn. The hydra regains 20 Hit Points when it grows new heads."
+      "description": "The hydra has five heads. Whenever"
+    },
+    {
+      "name": "the hydra takes 25 damage or more on a single turn, one of its heads dies",
+      "description": "The hydra dies if all its heads are dead. At the end of each of its turns when it has at least one living head, the hydra grows two heads for each of its heads that died since its last turn, unless it has taken Fire damage since its last turn. The hydra regains 20 Hit Points when it grows new heads."
     },
     {
       "name": "Reactive Heads",
-      "description": "For each head the hydra has beyond one, it gets an extra Reaction that can be used only for Opportunity Attacks."
+      "description": "For each head the hydra has beyond\none, it gets an extra Reaction that can be used only for Opportunity Attacks."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The hydra makes as many Bite attacks as it has heads."
+      "description": "The hydra makes as many Bite attacks as it\nhas heads."
     },
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +8, reach 10 ft. Hit: 10 (1d10 + 5) Piercing damage."
+      "description": "Melee Attack Roll: +8, reach 10 ft. Hit: 10 (1d10\n+ 5) Piercing damage."
     }
   ],
   "bonus_actions": [],

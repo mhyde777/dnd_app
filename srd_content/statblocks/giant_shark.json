@@ -58,7 +58,11 @@
     },
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +9 (with Advantage if the target doesn't have all its Hit Points), reach 5 ft. Hit: 22 (3d10 + 6) Piercing damage."
+      "description": "Melee Attack Roll: +9 (with Advantage if the target"
+    },
+    {
+      "name": "doesn't have all its Hit Points), reach 5 ft",
+      "description": "Hit: 22 (3d10 + 6) Piercing damage."
     }
   ],
   "bonus_actions": [],

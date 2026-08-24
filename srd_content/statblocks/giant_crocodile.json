@@ -47,21 +47,21 @@
   "special_traits": [
     {
       "name": "Hold Breath",
-      "description": "The crocodile can hold its breath for 1 hour."
+      "description": "The crocodile can hold its breath\nfor 1 hour."
     }
   ],
   "actions": [
     {
       "name": "Multiattack",
-      "description": "The crocodile makes one Bite attack and one Tail attack."
+      "description": "The crocodile makes one Bite attack and\none Tail attack."
     },
     {
       "name": "Bite",
-      "description": "Melee Attack Roll: +8, reach 5 ft. Hit: 21 (3d10 + 5) Piercing damage. If the target is a Large or smaller creature, it has the Grappled condition (escape DC 15). While Grappled, the target has the Restrained condition and can't be targeted by the crocodile's Tail."
+      "description": "Melee Attack Roll: +8, reach 5 ft. Hit: 21 (3d10\n+ 5) Piercing damage. If the target is a Large or smaller creature, it has the Grappled condition (escape DC 15). While Grappled, the target has the Restrained condition and can't be targeted by the crocodile's Tail."
     },
     {
       "name": "Tail",
-      "description": "Melee Attack Roll: +8, reach 10 ft. Hit: 18 (3d8 + 5) Bludgeoning damage. If the target is a Large or smaller creature, it has the Prone condition."
+      "description": "Melee Attack Roll: +8, reach 10 ft. Hit: 18 (3d8\n+ 5) Bludgeoning damage. If the target is a Large or smaller creature, it has the Prone condition."
     }
   ],
   "bonus_actions": [],

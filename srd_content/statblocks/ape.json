@@ -53,11 +53,15 @@
     },
     {
       "name": "Fist",
-      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 5 (1d4 + 3) Bludgeoning damage."
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 5 (1d4 + 3)\nBludgeoning damage."
     },
     {
       "name": "Rock (Recharge 6)",
-      "description": "Ranged Attack Roll: +5, range 25/50 ft. Hit: 10 (2d6 + 3) Bludgeoning damage."
+      "description": "Ranged Attack Roll: +5, range"
+    },
+    {
+      "name": "25/50 ft",
+      "description": "Hit: 10 (2d6 + 3) Bludgeoning damage."
     }
   ],
   "bonus_actions": [],
