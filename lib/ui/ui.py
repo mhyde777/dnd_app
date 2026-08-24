@@ -75,6 +75,13 @@ class InitiativeTracker(QMainWindow, Application):
     # never appears.
     update_available = pyqtSignal(str)
 
+    # The bridge's SSE stream delivers snapshots on a worker thread. Handing
+    # them over with QTimer.singleShot() does not work -- the timer is created
+    # in a thread with no event loop, so it never fires and every streamed
+    # snapshot was silently dropped. Signals queue across threads correctly.
+    bridge_snapshot_received = pyqtSignal(object)
+    bridge_status_changed = pyqtSignal(str)
+
     def __init__(self):
         super().__init__()
         self.center()
@@ -107,6 +114,12 @@ class InitiativeTracker(QMainWindow, Application):
                 "restored. You can load an encounter from the Encounters menu.",
                 e,
             )
+        self.bridge_snapshot_received.connect(
+            self._set_bridge_snapshot, Qt.QueuedConnection
+        )
+        self.bridge_status_changed.connect(
+            self.set_bridge_status, Qt.QueuedConnection
+        )
         self.start_bridge_polling()
         self.check_for_updates()
 

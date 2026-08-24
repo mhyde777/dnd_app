@@ -13,6 +13,17 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Foundry streaming (SSE) mode now works.** Snapshots arrived on the reader
+  thread and were handed to the UI with a timer created in a thread that has
+  no event loop, so it never fired and every streamed update was silently
+  discarded. It is a queued signal now.
+- **The stream no longer reconnects every few seconds.** The single-request
+  timeout was being applied to the long-lived stream, so an idle connection
+  expired and reconnected in a loop -- polling, but worse. Connect keeps the
+  short timeout; the read uses `BRIDGE_STREAM_READ_TIMEOUT` (65s).
+
 ### Changed
 
 - **Settings is tabbed** — Storage, Foundry VTT, Content and Updates — instead
@@ -98,10 +109,6 @@ First release intended for anyone other than its author.
 
 ### Known issues
 
-- The Foundry bridge's SSE streaming mode does not deliver snapshots; the
-  callbacks hand results back in a way that never reaches the UI thread.
-  Polling mode (the default) is unaffected. Set `BRIDGE_STREAM_ENABLED=0` if
-  you have turned streaming on.
 - No macOS build. See `docs/packaging-macos.md`.
 - Windows builds are unsigned, so SmartScreen will warn on first run.
 

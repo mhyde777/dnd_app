@@ -149,16 +149,18 @@ class Application:
         if self.bridge_stream_stop is None:
             self.bridge_stream_stop = threading.Event()
 
+        # These three run on the SSE reader thread. Everything they touch is a
+        # widget, so the hand-off has to be a queued signal: QTimer.singleShot()
+        # creates its timer in the calling thread, and this one has no event
+        # loop, so nothing it scheduled ever ran.
         def on_snapshot(snapshot: Dict[str, Any]) -> None:
-            QTimer.singleShot(0, lambda payload=snapshot: self._set_bridge_snapshot(payload))
+            self.bridge_snapshot_received.emit(snapshot)
 
         def on_stream_connect() -> None:
-            if hasattr(self, "set_bridge_status"):
-                QTimer.singleShot(0, lambda: self.set_bridge_status("connected"))
+            self.bridge_status_changed.emit("connected")
 
         def on_stream_disconnect() -> None:
-            if hasattr(self, "set_bridge_status"):
-                QTimer.singleShot(0, lambda: self.set_bridge_status("error"))
+            self.bridge_status_changed.emit("error")
 
         self.bridge_stream_thread = threading.Thread(
             target=self.bridge_client.stream_state,

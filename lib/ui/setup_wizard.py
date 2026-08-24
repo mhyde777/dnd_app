@@ -116,14 +116,6 @@ class SetupWizard(QDialog):
 
         self.local_radio.toggled.connect(self._on_mode_changed)
 
-        # --- Foundry VTT ---
-        foundry_page = QWidget()
-        foundry = QVBoxLayout(foundry_page)
-        foundry.setSpacing(12)
-        self._build_bridge_box(foundry)
-        foundry.addStretch()
-        self.tabs.addTab(foundry_page, "Foundry VTT")
-
         # --- Included content ---
         content_page = QWidget()
         content = QVBoxLayout(content_page)
@@ -140,6 +132,17 @@ class SetupWizard(QDialog):
         self._build_updates_box(updates)
         updates.addStretch()
         self.tabs.addTab(updates_page, "Updates")
+
+        # --- Foundry VTT ---
+        # Last, deliberately: it is the only optional integration here, and
+        # most people do not run Foundry. Leading with it would put a bridge
+        # URL and a shared secret in front of users who need neither.
+        foundry_page = QWidget()
+        foundry = QVBoxLayout(foundry_page)
+        foundry.setSpacing(12)
+        self._build_bridge_box(foundry)
+        foundry.addStretch()
+        self.tabs.addTab(foundry_page, "Foundry VTT")
 
         # --- Buttons ---
         btn_row = QHBoxLayout()

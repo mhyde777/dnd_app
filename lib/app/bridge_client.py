@@ -91,10 +91,20 @@ class BridgeClient:
         url = f"{self.base_url}/state/stream"
         headers = _build_headers(self.token)
         retry_delay = float(_get_env("BRIDGE_STREAM_RETRY_DELAY", "2"))
+        # timeout_s is sized for a single request-response; applying it to a
+        # long-lived stream means the read expires every few seconds while the
+        # connection is merely idle, so the stream dies and reconnects in a
+        # loop -- polling, but worse. Connect keeps the short timeout; the read
+        # gets one longer than any sane server keepalive, so a genuinely dead
+        # connection is still noticed instead of hanging forever.
+        read_timeout = float(_get_env("BRIDGE_STREAM_READ_TIMEOUT", "65"))
         while not stop_event.is_set():
             try:
                 with requests.get(
-                    url, headers=headers, timeout=self.timeout_s, stream=True
+                    url,
+                    headers=headers,
+                    timeout=(self.timeout_s, read_timeout),
+                    stream=True,
                 ) as response:
                     if response.status_code != 200:
                         print(
