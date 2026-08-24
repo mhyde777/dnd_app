@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import (
     QButtonGroup,
     QCheckBox,
     QDialog,
+    QTabWidget,
     QWidget,
     QFileDialog,
     QFrame,
@@ -34,7 +35,7 @@ _DEFAULT_DATA_DIR = paths.config_path("data")
 
 
 class SetupWizard(QDialog):
-    """Storage configuration dialog — shown on first run and from File → Settings."""
+    """Settings, one tab per decision — shown on first run and from File → Settings."""
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -43,23 +44,24 @@ class SetupWizard(QDialog):
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
 
         root = QVBoxLayout(self)
-        root.setSpacing(14)
+        root.setSpacing(12)
 
-        title = QLabel("Storage Settings")
-        title.setStyleSheet("font-size: 15px; font-weight: bold;")
-        root.addWidget(title)
+        # One tab per decision. Storage first because it is the only one that
+        # must be answered; everything else has a working default, so a
+        # first-run user can fill in one tab and press Save.
+        self.tabs = QTabWidget()
+        root.addWidget(self.tabs, stretch=1)
+
+        storage_page = QWidget()
+        storage = QVBoxLayout(storage_page)
+        storage.setSpacing(12)
+        self.tabs.addTab(storage_page, "Storage")
 
         info = QLabel(
-            "Choose where to store encounters, monsters, spells, and other data.\n"
-            "You can reopen this dialog at any time via File → Settings."
+            "Where to keep encounters, monsters, spells and other data."
         )
         info.setWordWrap(True)
-        root.addWidget(info)
-
-        sep = QFrame()
-        sep.setFrameShape(QFrame.HLine)
-        sep.setFrameShadow(QFrame.Sunken)
-        root.addWidget(sep)
+        storage.addWidget(info)
 
         # --- Storage mode radio buttons ---
         mode_box = QGroupBox("Storage Mode")
@@ -72,7 +74,7 @@ class SetupWizard(QDialog):
         self.local_radio.setChecked(True)
         mode_layout.addWidget(self.local_radio)
         mode_layout.addWidget(self.api_radio)
-        root.addWidget(mode_box)
+        storage.addWidget(mode_box)
 
         # --- Local section ---
         self.local_box = QGroupBox("Local Data Directory")
@@ -84,7 +86,7 @@ class SetupWizard(QDialog):
         browse_btn.clicked.connect(self._browse)
         local_layout.addWidget(self.local_dir_edit)
         local_layout.addWidget(browse_btn)
-        root.addWidget(self.local_box)
+        storage.addWidget(self.local_box)
 
         # --- API section ---
         self.api_box = QGroupBox("Remote API Settings")
@@ -109,15 +111,35 @@ class SetupWizard(QDialog):
         api_layout.addLayout(row_key)
 
         self.api_box.setVisible(False)
-        root.addWidget(self.api_box)
+        storage.addWidget(self.api_box)
+        storage.addStretch()
 
         self.local_radio.toggled.connect(self._on_mode_changed)
 
         # --- Foundry VTT ---
-        self._build_bridge_box(root)
+        foundry_page = QWidget()
+        foundry = QVBoxLayout(foundry_page)
+        foundry.setSpacing(12)
+        self._build_bridge_box(foundry)
+        foundry.addStretch()
+        self.tabs.addTab(foundry_page, "Foundry VTT")
 
         # --- Included content ---
-        self._build_content_box(root)
+        content_page = QWidget()
+        content = QVBoxLayout(content_page)
+        content.setSpacing(12)
+        self._build_content_box(content)
+        content.addStretch()
+        if self.content_box is not None:
+            self.tabs.addTab(content_page, "Content")
+
+        # --- Updates ---
+        updates_page = QWidget()
+        updates = QVBoxLayout(updates_page)
+        updates.setSpacing(12)
+        self._build_updates_box(updates)
+        updates.addStretch()
+        self.tabs.addTab(updates_page, "Updates")
 
         # --- Buttons ---
         btn_row = QHBoxLayout()
@@ -131,6 +153,7 @@ class SetupWizard(QDialog):
 
         self._prefill()
         self._prefill_bridge()
+        self._prefill_updates()
 
     def _build_bridge_box(self, root) -> None:
         """Foundry sync, collapsed behind a single switch.
@@ -222,6 +245,28 @@ class SetupWizard(QDialog):
             "bridge_stream_enabled": self.bridge_stream_check.isChecked(),
         })
         return changes
+
+    def _build_updates_box(self, root) -> None:
+        box = QGroupBox("Updates")
+        layout = QVBoxLayout(box)
+
+        self.update_check_box = QCheckBox("Tell me when a new version is available")
+        layout.addWidget(self.update_check_box)
+
+        note = QLabel(
+            "Checks GitHub for the latest release when the app starts. It never "
+            "downloads or installs anything -- if the version you have works, "
+            "keep it. Help -> Release Notes lists what changed in each version."
+        )
+        note.setWordWrap(True)
+        note.setStyleSheet("color: #888; font-size: 11px;")
+        layout.addWidget(note)
+
+        root.addWidget(box)
+
+    def _prefill_updates(self) -> None:
+        from app.config import update_check_enabled
+        self.update_check_box.setChecked(update_check_enabled())
 
     def _build_content_box(self, root) -> None:
         """Offer to install the bundled SRD library into the chosen backend.
@@ -373,6 +418,7 @@ class SetupWizard(QDialog):
         merged = dict(settings.load())
         merged.update(changes)
         merged.update(self._bridge_changes())
+        merged["update_check_enabled"] = self.update_check_box.isChecked()
         settings.save(merged)
 
         self._install_content(changes["storage_mode"], local_dir, url)

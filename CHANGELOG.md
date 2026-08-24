@@ -15,12 +15,17 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ### Changed
 
+- **Settings is tabbed** — Storage, Foundry VTT, Content and Updates — instead
+  of one long scroll. Storage is first because it is the only tab that has to
+  be answered; everything else has a working default.
 - **Foundry sync is configured in the app, not a dotfile.** File → Settings has
   a single "Sync with Foundry VTT" switch; the bridge URL, shared secret and
   transport options stay hidden until it is on, so anyone not using Foundry
   never sees them. Existing `.env` files still work and are never written to.
 - `settings.json` is now written 0600. It holds the storage API key and the
   Foundry secret, and was previously group- and world-readable.
+- The update-notification toggle is now in the UI (Updates tab) rather than
+  only an environment variable.
 - Removed two `load_dotenv()` calls that searched upward from the working
   directory, so a packaged app could absorb an unrelated `.env` from wherever
   its launcher happened to start it.
