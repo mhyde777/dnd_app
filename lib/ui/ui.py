@@ -1346,13 +1346,6 @@ class InitiativeTracker(QMainWindow, Application):
 
         menu = QMenu(self)
 
-        if getattr(creature, "_type", None) == CreatureType.MONSTER:
-            visible = bool(getattr(creature, "player_visible", True))
-            visibility_label = "Hide from Player View" if visible else "Reveal to Player View"
-            visibility_action = menu.addAction(visibility_label)
-        else:
-            visibility_action = None
-
         if getattr(creature, "_type", None) != CreatureType.PLAYER:
             statblock_action = menu.addAction("Set Statblock...")
         else:
@@ -1379,12 +1372,6 @@ class InitiativeTracker(QMainWindow, Application):
 
         if chosen == ignore_action:
             self.ignore_creature_in_foundry_sync(name, creature)
-            return
-
-        if visibility_action and chosen == visibility_action:
-            creature.player_visible = not bool(getattr(creature, "player_visible", True))
-            self.table_model.refresh()
-            self.update_table()
             return
 
         if statblock_action and chosen == statblock_action:
