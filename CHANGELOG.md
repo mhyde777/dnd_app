@@ -26,6 +26,10 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ### Changed
 
+- **Switching Foundry transport no longer needs a restart.** Saving settings
+  swaps between streaming and polling live, turns sync off, and picks up a
+  changed bridge URL or secret. Storage changes still need a relaunch, and now
+  say so in a banner instead of appearing to do nothing.
 - **Settings is tabbed** — Storage, Foundry VTT, Content and Updates — instead
   of one long scroll. Storage is first because it is the only tab that has to
   be answered; everything else has a working default.

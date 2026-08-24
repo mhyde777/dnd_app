@@ -612,6 +612,18 @@ class InitiativeTracker(QMainWindow, Application):
             else QMainWindow.AnimatedDocks
         )
 
+    def apply_settings_changes(self):
+        """Re-apply what a settings save changed, without a relaunch.
+
+        The bridge can swap transport, URL or token live. Storage cannot: the
+        backend object is built during construction and half the app holds
+        references to it, so that one still needs a restart and says so.
+        """
+        try:
+            self.restart_bridge_sync()
+        except Exception as exc:
+            self._log(f"[WARN] Could not restart bridge sync: {exc}")
+
     def open_layout_settings(self):
         from ui.layout_settings_dialog import LayoutSettingsDialog
         LayoutSettingsDialog(self).exec_()

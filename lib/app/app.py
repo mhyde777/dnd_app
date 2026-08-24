@@ -121,6 +121,43 @@ class Application:
             data_dir = get_local_data_dir() or get_config_path("data")
             self.storage_api = LocalStorage(data_dir)
 
+    def stop_bridge_sync(self) -> None:
+        """Tear down whichever transport is running, leaving neither active."""
+        if self.bridge_timer is not None:
+            self.bridge_timer.stop()
+            self.bridge_timer.deleteLater()
+            self.bridge_timer = None
+        if self.bridge_stream_stop is not None:
+            self.bridge_stream_stop.set()
+        thread = self.bridge_stream_thread
+        if thread is not None and thread.is_alive():
+            # The reader blocks on the socket, so it exits at the next event or
+            # read timeout rather than instantly. It is a daemon and checks the
+            # stop event before doing anything, so a short wait is enough --
+            # blocking the GUI until a 65s read timeout expires would not be.
+            thread.join(timeout=1.0)
+        self.bridge_stream_thread = None
+        self.bridge_stream_stop = None
+
+    def restart_bridge_sync(self) -> None:
+        """Re-read bridge settings and switch transport without a restart.
+
+        Called after the settings dialog saves. The client caches its URL and
+        token from construction, so it is rebuilt too -- otherwise changing the
+        bridge address in the UI would appear to do nothing until relaunch.
+        """
+        self.stop_bridge_sync()
+        try:
+            self.bridge_client = BridgeClient.from_env()
+        except Exception as exc:
+            self._log(f"[WARN] Could not rebuild bridge client: {exc}")
+        self.bridge_snapshot = None
+        self.start_bridge_polling()
+        self._log(
+            "[Bridge] Sync restarted "
+            f"({'stream' if bridge_stream_enabled() else 'polling'})."
+        )
+
     def start_bridge_polling(self) -> None:
         if not foundry_bridge_enabled():
             if hasattr(self, "set_bridge_status"):

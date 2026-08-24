@@ -398,6 +398,12 @@ class SetupWizard(QDialog):
     def _on_save(self) -> None:
         url = self.api_url_edit.text().strip()
         local_dir = self.local_dir_edit.text().strip()
+        current = settings.load()
+        before_storage = (
+            current.get("storage_mode"),
+            current.get("local_data_dir", ""),
+            current.get("storage_api_base", ""),
+        )
 
         if self.api_radio.isChecked():
             if not url:
@@ -425,4 +431,20 @@ class SetupWizard(QDialog):
         settings.save(merged)
 
         self._install_content(changes["storage_mode"], local_dir, url)
+
+        # Bridge changes take effect immediately; a storage change cannot,
+        # because the backend is wired up at construction and referenced all
+        # over the app. Say which one happened rather than making the user
+        # guess whether anything took.
+        parent = self.parent()
+        if parent is not None and hasattr(parent, "apply_settings_changes"):
+            parent.apply_settings_changes()
+
+        if before_storage != (changes["storage_mode"], local_dir, url):
+            if parent is not None and hasattr(parent, "show_banner"):
+                parent.show_banner(
+                    "storage-restart",
+                    "Storage settings saved — restart the app for them to take effect.",
+                    level="info",
+                )
         self.accept()
