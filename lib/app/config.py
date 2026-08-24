@@ -36,7 +36,17 @@ def get_local_data_dir() -> str:
 # ---- Feature flags ----
 
 def local_bridge_enabled() -> bool:
-    return os.getenv("LOCAL_BRIDGE_ENABLED", "1").strip() not in ("", "0", "false", "False")
+    """Whether to start the in-process bridge server.
+
+    Off unless asked for. It binds a port and invents a token when none is set,
+    which is fine on a machine running Foundry and wrong on everyone else's --
+    so a fresh install starts nothing until the user opts in. An existing .env
+    still wins, so setups that predate the settings key keep working.
+    """
+    configured = _settings.get("local_bridge_enabled")
+    if configured is not None:
+        return bool(configured)
+    return os.getenv("LOCAL_BRIDGE_ENABLED", "0").strip() not in ("", "0", "false", "False")
 
 def bridge_stream_enabled() -> bool:
     return os.getenv("BRIDGE_STREAM_ENABLED", "1").strip() not in ("", "0", "false", "False")

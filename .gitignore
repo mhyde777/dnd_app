@@ -171,8 +171,14 @@ dist/
 build/
 package_win/
 *.sh
+!package.sh
+!package_WIN.sh
 *bak*
 images/*
+!images/d20_icon.png
+!images/d20_icon.ico
 .venv/
 .venv-bridge/
+# Scraped spell text and parser output, not source. The bulk importer itself
+# lives in scripts/import_spells_bulk.py so a clone actually has it.
 spells/
