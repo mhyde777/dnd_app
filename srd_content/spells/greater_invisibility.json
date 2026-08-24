@@ -1,0 +1,19 @@
+{
+  "name": "Greater Invisibility",
+  "level": 4,
+  "school": "Illusion",
+  "casting_time": "Action",
+  "range": "Touch",
+  "components": "V, S",
+  "duration": "up to 1 minute",
+  "concentration": true,
+  "attack_save": "",
+  "damage_effect": "",
+  "description": "A creature you touch has the Invisible condition until the spell ends.",
+  "footnotes": [],
+  "classes": [
+    "Bard",
+    "Sorcerer",
+    "Wizard"
+  ]
+}

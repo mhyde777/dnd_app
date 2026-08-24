@@ -1,0 +1,18 @@
+{
+  "name": "Pass without Trace",
+  "level": 2,
+  "school": "Abjuration",
+  "casting_time": "Action",
+  "range": "Self",
+  "components": "V, S, M (ashes from burned mistletoe)",
+  "duration": "up to 1 hour",
+  "concentration": true,
+  "attack_save": "",
+  "damage_effect": "",
+  "description": "You radiate a concealing aura in a 30-foot Emanation for the duration. While in the aura, you and each creature you choose have a +10 bonus to Dexterity (Stealth) checks and leave no tracks.",
+  "footnotes": [],
+  "classes": [
+    "Druid",
+    "Ranger"
+  ]
+}

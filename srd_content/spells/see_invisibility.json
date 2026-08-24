@@ -1,0 +1,19 @@
+{
+  "name": "See Invisibility",
+  "level": 2,
+  "school": "Divination",
+  "casting_time": "Action",
+  "range": "Self",
+  "components": "V, S, M (a pinch of talc)",
+  "duration": "1 hour",
+  "concentration": false,
+  "attack_save": "",
+  "damage_effect": "",
+  "description": "For the duration, you see creatures and objects that have the Invisible condition as if they were visible, and you can see into the Ethereal Plane. Creatures and objects there appear ghostly.",
+  "footnotes": [],
+  "classes": [
+    "Bard",
+    "Sorcerer",
+    "Wizard"
+  ]
+}

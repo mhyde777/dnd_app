@@ -181,4 +181,6 @@ images/*
 .venv-bridge/
 # Scraped spell text and parser output, not source. The bulk importer itself
 # lives in scripts/import_spells_bulk.py so a clone actually has it.
-spells/
+# Anchored: an unanchored "spells/" also matches srd_content/spells/, which
+# silently kept 338 bundled SRD spells out of a commit.
+/spells/
