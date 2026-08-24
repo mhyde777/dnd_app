@@ -2352,6 +2352,11 @@ class Application:
     def hide_statblock(self):
         dock = getattr(self, "statblock_dock", None)
         if dock is not None:
+            # Remember how wide it was, so re-showing doesn't snap it back to
+            # whatever the config said at startup.
+            remember = getattr(self, "remember_dock_width", None)
+            if remember is not None:
+                remember(dock)
             dock.hide()
         else:
             self.statblock_widget.hide()
@@ -2361,6 +2366,10 @@ class Application:
         if dock is not None:
             dock.show()
             dock.raise_()
+            # A dock that was hidden has no width until it is laid out again.
+            reapply = getattr(self, "_apply_dock_widths", None)
+            if reapply is not None:
+                QTimer.singleShot(0, reapply)
         else:
             self.statblock_widget.show()
 

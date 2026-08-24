@@ -1,3 +1,4 @@
+from time import monotonic
 from typing import Optional
 from PyQt5.QtWidgets import (
     QApplication, QVBoxLayout, QLabel, QLineEdit,
@@ -10,7 +11,7 @@ from PyQt5.QtWidgets import (
     QDockWidget, QScrollArea, QTabWidget,
 )
 from ui.statblock_widget import StatblockWidget
-from PyQt5.QtCore import Qt, QByteArray
+from PyQt5.QtCore import Qt, QByteArray, QEvent, QObject, QTimer
 from PyQt5.QtGui import QKeySequence
 from app.app import Application
 from app.creature import CreatureType
@@ -32,6 +33,39 @@ from ui.conditions_dropdown import ConditionsDropdown, DEFAULT_CONDITIONS
 # Bumped whenever the set of docks/toolbars changes, so a layout saved by an
 # older build is discarded instead of restoring into a broken arrangement.
 LAYOUT_VERSION = 1
+
+# How long after the first show the configured panel widths keep overriding
+# whatever Qt lays out. The window manager's maximize lands a few frames after
+# show() and is what knocks panels out of their configured widths, so this has
+# to outlast it comfortably.
+_LAYOUT_SETTLE_MS = 1500
+
+# Dock resizes landing this soon after a window resize are Qt redistributing
+# space, not the user dragging a separator.
+_WINDOW_RESIZE_GRACE = 0.4
+
+
+class _DockResizeWatcher(QObject):
+    """
+    Notices the user dragging a dock separator.
+
+    A dock also gets resized whenever the window does, and those widths are
+    Qt's arithmetic rather than a choice — `_dock_resized` filters those out.
+    """
+
+    def __init__(self, window):
+        super().__init__(window)
+        self._window = window
+
+    def eventFilter(self, obj, event):
+        if (
+            event.type() == QEvent.Resize
+            and event.oldSize().width() > 0
+            and event.size().width() != event.oldSize().width()
+        ):
+            self._window._dock_resized(obj)
+        return False
+
 
 class InitiativeTracker(QMainWindow, Application):
     def __init__(self):
@@ -400,13 +434,24 @@ class InitiativeTracker(QMainWindow, Application):
                 dock.setFloating(False)
             self.addDockWidget(area, dock)
             dock.setVisible(bool(entry.get("visible", True)))
-            if entry.get("visible", True):
-                docks.append(dock)
-                widths.append(int(entry.get("width", 250)))
+            # Hidden docks are tracked too, so re-showing one later restores
+            # its configured width rather than a Qt default.
+            docks.append(dock)
+            widths.append(int(entry.get("width", 250)))
 
+        self._pending_dock_widths = (docks, widths)
+        watcher = getattr(self, "_dock_watcher", None)
+        if watcher is None:
+            watcher = self._dock_watcher = _DockResizeWatcher(self)
+            for dock in docks:
+                dock.installEventFilter(watcher)
+        # resizeDocks is only honoured once the widgets have been laid out, so
+        # before the window is on screen it silently does nothing. Apply it now
+        # for the live case, and again after the next layout pass so the widths
+        # survive startup.
+        self._apply_dock_widths()
         if docks:
-            # resizeDocks only takes effect once the widgets have been laid out.
-            self.resizeDocks(docks, widths, Qt.Horizontal)
+            QTimer.singleShot(0, self._apply_dock_widths)
 
         toolbar_config = config.get("toolbar") or {}
         toolbar_area = (
@@ -422,6 +467,64 @@ class InitiativeTracker(QMainWindow, Application):
         self.apply_toolbar_button_style(toolbar_config.get("button_style"))
 
         self.set_dragging_allowed(allow_drag)
+
+    def _apply_dock_widths(self):
+        """Re-assert the configured dock widths after Qt has laid the window out."""
+        pending = getattr(self, "_pending_dock_widths", None)
+        if not pending:
+            return
+        pairs = [(d, w) for d, w in zip(*pending) if d is not None and d.isVisible()]
+        if pairs:
+            self.resizeDocks([d for d, _ in pairs], [w for _, w in pairs], Qt.Horizontal)
+
+    def _remembered_width(self, dock) -> int:
+        """The width a hidden dock should come back at, if we captured one."""
+        pending = getattr(self, "_pending_dock_widths", None)
+        if not pending:
+            return 0
+        docks, widths = pending
+        return widths[docks.index(dock)] if dock in docks else 0
+
+    def remember_dock_width(self, dock):
+        """Record a dock's current width as the one to restore when re-shown."""
+        pending = getattr(self, "_pending_dock_widths", None)
+        if not pending or dock is None or dock.width() <= 0:
+            return
+        docks, widths = pending
+        if dock in docks:
+            widths[docks.index(dock)] = dock.width()
+        else:
+            docks.append(dock)
+            widths.append(dock.width())
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        # The first show is the first real layout pass; dock widths set before
+        # it were discarded, so apply them once the window actually has a size.
+        if not getattr(self, "_dock_widths_applied", False):
+            self._dock_widths_applied = True
+            QTimer.singleShot(0, self._apply_dock_widths)
+            # The window manager's maximize arrives some frames after show, and
+            # resizing to it is what knocks the panels out of their configured
+            # widths. Keep re-asserting them until the window has settled, then
+            # hand control back to the user's own separator drags.
+            QTimer.singleShot(_LAYOUT_SETTLE_MS, self._settle_layout)
+
+    def _settle_layout(self):
+        """End the startup window: from here, a dock's live width is the user's."""
+        self._apply_dock_widths()
+        self._layout_settled = True
+
+    def _dock_resized(self, dock):
+        """A dock changed width on its own — treat it as the user's choice."""
+        if not getattr(self, "_layout_settled", False):
+            return
+        if monotonic() - getattr(self, "_window_resized_at", 0.0) < _WINDOW_RESIZE_GRACE:
+            # Fallout from the window resizing, delivered a layout pass or two
+            # later. That width is Qt's arithmetic, not a choice — ignoring it
+            # is what stops a squeezed panel from becoming the new normal.
+            return
+        self.remember_dock_width(dock)
 
     def set_dragging_allowed(self, allowed: bool):
         """Whether panels can be moved/floated/closed with the mouse."""
@@ -511,8 +614,11 @@ class InitiativeTracker(QMainWindow, Application):
                     continue
                 entry = dict(panels.get(key) or {})
                 entry["visible"] = dock.isVisible()
-                width = dock.width()
-                if entry["visible"] and width > 0:
+                # The tracked width, not the live one: a window too narrow to
+                # honour it squeezes the dock to its minimum, and persisting
+                # that would make the squeeze permanent.
+                width = self._remembered_width(dock) or dock.width()
+                if width > 0:
                     entry["width"] = width
                 panels[key] = entry
             config["panels"] = panels
@@ -567,8 +673,24 @@ class InitiativeTracker(QMainWindow, Application):
         toast(self, "Panel layout reset", "success")
 
     def resizeEvent(self, event):
+        width_changed = (
+            event.oldSize().width() > 0
+            and event.size().width() != event.oldSize().width()
+        )
+        if width_changed:
+            # Stamped before super(), which relays out the docks synchronously
+            # and so delivers their resizes while this is the reason for them.
+            self._window_resized_at = monotonic()
+
         super().resizeEvent(event)
         reposition_toasts(self)
+
+        # A panel is a fixed pixel width the user picked; the table absorbs the
+        # difference when the window changes size. Left to itself Qt hands the
+        # extra width to the docks proportionally, so they drift every session
+        # — the window manager's maximize is itself such a resize.
+        if width_changed:
+            QTimer.singleShot(0, self._apply_dock_widths)
 
     def notify(self, message: str, level: str = "info"):
         """Transient, in-window feedback that also lands in the status bar."""

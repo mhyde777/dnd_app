@@ -35,9 +35,7 @@ if __name__ == "__main__":
 
     from ui.ui import InitiativeTracker
     mainWin = InitiativeTracker()
-    # Only force-maximize on a first run; otherwise honour the restored geometry.
-    if getattr(mainWin, "_layout_restored", False):
-        mainWin.show()
-    else:
-        mainWin.showMaximized()
+    # Restored geometry is kept as the un-maximized size, but the app always
+    # opens maximized.
+    mainWin.showMaximized()
     sys.exit(app.exec_())
