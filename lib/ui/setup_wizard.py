@@ -12,6 +12,7 @@ import os
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QButtonGroup,
+    QCheckBox,
     QDialog,
     QFileDialog,
     QFrame,
@@ -26,6 +27,7 @@ from PyQt5.QtWidgets import (
 )
 
 import app.settings as settings
+from app import srd_content
 
 _DEFAULT_DATA_DIR = os.path.join(os.path.expanduser("~"), ".dnd_tracker_config", "data")
 
@@ -110,6 +112,9 @@ class SetupWizard(QDialog):
 
         self.local_radio.toggled.connect(self._on_mode_changed)
 
+        # --- Included content ---
+        self._build_content_box(root)
+
         # --- Buttons ---
         btn_row = QHBoxLayout()
         btn_row.addStretch()
@@ -121,6 +126,97 @@ class SetupWizard(QDialog):
         root.addLayout(btn_row)
 
         self._prefill()
+
+    def _build_content_box(self, root) -> None:
+        """Offer to install the bundled SRD library into the chosen backend.
+
+        Hidden entirely when this build has no payload -- a source checkout
+        without srd_content/ is a normal state, not a misconfiguration.
+        """
+        self.content_box = None
+        if not srd_content.is_available():
+            return
+
+        counts = srd_content.counts()
+        self.content_box = QGroupBox("Included Content")
+        layout = QVBoxLayout(self.content_box)
+
+        blurb = QLabel(
+            "This app ships with the D&D System Reference Document 5.2.1. "
+            "Installing it gives you a starting library you can edit, add to, "
+            "or delete."
+        )
+        blurb.setWordWrap(True)
+        layout.addWidget(blurb)
+
+        self.install_statblocks = QCheckBox(f"Monsters ({counts.get('statblocks', 0)})")
+        self.install_spells = QCheckBox(f"Spells ({counts.get('spells', 0)})")
+        for box in (self.install_statblocks, self.install_spells):
+            box.setChecked(True)
+            layout.addWidget(box)
+
+        previous = settings.get("srd_installed") or {}
+        if previous:
+            note = QLabel(
+                f"Already installed to {previous.get('destination', 'your library')}. "
+                "Re-running adds anything missing and leaves your edits alone."
+            )
+            note.setWordWrap(True)
+            note.setStyleSheet("color: #888;")
+            layout.addWidget(note)
+            self.install_statblocks.setChecked(False)
+            self.install_spells.setChecked(False)
+
+        licence = QLabel(
+            "SRD 5.2.1 by Wizards of the Coast LLC, used under CC-BY-4.0. "
+            "See LICENSE-SRD.md."
+        )
+        licence.setWordWrap(True)
+        licence.setStyleSheet("color: #888; font-size: 11px;")
+        layout.addWidget(licence)
+
+        root.addWidget(self.content_box)
+
+    def _selected_categories(self) -> list:
+        if self.content_box is None:
+            return []
+        chosen = []
+        if self.install_statblocks.isChecked():
+            chosen.append("statblocks")
+        if self.install_spells.isChecked():
+            chosen.append("spells")
+        return chosen
+
+    def _storage_for(self, mode: str, local_dir: str, api_url: str):
+        """Build the backend the user just configured, for the install step."""
+        try:
+            if mode == "api":
+                from app.storage_api import StorageAPI
+                return StorageAPI(api_url), api_url
+            from app.local_storage import LocalStorage
+            from app.config import get_config_path
+            target = local_dir or get_config_path("data")
+            return LocalStorage(target), target
+        except Exception as exc:
+            QMessageBox.warning(
+                self, "Storage", f"Could not open the storage backend:\n{exc}"
+            )
+            return None, ""
+
+    def _install_content(self, mode: str, local_dir: str, api_url: str) -> None:
+        categories = self._selected_categories()
+        if not categories:
+            return
+        storage, destination = self._storage_for(mode, local_dir, api_url)
+        if storage is None:
+            return
+
+        from ui.content_install_dialog import run_install
+
+        result = run_install(self, storage, categories, destination)
+        if result is not None and result.installed:
+            from app.content_installer import install_marker
+            settings.set("srd_installed", install_marker(result, destination))
 
     # ---- slots ----
 
@@ -156,19 +252,31 @@ class SetupWizard(QDialog):
         self.api_key_edit.setText(api_key)
 
     def _on_save(self) -> None:
+        url = self.api_url_edit.text().strip()
+        local_dir = self.local_dir_edit.text().strip()
+
         if self.api_radio.isChecked():
-            url = self.api_url_edit.text().strip()
             if not url:
                 QMessageBox.warning(self, "Missing URL", "Please enter the API URL.")
                 return
-            settings.save({
+            changes = {
                 "storage_mode": "api",
                 "storage_api_base": url,
                 "storage_api_key": self.api_key_edit.text().strip(),
-            })
+            }
         else:
-            settings.save({
+            changes = {
                 "storage_mode": "local",
-                "local_data_dir": self.local_dir_edit.text().strip(),
-            })
+                "local_data_dir": local_dir,
+            }
+
+        # Merge, never replace. settings.save() writes the dict it is given
+        # wholesale, so passing only these keys wiped panel_layout, the
+        # toolbar, the palette, the active PC group and the bridge settings
+        # every time this dialog was used from File -> Settings.
+        merged = dict(settings.load())
+        merged.update(changes)
+        settings.save(merged)
+
+        self._install_content(changes["storage_mode"], local_dir, url)
         self.accept()
