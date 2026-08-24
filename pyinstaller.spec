@@ -12,6 +12,12 @@ datas = [
 
 # The bundled SRD library, when this tree has one. Absent in a plain source
 # checkout, so the spec has to stay valid without it.
+# Shipped so Help -> Release Notes works offline and describes the running
+# build, not whatever is on the web.
+for _doc in ("CHANGELOG.md", "LICENSE-SRD.md"):
+    if (project_dir / _doc).is_file():
+        datas.append((project_dir / _doc, "."))
+
 _srd_content = project_dir / "srd_content"
 if _srd_content.is_dir():
     # Ship the library and its manifest, not extraction_report.txt -- that is

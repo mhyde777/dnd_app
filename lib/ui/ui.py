@@ -141,10 +141,11 @@ class InitiativeTracker(QMainWindow, Application):
 
         self.show_banner(
             "update-available",
-            f"Version {version} is available — you're on {__version__}.",
+            f"Version {version} is available — you're on {__version__}. "
+            "Nothing installs unless you choose to.",
             level="info",
-            action_label="Open Releases",
-            action=open_releases,
+            action_label="What's New?",
+            action=lambda: self.show_release_notes(version),
         )
 
     def initUI(self):
@@ -1114,6 +1115,11 @@ class InitiativeTracker(QMainWindow, Application):
         self.show_log_action.triggered.connect(self.show_log)
         self.help_menu.addAction(self.show_log_action)
 
+        self.release_notes_action = QAction("Release Notes…", self)
+        self.release_notes_action.setToolTip("What changed in each version")
+        self.release_notes_action.triggered.connect(self.show_release_notes)
+        self.help_menu.addAction(self.release_notes_action)
+
         self.help_menu.addSeparator()
 
         # Carries the CC-BY-4.0 notice for the bundled SRD library, which has
@@ -1121,6 +1127,10 @@ class InitiativeTracker(QMainWindow, Application):
         self.about_action = QAction("About", self)
         self.about_action.triggered.connect(self.show_about)
         self.help_menu.addAction(self.about_action)
+
+    def show_release_notes(self, version=None):
+        from ui.release_notes_dialog import ReleaseNotesDialog
+        ReleaseNotesDialog(self, version=version or None).exec_()
 
     def show_about(self):
         from ui.about_dialog import AboutDialog
