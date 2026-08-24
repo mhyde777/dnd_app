@@ -1069,6 +1069,18 @@ class InitiativeTracker(QMainWindow, Application):
         self.show_log_action.triggered.connect(self.show_log)
         self.help_menu.addAction(self.show_log_action)
 
+        self.help_menu.addSeparator()
+
+        # Carries the CC-BY-4.0 notice for the bundled SRD library, which has
+        # to accompany the material in the distributed app, not just the repo.
+        self.about_action = QAction("About", self)
+        self.about_action.triggered.connect(self.show_about)
+        self.help_menu.addAction(self.about_action)
+
+    def show_about(self):
+        from ui.about_dialog import AboutDialog
+        AboutDialog(self).exec_()
+
     def show_log(self):
         from ui.log_dialog import LogDialog
         LogDialog(self).exec_()
