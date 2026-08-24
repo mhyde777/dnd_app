@@ -1,0 +1,119 @@
+{
+  "name": "Ancient Blue Dragon",
+  "size": "Gargantuan",
+  "type": "Dragon (Chromatic)",
+  "alignment": "Lawful Evil",
+  "armor_class": [
+    {
+      "value": 22,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 481,
+    "dice": "26d20 + 208"
+  },
+  "speed": {
+    "walk": 40,
+    "fly": 80,
+    "swim": null,
+    "climb": null,
+    "burrow": 40
+  },
+  "initiative_bonus": 14,
+  "ability_scores": {
+    "str": 29,
+    "dex": 10,
+    "con": 27,
+    "int": 18,
+    "wis": 17,
+    "cha": 25
+  },
+  "saving_throws": {
+    "dex": 7,
+    "wis": 10
+  },
+  "skills": {
+    "perception": 17,
+    "stealth": 7
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Lightning"
+  ],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 60,
+    "darkvision": 120,
+    "passive_perception": 27
+  },
+  "languages": [
+    "Common",
+    "Draconic"
+  ],
+  "challenge_rating": "23",
+  "xp": 50000,
+  "proficiency_bonus": 7,
+  "special_traits": [
+    {
+      "name": "Legendary Resistance (4/Day, or 5/Day in Lair)",
+      "description": "If the dragon fails a saving throw, it can choose to succeed instead."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The dragon makes three Rend attacks. It can replace one attack with a use of Spellcasting to cast Shatter (level 3 version)."
+    },
+    {
+      "name": "Rend",
+      "description": "Melee Attack Roll: +16, reach 15 ft. Hit: 18 (2d8 + 9) Slashing damage plus 11 (2d10) Lightning damage."
+    },
+    {
+      "name": "Lightning Breath (Recharge 5-6)",
+      "description": "Dexterity Saving Throw: DC 23, each creature in a 120-foot-long, 10-foot-wide Line. Failure: 88 (16d10) Lightning damage. Success: Half damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": [
+    {
+      "name": "Cloaked Flight",
+      "cost": 1,
+      "description": "The dragon uses Spellcasting to cast Invisibility on itself, and it can fly up to half its Fly Speed. The dragon can't take this action again until the start of its next turn."
+    },
+    {
+      "name": "Sonic Boom",
+      "cost": 1,
+      "description": "The dragon uses Spellcasting to cast Shatter (level 3 version). The dragon can't take this action again until the start of its next turn."
+    },
+    {
+      "name": "Tail Swipe",
+      "cost": 1,
+      "description": "The dragon makes one Rend attack."
+    }
+  ],
+  "legendary_action_count": 3,
+  "lair_actions": null,
+  "spellcasting": {
+    "ability": "Charisma",
+    "save_dc": 22,
+    "attack_bonus": null,
+    "cantrip_damage_bonus": null,
+    "slots": {},
+    "spells_by_level": {},
+    "innate": {
+      "at_will": [
+        "detect magic",
+        "invisibility",
+        "mage hand",
+        "shatter (level 3 version)"
+      ],
+      "1_per_day": [
+        "scrying",
+        "sending"
+      ]
+    }
+  }
+}

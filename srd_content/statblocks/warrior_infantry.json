@@ -1,0 +1,65 @@
+{
+  "name": "Warrior Infantry",
+  "size": "Medium or small",
+  "type": "Humanoid",
+  "alignment": "Neutral",
+  "armor_class": [
+    {
+      "value": 13,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 9,
+    "dice": "2d8"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 0,
+  "ability_scores": {
+    "str": 13,
+    "dex": 11,
+    "con": 11,
+    "int": 8,
+    "wis": 11,
+    "cha": 8
+  },
+  "saving_throws": {},
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "passive_perception": 10
+  },
+  "languages": [
+    "Common"
+  ],
+  "challenge_rating": "1/8",
+  "xp": 25,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Pack Tactics",
+      "description": "The warrior has Advantage on an attack roll against a creature if at least one of the warrior's allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Spear",
+      "description": "Melee or Ranged Attack Roll: +3, reach 5 ft. or range 20/60 ft. Hit: 4 (1d6 + 1) Piercing damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

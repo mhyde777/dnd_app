@@ -1,0 +1,121 @@
+{
+  "name": "Ancient Copper Dragon",
+  "size": "Gargantuan",
+  "type": "Dragon (Metallic)",
+  "alignment": "Chaotic Good",
+  "armor_class": [
+    {
+      "value": 21,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 367,
+    "dice": "21d20 + 147"
+  },
+  "speed": {
+    "walk": 40,
+    "fly": 80,
+    "swim": null,
+    "climb": 40,
+    "burrow": null
+  },
+  "initiative_bonus": 15,
+  "ability_scores": {
+    "str": 27,
+    "dex": 12,
+    "con": 25,
+    "int": 20,
+    "wis": 17,
+    "cha": 22
+  },
+  "saving_throws": {
+    "dex": 8,
+    "wis": 10
+  },
+  "skills": {
+    "deception": 13,
+    "perception": 17,
+    "stealth": 8
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Acid"
+  ],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 60,
+    "darkvision": 120,
+    "passive_perception": 27
+  },
+  "languages": [
+    "Common",
+    "Draconic"
+  ],
+  "challenge_rating": "21",
+  "xp": 33000,
+  "proficiency_bonus": 7,
+  "special_traits": [
+    {
+      "name": "Legendary Resistance (4/Day, or 5/Day in Lair)",
+      "description": "If the dragon fails a saving throw, it can choose to succeed instead."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The dragon makes three Rend attacks. It can replace one attack with a use of (A) Slowing Breath or (B) Spellcasting to cast Mind Spike (level 5 version)."
+    },
+    {
+      "name": "Rend",
+      "description": "Melee Attack Roll: +15, reach 15 ft. Hit: 19 (2d10 + 8) Slashing damage plus 9 (2d8) Acid damage. Acid Breath (Recharge 5-6). Dexterity Saving Throw: DC 22, each creature in an 90-foot-long, 10-footwide Line. Failure: 63 (14d8) Acid damage. Success: Half damage."
+    },
+    {
+      "name": "Slowing Breath",
+      "description": "Constitution Saving Throw: DC 22, each creature in a 90-foot Cone. Failure: The target can't take Reactions; its Speed is halved; and it can take either an action or a Bonus Action on its turn, not both. This effect lasts until the end of its next turn."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": [
+    {
+      "name": "Giggling Magic",
+      "cost": 1,
+      "description": "Charisma Saving Throw: DC 21, one creature the dragon can see within 120 feet. Failure: 31 (9d6) Psychic damage. Until the end of its next turn, the target rolls 1d8 whenever it makes an ability check or attack roll and subtracts the number rolled from the D20 Test. Failure or Success: The dragon can't take this action again until the start of its next turn."
+    },
+    {
+      "name": "Mind Jolt",
+      "cost": 1,
+      "description": "The dragon uses Spellcasting to cast Mind Spike (level 5 version). The dragon can't take this action again until the start of its next turn."
+    },
+    {
+      "name": "Pounce",
+      "cost": 1,
+      "description": "The dragon moves up to half its Speed, and it makes one Rend attack."
+    }
+  ],
+  "legendary_action_count": 3,
+  "lair_actions": null,
+  "spellcasting": {
+    "ability": "Charisma",
+    "save_dc": 21,
+    "attack_bonus": null,
+    "cantrip_damage_bonus": null,
+    "slots": {},
+    "spells_by_level": {},
+    "innate": {
+      "at_will": [
+        "detect magic",
+        "mind spike (level 5 version)",
+        "minor illusion",
+        "shapechange (beast or humanoid form only, no temporary hit points gained from the spell, and no concentration or temporary hit points required to maintain the spell)"
+      ],
+      "1_per_day": [
+        "greater restoration",
+        "major image",
+        "project image"
+      ]
+    }
+  }
+}

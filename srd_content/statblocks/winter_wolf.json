@@ -1,0 +1,75 @@
+{
+  "name": "Winter Wolf",
+  "size": "Large",
+  "type": "Monstrosity",
+  "alignment": "Neutral Evil",
+  "armor_class": [
+    {
+      "value": 13,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 75,
+    "dice": "10d10 + 20"
+  },
+  "speed": {
+    "walk": 50,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 1,
+  "ability_scores": {
+    "str": 18,
+    "dex": 13,
+    "con": 14,
+    "int": 7,
+    "wis": 12,
+    "cha": 8
+  },
+  "saving_throws": {},
+  "skills": {
+    "perception": 5,
+    "stealth": 5
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Cold"
+  ],
+  "condition_immunities": [],
+  "senses": {
+    "passive_perception": 15
+  },
+  "languages": [
+    "Common",
+    "Giant"
+  ],
+  "challenge_rating": "3",
+  "xp": 700,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Pack Tactics",
+      "description": "The wolf has Advantage on an attack roll against a creature if at least one of the wolf's allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 11 (2d6 + 4) Piercing damage. If the target is a Large or smaller creature, it has the Prone condition."
+    },
+    {
+      "name": "Cold Breath (Recharge 5-6)",
+      "description": "Constitution Saving Throw: DC 12, each creature in a 15-foot Cone. Failure: 18 (4d8) Cold damage. Success: Half damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

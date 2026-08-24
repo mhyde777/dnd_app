@@ -1,0 +1,67 @@
+{
+  "name": "Wolf",
+  "size": "Medium",
+  "type": "Beast",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 12,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 11,
+    "dice": "2d8 + 2"
+  },
+  "speed": {
+    "walk": 40,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 2,
+  "ability_scores": {
+    "str": 14,
+    "dex": 15,
+    "con": 12,
+    "int": 3,
+    "wis": 12,
+    "cha": 6
+  },
+  "saving_throws": {},
+  "skills": {
+    "perception": 5,
+    "stealth": 4
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 15
+  },
+  "languages": [],
+  "challenge_rating": "1/4",
+  "xp": 50,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Pack Tactics",
+      "description": "The wolf has Advantage on attack rolls against a creature if at least one of the wolf's allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 5 (1d6 + 2) Piercing damage. If the target is a Medium or smaller creature, it has the Prone condition."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

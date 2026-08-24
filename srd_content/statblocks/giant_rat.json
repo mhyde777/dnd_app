@@ -1,0 +1,68 @@
+{
+  "name": "Giant Rat",
+  "size": "Small",
+  "type": "Beast",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 13,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 7,
+    "dice": "2d6"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": null,
+    "climb": 30,
+    "burrow": null
+  },
+  "initiative_bonus": 3,
+  "ability_scores": {
+    "str": 7,
+    "dex": 16,
+    "con": 11,
+    "int": 2,
+    "wis": 10,
+    "cha": 4
+  },
+  "saving_throws": {
+    "dex": 5
+  },
+  "skills": {
+    "perception": 2
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 12
+  },
+  "languages": [],
+  "challenge_rating": "1/8",
+  "xp": 25,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Pack Tactics",
+      "description": "The rat has Advantage on an attack roll against a creature if at least one of the rat's allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Attack Roll: +5, reach 5 feet. Hit: 5 (1d4 + 3) Piercing damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

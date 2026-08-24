@@ -1,0 +1,73 @@
+{
+  "name": "Scout",
+  "size": "Medium or small",
+  "type": "Humanoid",
+  "alignment": "Neutral",
+  "armor_class": [
+    {
+      "value": 13,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 16,
+    "dice": "3d8 + 3"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 2,
+  "ability_scores": {
+    "str": 11,
+    "dex": 14,
+    "con": 12,
+    "int": 11,
+    "wis": 13,
+    "cha": 11
+  },
+  "saving_throws": {},
+  "skills": {
+    "nature": 4,
+    "perception": 5,
+    "stealth": 6,
+    "survival": 5
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "passive_perception": 15
+  },
+  "languages": [
+    "Common plus one other language"
+  ],
+  "challenge_rating": "1/2",
+  "xp": 100,
+  "proficiency_bonus": 2,
+  "special_traits": [],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The scout makes two attacks, using Shortsword and Longbow in any combination."
+    },
+    {
+      "name": "Shortsword",
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 5 (1d6 + 2) Piercing damage."
+    },
+    {
+      "name": "Longbow",
+      "description": "Ranged Attack Roll: +4, range 150/600 ft. Hit: 6 (1d8 + 2) Piercing damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

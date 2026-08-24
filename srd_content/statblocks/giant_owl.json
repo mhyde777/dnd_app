@@ -1,0 +1,93 @@
+{
+  "name": "Giant Owl",
+  "size": "Large",
+  "type": "Celestial",
+  "alignment": "Neutral",
+  "armor_class": [
+    {
+      "value": 12,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 19,
+    "dice": "3d10 + 3"
+  },
+  "speed": {
+    "walk": 5,
+    "fly": 60,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 2,
+  "ability_scores": {
+    "str": 13,
+    "dex": 15,
+    "con": 12,
+    "int": 10,
+    "wis": 14,
+    "cha": 10
+  },
+  "saving_throws": {
+    "wis": 4
+  },
+  "skills": {
+    "perception": 6,
+    "stealth": 6
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [
+    "Necrotic",
+    "Radiant"
+  ],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 120,
+    "passive_perception": 16
+  },
+  "languages": [
+    "Celestial",
+    "understands Common",
+    "Elvish",
+    "and Sylvan but can't speak them"
+  ],
+  "challenge_rating": "1/4",
+  "xp": 50,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Flyby",
+      "description": "The owl doesn't provoke an Opportunity Attack when it flies out of an enemy's reach."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Talons",
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 7 (1d10 + 2) Slashing damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": {
+    "ability": "Wisdom",
+    "save_dc": null,
+    "attack_bonus": null,
+    "cantrip_damage_bonus": null,
+    "slots": {},
+    "spells_by_level": {},
+    "innate": {
+      "at_will": [
+        "detect evil and good",
+        "detect magic"
+      ],
+      "1_per_day": [
+        "clairvoyance"
+      ]
+    }
+  }
+}

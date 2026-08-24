@@ -1,0 +1,127 @@
+{
+  "name": "Ancient Bronze Dragon",
+  "size": "Gargantuan",
+  "type": "Dragon (Metallic)",
+  "alignment": "Lawful Good",
+  "armor_class": [
+    {
+      "value": 22,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 444,
+    "dice": "24d20 + 192"
+  },
+  "speed": {
+    "walk": 40,
+    "fly": 80,
+    "swim": 40,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 14,
+  "ability_scores": {
+    "str": 29,
+    "dex": 10,
+    "con": 27,
+    "int": 18,
+    "wis": 17,
+    "cha": 25
+  },
+  "saving_throws": {
+    "dex": 7,
+    "wis": 10
+  },
+  "skills": {
+    "insight": 10,
+    "perception": 17,
+    "stealth": 7
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Lightning"
+  ],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 60,
+    "darkvision": 120,
+    "passive_perception": 27
+  },
+  "languages": [
+    "Common",
+    "Draconic"
+  ],
+  "challenge_rating": "22",
+  "xp": 41000,
+  "proficiency_bonus": 7,
+  "special_traits": [
+    {
+      "name": "Amphibious",
+      "description": "The dragon can breathe air and water."
+    },
+    {
+      "name": "Legendary Resistance (4/Day, or 5/Day in Lair)",
+      "description": "If the dragon fails a saving throw, it can choose to succeed instead."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The dragon makes three Rend attacks. It can replace one attack with a use of (A) Repulsion Breath or (B) Spellcasting to cast Guiding Bolt (level 2 version)."
+    },
+    {
+      "name": "Rend",
+      "description": "Melee Attack Roll: +16, reach 15 ft. Hit: 18 (2d8 + 9) Slashing damage plus 9 (2d8) Lightning damage. Lightning Breath (Recharge 5-6). Dexterity Saving Throw: DC 23, each creature in a 120-foot-long, 10-foot-wide Line. Failure: 82 (15d10) Lightning damage. Success: Half damage."
+    },
+    {
+      "name": "Repulsion Breath",
+      "description": "Strength Saving Throw: DC 23, each creature in a 30-foot Cone. Failure: The target is pushed up to 60 feet straight away from the dragon and has the Prone condition."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": [
+    {
+      "name": "Guiding Light",
+      "cost": 1,
+      "description": "The dragon uses Spellcasting to cast Guiding Bolt (level 2 version)."
+    },
+    {
+      "name": "Pounce",
+      "cost": 1,
+      "description": "The dragon moves up to half its Speed, and it makes one Rend attack."
+    },
+    {
+      "name": "Thunderclap",
+      "cost": 1,
+      "description": "Constitution Saving Throw: DC 22, each creature in a 20-foot-radius Sphere centered on a point the dragon can see within 120 feet. Failure: 13 (3d8) Thunder damage, and the target has the Deafened condition until the end of its next turn."
+    }
+  ],
+  "legendary_action_count": 3,
+  "lair_actions": null,
+  "spellcasting": {
+    "ability": "Charisma",
+    "save_dc": 22,
+    "attack_bonus": 14,
+    "cantrip_damage_bonus": null,
+    "slots": {},
+    "spells_by_level": {},
+    "innate": {
+      "at_will": [
+        "detect magic",
+        "guiding bolt (level 2 version)",
+        "shapechange (beast or humanoid form only, no temporary hit points gained from the spell, and no concentration or temporary hit points required to maintain the spell)",
+        "speak with animals",
+        "thaumaturgy"
+      ],
+      "1_per_day": [
+        "detect thoughts",
+        "control water",
+        "scrying",
+        "water breathing"
+      ]
+    }
+  }
+}

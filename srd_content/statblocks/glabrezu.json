@@ -1,0 +1,114 @@
+{
+  "name": "Glabrezu",
+  "size": "Large",
+  "type": "Fiend (Demon)",
+  "alignment": "Chaotic Evil",
+  "armor_class": [
+    {
+      "value": 17,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 189,
+    "dice": "18d10 + 90"
+  },
+  "speed": {
+    "walk": 40,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 6,
+  "ability_scores": {
+    "str": 20,
+    "dex": 15,
+    "con": 21,
+    "int": 19,
+    "wis": 17,
+    "cha": 16
+  },
+  "saving_throws": {
+    "str": 9,
+    "con": 9,
+    "wis": 7,
+    "cha": 7
+  },
+  "skills": {
+    "deception": 7,
+    "perception": 7
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [
+    "Cold",
+    "Fire",
+    "Lightning"
+  ],
+  "damage_immunities": [
+    "Poison"
+  ],
+  "condition_immunities": [
+    "Poisoned"
+  ],
+  "senses": {
+    "truesight": 120,
+    "passive_perception": 17
+  },
+  "languages": [
+    "Abyssal",
+    "telepathy 120 ft."
+  ],
+  "challenge_rating": "9",
+  "xp": 5000,
+  "proficiency_bonus": 4,
+  "special_traits": [
+    {
+      "name": "Demonic Restoration",
+      "description": "If the glabrezu dies outside the Abyss, its body dissolves into ichor, and it gains a new body instantly, reviving with all its Hit Points somewhere in the Abyss."
+    },
+    {
+      "name": "Magic Resistance",
+      "description": "The glabrezu has Advantage on saving throws against spells and other magical effects."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The glabrezu makes two Pincer attacks and uses Pummel or Spellcasting."
+    },
+    {
+      "name": "Pincer",
+      "description": "Melee Attack Roll: +9, reach 10 ft. Hit: 16 (2d10 + 5) Slashing damage. If the target is a Medium or smaller creature, it has the Grappled condition (escape DC 15) from one of two pincers."
+    },
+    {
+      "name": "Pummel",
+      "description": "Dexterity Saving Throw: DC 17, one creature Grappled by the glabrezu. Failure: 15 (3d6 + 5) Bludgeoning damage. Success: Half damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": {
+    "ability": "Intelligence",
+    "save_dc": 16,
+    "attack_bonus": null,
+    "cantrip_damage_bonus": null,
+    "slots": {},
+    "spells_by_level": {},
+    "innate": {
+      "at_will": [
+        "darkness",
+        "detect magic",
+        "dispel magic"
+      ],
+      "1_per_day": [
+        "confusion",
+        "fly",
+        "power word stun"
+      ]
+    }
+  }
+}

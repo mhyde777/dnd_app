@@ -1,0 +1,74 @@
+{
+  "name": "Dretch",
+  "size": "Small",
+  "type": "Fiend (Demon)",
+  "alignment": "Chaotic Evil",
+  "armor_class": [
+    {
+      "value": 11,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 18,
+    "dice": "4d6 + 4"
+  },
+  "speed": {
+    "walk": 20,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 0,
+  "ability_scores": {
+    "str": 12,
+    "dex": 11,
+    "con": 12,
+    "int": 5,
+    "wis": 8,
+    "cha": 3
+  },
+  "saving_throws": {},
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [
+    "Cold",
+    "Fire",
+    "Lightning"
+  ],
+  "damage_immunities": [
+    "Poison"
+  ],
+  "condition_immunities": [
+    "Poisoned"
+  ],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 9
+  },
+  "languages": [
+    "Abyssal",
+    "telepathy 60 ft. (works only with creatures that understand Abyssal)"
+  ],
+  "challenge_rating": "1/4",
+  "xp": 50,
+  "proficiency_bonus": 2,
+  "special_traits": [],
+  "actions": [
+    {
+      "name": "Rend",
+      "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 4 (1d6 + 1) Slashing damage."
+    },
+    {
+      "name": "Fetid Cloud (1/Day)",
+      "description": "Constitution Saving Throw: DC 11, each creature in a 10-foot Emanation originating from the dretch. Failure: The target has the Poisoned condition until the end of its next turn. While Poisoned, the creature can take either an action or a Bonus Action on its turn, not both, and it can't take Reactions."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

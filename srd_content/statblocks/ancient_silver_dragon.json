@@ -1,0 +1,122 @@
+{
+  "name": "Ancient Silver Dragon",
+  "size": "Gargantuan",
+  "type": "Dragon (Metallic)",
+  "alignment": "Lawful Good",
+  "armor_class": [
+    {
+      "value": 22,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 468,
+    "dice": "24d20 + 216"
+  },
+  "speed": {
+    "walk": 40,
+    "fly": 80,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 14,
+  "ability_scores": {
+    "str": 30,
+    "dex": 10,
+    "con": 29,
+    "int": 18,
+    "wis": 15,
+    "cha": 26
+  },
+  "saving_throws": {
+    "dex": 7,
+    "wis": 9
+  },
+  "skills": {
+    "history": 11,
+    "perception": 16,
+    "stealth": 7
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Cold"
+  ],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 60,
+    "darkvision": 120,
+    "passive_perception": 26
+  },
+  "languages": [
+    "Common",
+    "Draconic"
+  ],
+  "challenge_rating": "23",
+  "xp": 50000,
+  "proficiency_bonus": 7,
+  "special_traits": [
+    {
+      "name": "Legendary Resistance (4/Day, or 5/Day in Lair)",
+      "description": "If the dragon fails a saving throw, it can choose to succeed instead."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The dragon makes three Rend attacks. It can replace one attack with a use of (A) Paralyzing Breath or (B) Spellcasting to cast Ice Knife (level 2 version)."
+    },
+    {
+      "name": "Rend",
+      "description": "Melee Attack Roll: +17, reach 15 ft. Hit: 19 (2d8 + 10) Slashing damage plus 9 (2d8) Cold damage. Cold Breath (Recharge 5-6). Constitution Saving Throw: DC 24, each creature in a 90-foot Cone. Failure: 67 (15d8) Cold damage. Success: Half damage."
+    },
+    {
+      "name": "Paralyzing Breath",
+      "description": "Constitution Saving Throw: DC 24, each creature in a 90-foot Cone. First Failure: The target has the Incapacitated condition until the end of its next turn, when it repeats the save. Second Failure: The target has the Paralyzed condition, and it repeats the save at the end of each of its turns, ending the effect on itself on a success. After 1 minute, it succeeds automatically."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": [
+    {
+      "name": "Chill",
+      "cost": 1,
+      "description": "The dragon uses Spellcasting to cast Hold Monster. The dragon can't take this action again until the start of its next turn."
+    },
+    {
+      "name": "Cold Gale",
+      "cost": 1,
+      "description": "Dexterity Saving Throw: DC 23, each creature in a 60-foot-long, 10-foot-wide Line. Failure: 14 (4d6) Cold damage, and the target is pushed up to 30 feet straight away from the dragon. Success: Half damage only. Failure or Success: The dragon can't take this action again until the start of its next turn."
+    },
+    {
+      "name": "Pounce",
+      "cost": 1,
+      "description": "The dragon moves up to half its Speed, and it makes one Rend attack."
+    }
+  ],
+  "legendary_action_count": 3,
+  "lair_actions": null,
+  "spellcasting": {
+    "ability": "Charisma",
+    "save_dc": 23,
+    "attack_bonus": 15,
+    "cantrip_damage_bonus": null,
+    "slots": {},
+    "spells_by_level": {},
+    "innate": {
+      "at_will": [
+        "detect magic",
+        "hold monster",
+        "ice knife (level 2 version)",
+        "shapechange (beast or humanoid form only, no temporary hit points gained from the spell, and no concentration or temporary hit points required to maintain the spell)"
+      ],
+      "1_per_day": [
+        "control weather",
+        "ice storm (level 7 version)",
+        "teleport",
+        "zone of truth"
+      ]
+    }
+  }
+}

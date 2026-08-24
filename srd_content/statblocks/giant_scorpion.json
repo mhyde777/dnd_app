@@ -1,0 +1,67 @@
+{
+  "name": "Giant Scorpion",
+  "size": "Large",
+  "type": "Beast",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 15,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 52,
+    "dice": "7d10 + 14"
+  },
+  "speed": {
+    "walk": 40,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 1,
+  "ability_scores": {
+    "str": 16,
+    "dex": 13,
+    "con": 15,
+    "int": 1,
+    "wis": 9,
+    "cha": 3
+  },
+  "saving_throws": {},
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 60,
+    "passive_perception": 9
+  },
+  "languages": [],
+  "challenge_rating": "3",
+  "xp": 700,
+  "proficiency_bonus": 2,
+  "special_traits": [],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The scorpion makes two Claw attacks and one Sting attack."
+    },
+    {
+      "name": "Claw",
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 6 (1d6 + 3) Bludgeoning damage. If the target is a Large or smaller creature, it has the Grappled condition (escape DC 13) from one of two claws."
+    },
+    {
+      "name": "Sting",
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 7 (1d8 + 3) Piercing damage plus 11 (2d10) Poison damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

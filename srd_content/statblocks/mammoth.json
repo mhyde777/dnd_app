@@ -1,0 +1,70 @@
+{
+  "name": "Mammoth",
+  "size": "Huge",
+  "type": "Beast",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 13,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 126,
+    "dice": "11d12 + 55"
+  },
+  "speed": {
+    "walk": 50,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 2,
+  "ability_scores": {
+    "str": 24,
+    "dex": 9,
+    "con": 21,
+    "int": 3,
+    "wis": 11,
+    "cha": 6
+  },
+  "saving_throws": {
+    "str": 10,
+    "con": 8
+  },
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "passive_perception": 10
+  },
+  "languages": [],
+  "challenge_rating": "6",
+  "xp": 2300,
+  "proficiency_bonus": 3,
+  "special_traits": [],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The mammoth makes two Gore attacks."
+    },
+    {
+      "name": "Gore",
+      "description": "Melee Attack Roll: +10, reach 10 ft. Hit: 18 (2d10 + 7) Piercing damage. If the target is a Huge or smaller creature and the mammoth moved 20+ feet straight toward it immediately before the hit, the target has the Prone condition."
+    }
+  ],
+  "bonus_actions": [
+    {
+      "name": "Trample",
+      "description": "Dexterity Saving Throw: DC 18, one creature within 5 feet that has the Prone condition. Failure: 29 (4d10 + 7) Bludgeoning damage. Success: Half damage."
+    }
+  ],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

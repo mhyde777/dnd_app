@@ -1,0 +1,59 @@
+{
+  "name": "Bat",
+  "size": "Tiny",
+  "type": "Beast",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 12,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 1,
+    "dice": "1d4 - 1"
+  },
+  "speed": {
+    "walk": 5,
+    "fly": 30,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 2,
+  "ability_scores": {
+    "str": 2,
+    "dex": 15,
+    "con": 8,
+    "int": 2,
+    "wis": 12,
+    "cha": 4
+  },
+  "saving_throws": {},
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 60,
+    "passive_perception": 11
+  },
+  "languages": [],
+  "challenge_rating": "0",
+  "xp": 10,
+  "proficiency_bonus": 2,
+  "special_traits": [],
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 1 Piercing damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

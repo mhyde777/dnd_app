@@ -1,0 +1,97 @@
+{
+  "name": "Iron Golem",
+  "size": "Large",
+  "type": "Construct",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 20,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 252,
+    "dice": "24d10 + 120"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 9,
+  "ability_scores": {
+    "str": 24,
+    "dex": 9,
+    "con": 20,
+    "int": 3,
+    "wis": 11,
+    "cha": 1
+  },
+  "saving_throws": {},
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Fire",
+    "Poison",
+    "Psychic"
+  ],
+  "condition_immunities": [
+    "Charmed",
+    "Exhaustion",
+    "Frightened",
+    "Paralyzed",
+    "Petrified",
+    "Poisoned"
+  ],
+  "senses": {
+    "darkvision": 120,
+    "passive_perception": 10
+  },
+  "languages": [
+    "Understands Common plus two other languages but can't speak"
+  ],
+  "challenge_rating": "16",
+  "xp": 15000,
+  "proficiency_bonus": 5,
+  "special_traits": [
+    {
+      "name": "Fire Absorption",
+      "description": "Whenever the golem is subjected to Fire damage, it regains a number of Hit Points equal to the Fire damage dealt."
+    },
+    {
+      "name": "Immutable Form",
+      "description": "The golem can't shape-shift."
+    },
+    {
+      "name": "Magic Resistance",
+      "description": "The golem has Advantage on saving throws against spells and other magical effects."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The golem makes two attacks, using Bladed Arm or Fiery Bolt in any combination."
+    },
+    {
+      "name": "Bladed Arm",
+      "description": "Melee Attack Roll: +12, reach 10 ft. Hit: 20 (3d8 + 7) Slashing damage plus 10 (3d6) Fire damage."
+    },
+    {
+      "name": "Fiery Bolt",
+      "description": "Ranged Attack Roll: +10, range 120 ft. Hit: 36 (8d8) Fire damage."
+    },
+    {
+      "name": "Poison Breath (Recharge 6)",
+      "description": "Constitution Saving Throw: DC 18, each creature in a 60-foot Cone. Failure: 55 (10d10) Poison damage. Success: Half damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

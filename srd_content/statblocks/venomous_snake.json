@@ -1,0 +1,59 @@
+{
+  "name": "Venomous Snake",
+  "size": "Tiny",
+  "type": "Beast",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 12,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 5,
+    "dice": "2d4"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": 30,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 2,
+  "ability_scores": {
+    "str": 2,
+    "dex": 15,
+    "con": 11,
+    "int": 1,
+    "wis": 10,
+    "cha": 3
+  },
+  "saving_throws": {},
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 10,
+    "passive_perception": 10
+  },
+  "languages": [],
+  "challenge_rating": "1/8",
+  "xp": 25,
+  "proficiency_bonus": 2,
+  "special_traits": [],
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 4 (1d4 + 2) Piercing damage plus 3 (1d6) Poison damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

@@ -1,0 +1,88 @@
+{
+  "name": "Wight",
+  "size": "Medium",
+  "type": "Undead",
+  "alignment": "Neutral Evil",
+  "armor_class": [
+    {
+      "value": 14,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 82,
+    "dice": "11d8 + 33"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 4,
+  "ability_scores": {
+    "str": 15,
+    "dex": 14,
+    "con": 16,
+    "int": 10,
+    "wis": 13,
+    "cha": 15
+  },
+  "saving_throws": {},
+  "skills": {
+    "perception": 3,
+    "stealth": 4
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [
+    "Necrotic"
+  ],
+  "damage_immunities": [
+    "Poison"
+  ],
+  "condition_immunities": [
+    "Exhaustion",
+    "Poisoned"
+  ],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 13
+  },
+  "languages": [
+    "Common plus one other language"
+  ],
+  "challenge_rating": "3",
+  "xp": 700,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Sunlight Sensitivity",
+      "description": "While in sunlight, the wight has Disadvantage on ability checks and attack rolls."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The wight makes two attacks, using Necrotic Sword or Necrotic Bow in any combination. It can replace one attack with a use of Life Drain."
+    },
+    {
+      "name": "Necrotic Sword",
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 6 (1d8 + 2) Slashing damage plus 4 (1d8) Necrotic damage."
+    },
+    {
+      "name": "Necrotic Bow",
+      "description": "Ranged Attack Roll: +4, range 150/600 ft. Hit: 6 (1d8 + 2) Piercing damage plus 4 (1d8) Necrotic damage."
+    },
+    {
+      "name": "Life Drain",
+      "description": "Constitution Saving Throw: DC 13, one creature within 5 feet. Failure: 6 (1d8 + 2) Necrotic damage, and the target's Hit Point maximum decreases by an amount equal to the damage taken. A Humanoid slain by this attack rises 24 hours later as a Zombie under the wight's control, unless the Humanoid is restored to life or its body is destroyed. The wight can have no more than twelve zombies under its control at a time."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

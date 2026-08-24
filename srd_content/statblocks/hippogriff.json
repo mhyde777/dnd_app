@@ -1,0 +1,69 @@
+{
+  "name": "Hippogriff",
+  "size": "Large",
+  "type": "Monstrosity",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 11,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 26,
+    "dice": "4d10 + 4"
+  },
+  "speed": {
+    "walk": 40,
+    "fly": 60,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 1,
+  "ability_scores": {
+    "str": 17,
+    "dex": 13,
+    "con": 13,
+    "int": 2,
+    "wis": 12,
+    "cha": 8
+  },
+  "saving_throws": {},
+  "skills": {
+    "perception": 5
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "passive_perception": 15
+  },
+  "languages": [],
+  "challenge_rating": "1",
+  "xp": 200,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Flyby",
+      "description": "The hippogriff doesn't provoke an Opportunity Attack when it flies out of an enemy's reach."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The hippogriff makes two Rend attacks."
+    },
+    {
+      "name": "Rend",
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 7 (1d8 + 3) Slashing damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

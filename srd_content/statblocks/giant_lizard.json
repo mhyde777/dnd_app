@@ -1,0 +1,66 @@
+{
+  "name": "Giant Lizard",
+  "size": "Large",
+  "type": "Beast",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 12,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 19,
+    "dice": "3d10 + 3"
+  },
+  "speed": {
+    "walk": 40,
+    "fly": null,
+    "swim": null,
+    "climb": 40,
+    "burrow": null
+  },
+  "initiative_bonus": 1,
+  "ability_scores": {
+    "str": 15,
+    "dex": 12,
+    "con": 13,
+    "int": 2,
+    "wis": 10,
+    "cha": 5
+  },
+  "saving_throws": {
+    "dex": 3
+  },
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 10
+  },
+  "languages": [],
+  "challenge_rating": "1/4",
+  "xp": 50,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Spider Climb",
+      "description": "The lizard can climb difficult surfaces, including along ceilings, without needing to make an ability check."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 6 (1d8 + 2) Piercing damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

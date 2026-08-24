@@ -1,0 +1,75 @@
+{
+  "name": "Giant Frog",
+  "size": "Medium",
+  "type": "Beast",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 11,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 18,
+    "dice": "4d8"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": 30,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 1,
+  "ability_scores": {
+    "str": 12,
+    "dex": 13,
+    "con": 11,
+    "int": 2,
+    "wis": 10,
+    "cha": 3
+  },
+  "saving_throws": {},
+  "skills": {
+    "perception": 2,
+    "stealth": 4
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 30,
+    "passive_perception": 12
+  },
+  "languages": [],
+  "challenge_rating": "1/4",
+  "xp": 50,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Amphibious",
+      "description": "The frog can breathe air and water."
+    },
+    {
+      "name": "Standing Leap",
+      "description": "The frog's Long Jump is up to 20 feet and its High Jump is up to 10 feet with or without a running start."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 5 (1d6 + 2) Piercing damage. If the target is a Medium or smaller creature, it has the Grappled condition (escape DC 11)."
+    },
+    {
+      "name": "Swallow",
+      "description": "The frog swallows a Small or smaller target it is grappling. While swallowed, the target isn't Grappled but has the Blinded and Restrained conditions, and it has Total Cover against attacks and other effects outside the frog. While swallowing the target, the frog can't use Bite, and if the frog dies, the swallowed target is no longer Restrained and can escape from the corpse using 5 feet of movement, exiting with the Prone condition. At the end of the frog's next turn, the swallowed target takes 5 (2d4) Acid damage. If that damage doesn't kill it, the frog disgorges it, causing it to exit Prone."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

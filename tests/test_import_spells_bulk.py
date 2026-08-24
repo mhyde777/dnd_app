@@ -2,7 +2,7 @@ from pathlib import Path
 from types import SimpleNamespace
 import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 from import_spells_bulk import _canonical_spell_key, _prepare_api_replacements
 

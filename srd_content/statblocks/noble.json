@@ -1,0 +1,69 @@
+{
+  "name": "Noble",
+  "size": "Medium or small",
+  "type": "Humanoid",
+  "alignment": "Neutral",
+  "armor_class": [
+    {
+      "value": 15,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 9,
+    "dice": "2d8"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 1,
+  "ability_scores": {
+    "str": 11,
+    "dex": 12,
+    "con": 11,
+    "int": 12,
+    "wis": 14,
+    "cha": 16
+  },
+  "saving_throws": {},
+  "skills": {
+    "deception": 5,
+    "insight": 4,
+    "persuasion": 5
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "passive_perception": 12
+  },
+  "languages": [
+    "Common plus two other languages"
+  ],
+  "challenge_rating": "1/8",
+  "xp": 25,
+  "proficiency_bonus": 2,
+  "special_traits": [],
+  "actions": [
+    {
+      "name": "Rapier",
+      "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 5 (1d8 + 1) Piercing damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [
+    {
+      "name": "Parry",
+      "description": "Trigger: The noble is hit by a melee attack roll while holding a weapon. Response: The noble adds 2 to its AC against that attack, possibly causing it to miss."
+    }
+  ],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

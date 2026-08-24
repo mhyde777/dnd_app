@@ -1,0 +1,101 @@
+{
+  "name": "Green Hag",
+  "size": "Medium",
+  "type": "Fey",
+  "alignment": "Neutral Evil",
+  "armor_class": [
+    {
+      "value": 17,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 82,
+    "dice": "11d8 + 33"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": 30,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 1,
+  "ability_scores": {
+    "str": 18,
+    "dex": 12,
+    "con": 16,
+    "int": 13,
+    "wis": 14,
+    "cha": 14
+  },
+  "saving_throws": {},
+  "skills": {
+    "arcana": 5,
+    "deception": 4,
+    "perception": 4,
+    "stealth": 3
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 14
+  },
+  "languages": [
+    "Common",
+    "Elvish",
+    "Sylvan"
+  ],
+  "challenge_rating": "3",
+  "xp": 700,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Amphibious",
+      "description": "The hag can breathe air and water."
+    },
+    {
+      "name": "Coven Magic",
+      "description": "While within 30 feet of at least two hag allies, the hag can cast one of the following spells, requiring no Material components, using the spell's normal casting time, and using Intelligence as the spellcasting ability (spell save DC 11): Augury, Find Familiar, Identify, Locate Object, Scrying, or Unseen Servant. The hag must finish a Long Rest before using this trait to cast that spell again."
+    },
+    {
+      "name": "Mimicry",
+      "description": "The hag can mimic animal sounds and humanoid voices. A creature that hears the sounds can tell they are imitations only with a successful DC 14 Wisdom (Insight) check."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The hag makes two Claw attacks."
+    },
+    {
+      "name": "Claw",
+      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 8 (1d8 + 4) Slashing damage plus 3 (1d6) Poison damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": {
+    "ability": "Wisdom",
+    "save_dc": 12,
+    "attack_bonus": 4,
+    "cantrip_damage_bonus": null,
+    "slots": {},
+    "spells_by_level": {},
+    "innate": {
+      "at_will": [
+        "dancing lights",
+        "disguise self (24-hour duration)",
+        "invisibility (self only, and the hag leaves no tracks while invisible)",
+        "minor illusion",
+        "ray of sickness (level 3 version)"
+      ]
+    }
+  }
+}

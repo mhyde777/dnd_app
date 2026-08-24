@@ -1,0 +1,93 @@
+{
+  "name": "Stone Golem",
+  "size": "Large",
+  "type": "Construct",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 18,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 220,
+    "dice": "21d10 + 105"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 3,
+  "ability_scores": {
+    "str": 22,
+    "dex": 9,
+    "con": 20,
+    "int": 3,
+    "wis": 11,
+    "cha": 1
+  },
+  "saving_throws": {},
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Poison",
+    "Psychic"
+  ],
+  "condition_immunities": [
+    "Charmed",
+    "Exhaustion",
+    "Frightened",
+    "Paralyzed",
+    "Petrified",
+    "Poisoned"
+  ],
+  "senses": {
+    "darkvision": 120,
+    "passive_perception": 10
+  },
+  "languages": [
+    "Understands Common plus two other languages but can't speak"
+  ],
+  "challenge_rating": "10",
+  "xp": 5900,
+  "proficiency_bonus": 4,
+  "special_traits": [
+    {
+      "name": "Immutable Form",
+      "description": "The golem can't shape-shift."
+    },
+    {
+      "name": "Magic Resistance",
+      "description": "The golem has Advantage on saving throws against spells and other magical effects."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The golem makes two attacks, using Slam or Force Bolt in any combination."
+    },
+    {
+      "name": "Slam",
+      "description": "Melee Attack Roll: +10, reach 5 ft. Hit: 15 (2d8 + 6) Bludgeoning damage plus 9 (2d8) Force damage."
+    },
+    {
+      "name": "Force Bolt",
+      "description": "Ranged Attack Roll: +9, range 120 ft. Hit: 22 (4d10) Force damage."
+    }
+  ],
+  "bonus_actions": [
+    {
+      "name": "Slow (Recharge 5-6)",
+      "description": "The golem casts the Slow spell, requiring no spell components and using Constitution as the spellcasting ability (spell save DC 17)."
+    }
+  ],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

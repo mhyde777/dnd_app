@@ -1,0 +1,82 @@
+{
+  "name": "Frost Giant",
+  "size": "Huge",
+  "type": "Giant",
+  "alignment": "Neutral Evil",
+  "armor_class": [
+    {
+      "value": 15,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 149,
+    "dice": "13d12 + 65"
+  },
+  "speed": {
+    "walk": 40,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 2,
+  "ability_scores": {
+    "str": 23,
+    "dex": 9,
+    "con": 21,
+    "int": 9,
+    "wis": 10,
+    "cha": 12
+  },
+  "saving_throws": {
+    "con": 8,
+    "wis": 3,
+    "cha": 4
+  },
+  "skills": {
+    "athletics": 9,
+    "perception": 3
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Cold"
+  ],
+  "condition_immunities": [],
+  "senses": {
+    "passive_perception": 13
+  },
+  "languages": [
+    "Giant"
+  ],
+  "challenge_rating": "8",
+  "xp": 3900,
+  "proficiency_bonus": 3,
+  "special_traits": [],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The giant makes two attacks, using Frost Axe or Great Bow in any combination."
+    },
+    {
+      "name": "Frost Axe",
+      "description": "Melee Attack Roll: +9, reach 10 ft. Hit: 19 (2d12 + 6) Slashing damage plus 9 (2d8) Cold damage."
+    },
+    {
+      "name": "Great Bow",
+      "description": "Ranged Attack Roll: +9, range 150/600 ft. Hit: 17 (2d10 + 6) Piercing damage plus 7 (2d6) Cold damage, and the target's Speed decreases by 10 feet until the end of its next turn."
+    }
+  ],
+  "bonus_actions": [
+    {
+      "name": "War Cry (Recharge 5-6)",
+      "description": "The giant or one creature of its choice that can see or hear it gains 16 (2d10 + 5) Temporary Hit Points and has Advantage on attack rolls until the start of the giant's next turn."
+    }
+  ],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

@@ -1,0 +1,74 @@
+{
+  "name": "Homunculus",
+  "size": "Tiny",
+  "type": "Construct",
+  "alignment": "Neutral",
+  "armor_class": [
+    {
+      "value": 13,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 4,
+    "dice": "1d4 + 2"
+  },
+  "speed": {
+    "walk": 20,
+    "fly": 40,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 2,
+  "ability_scores": {
+    "str": 4,
+    "dex": 15,
+    "con": 14,
+    "int": 10,
+    "wis": 10,
+    "cha": 7
+  },
+  "saving_throws": {
+    "wis": 2,
+    "cha": 0
+  },
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Poison"
+  ],
+  "condition_immunities": [
+    "Charmed",
+    "Poisoned"
+  ],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 10
+  },
+  "languages": [
+    "Understands Common plus one other language but can't speak"
+  ],
+  "challenge_rating": "0",
+  "xp": 10,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Telepathic Bond",
+      "description": "While the homunculus is on the same plane of existence as its master, the two of them can communicate telepathically with each other."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 1 Piercing damage, and the target is subjected to the following effect. Constitution Saving Throw: DC 12. Failure: The target has the Poisoned condition until the end of the homunculus's next turn. Failure by 5 or More: The target has the Poisoned condition for 1 minute. While Poisoned, the target has the Unconscious condition, which ends early if the target takes any damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

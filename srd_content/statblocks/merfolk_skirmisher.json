@@ -1,0 +1,66 @@
+{
+  "name": "Merfolk Skirmisher",
+  "size": "Medium",
+  "type": "Elemental",
+  "alignment": "Neutral",
+  "armor_class": [
+    {
+      "value": 11,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 11,
+    "dice": "2d8 + 2"
+  },
+  "speed": {
+    "walk": 10,
+    "fly": null,
+    "swim": 40,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 1,
+  "ability_scores": {
+    "str": 10,
+    "dex": 13,
+    "con": 12,
+    "int": 11,
+    "wis": 14,
+    "cha": 12
+  },
+  "saving_throws": {},
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "passive_perception": 12
+  },
+  "languages": [
+    "Common",
+    "Primordial (Aquan)"
+  ],
+  "challenge_rating": "1/8",
+  "xp": 25,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Amphibious",
+      "description": "The merfolk can breathe air and water."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Ocean Spear",
+      "description": "Melee or Ranged Attack Roll: +2, reach 5 ft. or range 20/60 ft. Hit: 3 (1d6) Piercing damage plus 2 (1d4) Cold damage. If the target is a creature, its Speed decreases by 10 feet until the end of its next turn. Hit or Miss: The spear magically returns to the merfolk's hand immediately after a ranged attack."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

@@ -1,0 +1,123 @@
+{
+  "name": "Ancient Black Dragon",
+  "size": "Gargantuan",
+  "type": "Dragon (Chromatic)",
+  "alignment": "Chaotic Evil",
+  "armor_class": [
+    {
+      "value": 22,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 367,
+    "dice": "21d20 + 147"
+  },
+  "speed": {
+    "walk": 40,
+    "fly": 80,
+    "swim": 40,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 16,
+  "ability_scores": {
+    "str": 27,
+    "dex": 14,
+    "con": 25,
+    "int": 16,
+    "wis": 15,
+    "cha": 22
+  },
+  "saving_throws": {
+    "dex": 9,
+    "wis": 9
+  },
+  "skills": {
+    "perception": 16,
+    "stealth": 9
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Acid"
+  ],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 60,
+    "darkvision": 120,
+    "passive_perception": 26
+  },
+  "languages": [
+    "Common",
+    "Draconic"
+  ],
+  "challenge_rating": "21",
+  "xp": 33000,
+  "proficiency_bonus": 7,
+  "special_traits": [
+    {
+      "name": "Amphibious",
+      "description": "The dragon can breathe air and water."
+    },
+    {
+      "name": "Legendary Resistance (4/Day, or 5/Day in Lair)",
+      "description": "If the dragon fails a saving throw, it can choose to succeed instead."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The dragon makes three Rend attacks. It can replace one attack with a use of Spellcasting to cast Acid Arrow (level 4 version)."
+    },
+    {
+      "name": "Rend",
+      "description": "Melee Attack Roll: +15, reach 15 ft. Hit: 17 (2d8 + 8) Slashing damage plus 9 (2d8) Acid damage."
+    },
+    {
+      "name": "Acid Breath (Recharge 5-6)",
+      "description": "Dexterity Saving Throw: DC 22, each creature in a 90-foot-long, 10-footwide Line. Failure: 67 (15d8) Acid damage. Success: Half damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": [
+    {
+      "name": "Cloud of Insects",
+      "cost": 1,
+      "description": "Dexterity Saving Throw: DC 21, one creature the dragon can see within 120 feet. Failure: 33 (6d10) Poison damage, and the target has Disadvantage on saving throws to maintain Concentration until the end of its next turn. Failure or Success: The dragon can't take this action again until the start of its next turn."
+    },
+    {
+      "name": "Frightful Presence",
+      "cost": 1,
+      "description": "The dragon uses Spellcasting to cast Fear. The dragon can't take this action again until the start of its next turn."
+    },
+    {
+      "name": "Pounce",
+      "cost": 1,
+      "description": "The dragon moves up to half its Speed, and it makes one Rend attack."
+    }
+  ],
+  "legendary_action_count": 3,
+  "lair_actions": null,
+  "spellcasting": {
+    "ability": "Charisma",
+    "save_dc": 21,
+    "attack_bonus": 13,
+    "cantrip_damage_bonus": null,
+    "slots": {},
+    "spells_by_level": {},
+    "innate": {
+      "at_will": [
+        "acid arrow (level 4 version)",
+        "detect magic",
+        "fear"
+      ],
+      "1_per_day": [
+        "create undead",
+        "speak with dead",
+        "vitriolic sphere (level 5 version)"
+      ]
+    }
+  }
+}

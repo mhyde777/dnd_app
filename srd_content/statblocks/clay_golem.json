@@ -1,0 +1,102 @@
+{
+  "name": "Clay Golem",
+  "size": "Large",
+  "type": "Construct",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 14,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 123,
+    "dice": "13d10 + 52"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 3,
+  "ability_scores": {
+    "str": 20,
+    "dex": 9,
+    "con": 18,
+    "int": 3,
+    "wis": 8,
+    "cha": 1
+  },
+  "saving_throws": {},
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [
+    "Bludgeoning",
+    "Piercing",
+    "Slashing"
+  ],
+  "damage_immunities": [
+    "Acid",
+    "Poison",
+    "Psychic"
+  ],
+  "condition_immunities": [
+    "Charmed",
+    "Exhaustion",
+    "Frightened",
+    "Paralyzed",
+    "Petrified",
+    "Poisoned"
+  ],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 9
+  },
+  "languages": [
+    "Common plus one other language"
+  ],
+  "challenge_rating": "9",
+  "xp": 5000,
+  "proficiency_bonus": 4,
+  "special_traits": [
+    {
+      "name": "Acid Absorption",
+      "description": "Whenever the golem is subjected to Acid damage, it takes no damage and instead regains a number of Hit Points equal to the Acid damage dealt."
+    },
+    {
+      "name": "Berserk",
+      "description": "Whenever the golem starts its turn Bloodied, roll 1d6. On a 6, the golem goes berserk. On each of its turns while berserk, the golem attacks the nearest creature it can see. If no creature is near enough to move to and attack, the golem attacks an object. Once the golem goes berserk, it continues to be berserk until it is destroyed or it is no longer Bloodied."
+    },
+    {
+      "name": "Immutable Form",
+      "description": "The golem can't shape-shift."
+    },
+    {
+      "name": "Magic Resistance",
+      "description": "The golem has Advantage on saving throws against spells and other magical effects."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The golem makes two Slam attacks, or it makes three Slam attacks if it used Hasten this turn."
+    },
+    {
+      "name": "Slam",
+      "description": "Melee Attack Roll: +9, reach 5 ft. Hit: 10 (1d10 + 5) Bludgeoning damage plus 6 (1d12) Acid damage, and the target's Hit Point maximum decreases by an amount equal to the Acid damage taken."
+    }
+  ],
+  "bonus_actions": [
+    {
+      "name": "Hasten (Recharge 5-6)",
+      "description": "The golem takes the Dash and Disengage actions."
+    }
+  ],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

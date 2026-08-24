@@ -1,0 +1,71 @@
+{
+  "name": "Hippopotamus",
+  "size": "Large",
+  "type": "Beast",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 14,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 82,
+    "dice": "11d10 + 22"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": 30,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": -2,
+  "ability_scores": {
+    "str": 21,
+    "dex": 7,
+    "con": 15,
+    "int": 2,
+    "wis": 12,
+    "cha": 4
+  },
+  "saving_throws": {
+    "str": 7
+  },
+  "skills": {
+    "perception": 3
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "passive_perception": 13
+  },
+  "languages": [],
+  "challenge_rating": "4",
+  "xp": 1100,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Hold Breath",
+      "description": "The hippopotamus can hold its breath for 10 minutes."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The hippopotamus makes two Bite attacks."
+    },
+    {
+      "name": "Bite",
+      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 16 (2d10 + 5) Piercing damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

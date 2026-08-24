@@ -1,0 +1,69 @@
+{
+  "name": "Archelon",
+  "size": "Huge",
+  "type": "Beast (Dinosaur)",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 17,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 90,
+    "dice": "12d12 + 12"
+  },
+  "speed": {
+    "walk": 20,
+    "fly": null,
+    "swim": 80,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 3,
+  "ability_scores": {
+    "str": 18,
+    "dex": 16,
+    "con": 13,
+    "int": 4,
+    "wis": 14,
+    "cha": 6
+  },
+  "saving_throws": {},
+  "skills": {
+    "stealth": 5
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "passive_perception": 12
+  },
+  "languages": [],
+  "challenge_rating": "4",
+  "xp": 1100,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Amphibious",
+      "description": "The archelon can breathe air and water."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The archelon makes two Bite attacks."
+    },
+    {
+      "name": "Bite",
+      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 14 (3d6 + 4) Piercing damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

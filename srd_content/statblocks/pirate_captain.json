@@ -1,0 +1,86 @@
+{
+  "name": "Pirate Captain",
+  "size": "Medium or small",
+  "type": "Humanoid",
+  "alignment": "Neutral",
+  "armor_class": [
+    {
+      "value": 17,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 84,
+    "dice": "13d8 + 26"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 7,
+  "ability_scores": {
+    "str": 10,
+    "dex": 18,
+    "con": 14,
+    "int": 10,
+    "wis": 14,
+    "cha": 17
+  },
+  "saving_throws": {
+    "str": 3,
+    "dex": 7,
+    "wis": 5,
+    "cha": 6
+  },
+  "skills": {
+    "acrobatics": 7,
+    "perception": 5
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "passive_perception": 15
+  },
+  "languages": [
+    "Common plus one other language"
+  ],
+  "challenge_rating": "6",
+  "xp": 2300,
+  "proficiency_bonus": 3,
+  "special_traits": [],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The pirate makes three attacks, using Rapier or Pistol in any combination."
+    },
+    {
+      "name": "Rapier",
+      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 13 (2d8 + 4) Piercing damage, and the pirate has Advantage on the next attack roll it makes before the end of this turn."
+    },
+    {
+      "name": "Pistol",
+      "description": "Ranged Attack Roll: +7, range 30/90 ft. Hit: 15 (2d10 + 4) Piercing damage."
+    }
+  ],
+  "bonus_actions": [
+    {
+      "name": "Captain's Charm",
+      "description": "Wisdom Saving Throw: DC 14, one creature the pirate can see within 30 feet. Failure: The target has the Charmed condition until the start of the pirate's next turn."
+    }
+  ],
+  "reactions": [
+    {
+      "name": "Riposte",
+      "description": "Trigger: The pirate is hit by a melee attack roll while holding a weapon. Response: The pirate adds 3 to its AC against that attack, possibly causing it to miss. On a miss, the pirate makes one Rapier attack against the triggering creature if within range."
+    }
+  ],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

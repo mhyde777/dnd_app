@@ -1,0 +1,79 @@
+{
+  "name": "Chimera",
+  "size": "Large",
+  "type": "Monstrosity",
+  "alignment": "Chaotic Evil",
+  "armor_class": [
+    {
+      "value": 14,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 114,
+    "dice": "12d10 + 48"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": 60,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 0,
+  "ability_scores": {
+    "str": 19,
+    "dex": 11,
+    "con": 19,
+    "int": 3,
+    "wis": 14,
+    "cha": 10
+  },
+  "saving_throws": {},
+  "skills": {
+    "perception": 8
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 18
+  },
+  "languages": [
+    "Understands Draconic but can't speak"
+  ],
+  "challenge_rating": "6",
+  "xp": 2300,
+  "proficiency_bonus": 3,
+  "special_traits": [],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The chimera makes one Ram attack, one Bite attack, and one Claw attack. It can replace the Claw attack with a use of Fire Breath if available."
+    },
+    {
+      "name": "Bite",
+      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 11 (2d6 + 4) Piercing damage, or 18 (4d6 + 4) Piercing damage if the chimera had Advantage on the attack roll."
+    },
+    {
+      "name": "Claw",
+      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 7 (1d6 + 4) Slashing damage."
+    },
+    {
+      "name": "Ram",
+      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 10 (1d12 + 4) Bludgeoning damage. If the target is a Medium or smaller creature, it has the Prone condition."
+    },
+    {
+      "name": "Fire Breath (Recharge 5-6)",
+      "description": "Dexterity Saving Throw: DC 15, each creature in a 15-foot Cone. Failure: 31 (7d8) Fire damage. Success: Half damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

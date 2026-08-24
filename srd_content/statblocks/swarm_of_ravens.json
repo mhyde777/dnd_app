@@ -1,0 +1,82 @@
+{
+  "name": "Swarm of Ravens",
+  "size": "Medium",
+  "type": "Swarm of Tiny Beasts",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 12,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 11,
+    "dice": "2d8 + 2"
+  },
+  "speed": {
+    "walk": 10,
+    "fly": 50,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 2,
+  "ability_scores": {
+    "str": 6,
+    "dex": 14,
+    "con": 12,
+    "int": 5,
+    "wis": 12,
+    "cha": 6
+  },
+  "saving_throws": {},
+  "skills": {
+    "perception": 5
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [
+    "Bludgeoning",
+    "Piercing",
+    "Slashing"
+  ],
+  "damage_immunities": [],
+  "condition_immunities": [
+    "Charmed",
+    "Frightened",
+    "Grappled",
+    "Paralyzed",
+    "Petrified",
+    "Prone",
+    "Restrained",
+    "Stunned"
+  ],
+  "senses": {
+    "passive_perception": 15
+  },
+  "languages": [],
+  "challenge_rating": "1/4",
+  "xp": 50,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Swarm",
+      "description": "The swarm can occupy another creature's space and vice versa, and the swarm can move through any opening large enough for a Tiny raven. The swarm can't regain Hit Points or gain Temporary Hit Points."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Beaks",
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 5 (1d6 + 2) Piercing damage, or 2 (1d4) Piercing damage if the swarm is Bloodied."
+    },
+    {
+      "name": "Cacophony (Recharge 6)",
+      "description": "Wisdom Saving Throw: DC 10, one creature in the swarm's space. Failure: The target has the Deafened condition until the start of the swarm's next turn. While Deafened, the target also has Disadvantage on ability checks and attack rolls."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

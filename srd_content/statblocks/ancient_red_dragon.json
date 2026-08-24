@@ -1,0 +1,118 @@
+{
+  "name": "Ancient Red Dragon",
+  "size": "Gargantuan",
+  "type": "Dragon (Chromatic)",
+  "alignment": "Chaotic Evil",
+  "armor_class": [
+    {
+      "value": 22,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 507,
+    "dice": "26d20 + 234"
+  },
+  "speed": {
+    "walk": 40,
+    "fly": 80,
+    "swim": null,
+    "climb": 40,
+    "burrow": null
+  },
+  "initiative_bonus": 14,
+  "ability_scores": {
+    "str": 30,
+    "dex": 10,
+    "con": 29,
+    "int": 18,
+    "wis": 15,
+    "cha": 27
+  },
+  "saving_throws": {
+    "dex": 7,
+    "wis": 9
+  },
+  "skills": {
+    "perception": 16,
+    "stealth": 7
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Fire"
+  ],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 60,
+    "darkvision": 120,
+    "passive_perception": 26
+  },
+  "languages": [
+    "Common",
+    "Draconic"
+  ],
+  "challenge_rating": "24",
+  "xp": 62000,
+  "proficiency_bonus": 7,
+  "special_traits": [
+    {
+      "name": "Legendary Resistance (4/Day, or 5/Day in Lair)",
+      "description": "If the dragon fails a saving throw, it can choose to succeed instead."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The dragon makes three Rend attacks. It can replace one attack with a use of Spellcasting to cast Scorching Ray (level 3 version)."
+    },
+    {
+      "name": "Rend",
+      "description": "Melee Attack Roll: +17, reach 15 ft. Hit: 19 (2d8 + 10) Slashing damage plus 10 (3d6) Fire damage."
+    },
+    {
+      "name": "Fire Breath (Recharge 5-6)",
+      "description": "Dexterity Saving Throw: DC 24, each creature in a 90-foot Cone. Failure: 91 (26d6) Fire damage. Success: Half damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": [
+    {
+      "name": "Commanding Presence",
+      "cost": 1,
+      "description": "The dragon uses Spellcasting to cast Command (level 2 version). The dragon can't take this action again until the start of its next turn."
+    },
+    {
+      "name": "Fiery Rays",
+      "cost": 1,
+      "description": "The dragon uses Spellcasting to cast Scorching Ray (level 3 version). The dragon can't take this action again until the start of its next turn."
+    },
+    {
+      "name": "Pounce",
+      "cost": 1,
+      "description": "The dragon moves up to half its Speed, and it makes one Rend attack."
+    }
+  ],
+  "legendary_action_count": 3,
+  "lair_actions": null,
+  "spellcasting": {
+    "ability": "Charisma",
+    "save_dc": 23,
+    "attack_bonus": 15,
+    "cantrip_damage_bonus": null,
+    "slots": {},
+    "spells_by_level": {},
+    "innate": {
+      "at_will": [
+        "command (level 2 version)",
+        "detect magic",
+        "scorching ray (level 3 version)"
+      ],
+      "1_per_day": [
+        "fireball (level 6 version)",
+        "scrying"
+      ]
+    }
+  }
+}

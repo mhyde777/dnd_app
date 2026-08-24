@@ -1,0 +1,71 @@
+{
+  "name": "Frog",
+  "size": "Tiny",
+  "type": "Beast",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 11,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 1,
+    "dice": "1d4 - 1"
+  },
+  "speed": {
+    "walk": 20,
+    "fly": null,
+    "swim": 20,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 1,
+  "ability_scores": {
+    "str": 1,
+    "dex": 13,
+    "con": 8,
+    "int": 1,
+    "wis": 8,
+    "cha": 3
+  },
+  "saving_throws": {},
+  "skills": {
+    "perception": 1,
+    "stealth": 3
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 30,
+    "passive_perception": 11
+  },
+  "languages": [],
+  "challenge_rating": "0",
+  "xp": 10,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Amphibious",
+      "description": "The frog can breathe air and water."
+    },
+    {
+      "name": "Standing Leap",
+      "description": "The frog's Long Jump is up to 10 feet and its High Jump is up to 5 feet with or without a running start."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 1 Piercing damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

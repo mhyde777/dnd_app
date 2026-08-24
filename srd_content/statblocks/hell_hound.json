@@ -1,0 +1,78 @@
+{
+  "name": "Hell Hound",
+  "size": "Medium",
+  "type": "Fiend",
+  "alignment": "Lawful Evil",
+  "armor_class": [
+    {
+      "value": 15,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 58,
+    "dice": "9d8 + 18"
+  },
+  "speed": {
+    "walk": 50,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 1,
+  "ability_scores": {
+    "str": 17,
+    "dex": 12,
+    "con": 14,
+    "int": 6,
+    "wis": 13,
+    "cha": 6
+  },
+  "saving_throws": {},
+  "skills": {
+    "perception": 5
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Fire"
+  ],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 15
+  },
+  "languages": [
+    "Understands Infernal but can't speak"
+  ],
+  "challenge_rating": "3",
+  "xp": 700,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Pack Tactics",
+      "description": "The hound has Advantage on an attack roll against a creature if at least one of the hound's allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The hound makes two Bite attacks."
+    },
+    {
+      "name": "Bite",
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 7 (1d8 + 3) Piercing damage plus 3 (1d6) Fire damage."
+    },
+    {
+      "name": "Fire Breath (Recharge 5-6)",
+      "description": "Dexterity Saving Throw: DC 12, each creature in a 15-foot Cone. Failure: 17 (5d6) Fire damage. Success: Half damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

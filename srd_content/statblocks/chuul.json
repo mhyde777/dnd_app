@@ -1,0 +1,84 @@
+{
+  "name": "Chuul",
+  "size": "Large",
+  "type": "Aberration",
+  "alignment": "Chaotic Evil",
+  "armor_class": [
+    {
+      "value": 16,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 76,
+    "dice": "9d10 + 27"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": 30,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 0,
+  "ability_scores": {
+    "str": 19,
+    "dex": 10,
+    "con": 16,
+    "int": 5,
+    "wis": 11,
+    "cha": 5
+  },
+  "saving_throws": {},
+  "skills": {
+    "perception": 4
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Poison"
+  ],
+  "condition_immunities": [
+    "Poisoned"
+  ],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 14
+  },
+  "languages": [
+    "Understands Deep Speech but can't speak"
+  ],
+  "challenge_rating": "4",
+  "xp": 1100,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Amphibious",
+      "description": "The chuul can breathe air and water."
+    },
+    {
+      "name": "Sense Magic",
+      "description": "The chuul senses magic within 120 feet of itself. This trait otherwise works like the Detect Magic spell but isn't itself magical."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The chuul makes two Pincer attacks and uses Paralyzing Tentacles."
+    },
+    {
+      "name": "Pincer",
+      "description": "Melee Attack Roll: +6, reach 10 ft. Hit: 9 (1d10 + 4) Bludgeoning damage. If the target is a Large or smaller creature, it has the Grappled condition (escape DC 14) from one of two pincers."
+    },
+    {
+      "name": "Paralyzing Tentacles",
+      "description": "Constitution Saving Throw: DC 13, one creature Grappled by the chuul. Failure: The target has the Poisoned condition and repeats the save at the end of each of its turns, ending the effect on itself on a success. After 1 minute, it succeeds automatically. While Poisoned, the target has the Paralyzed condition."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

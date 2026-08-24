@@ -1,0 +1,70 @@
+{
+  "name": "Giant Shark",
+  "size": "Huge",
+  "type": "Beast",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 13,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 92,
+    "dice": "8d12 + 40"
+  },
+  "speed": {
+    "walk": 5,
+    "fly": null,
+    "swim": 60,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 3,
+  "ability_scores": {
+    "str": 23,
+    "dex": 11,
+    "con": 21,
+    "int": 1,
+    "wis": 10,
+    "cha": 5
+  },
+  "saving_throws": {},
+  "skills": {
+    "perception": 3
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 60,
+    "passive_perception": 13
+  },
+  "languages": [],
+  "challenge_rating": "5",
+  "xp": 1800,
+  "proficiency_bonus": 3,
+  "special_traits": [
+    {
+      "name": "Water Breathing",
+      "description": "The shark can breathe only underwater."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The shark makes two Bite attacks."
+    },
+    {
+      "name": "Bite",
+      "description": "Melee Attack Roll: +9 (with Advantage if the target doesn't have all its Hit Points), reach 5 ft. Hit: 22 (3d10 + 6) Piercing damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

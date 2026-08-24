@@ -1,0 +1,76 @@
+{
+  "name": "Octopus",
+  "size": "Small",
+  "type": "Beast",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 12,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 3,
+    "dice": "1d6"
+  },
+  "speed": {
+    "walk": 5,
+    "fly": null,
+    "swim": 30,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 2,
+  "ability_scores": {
+    "str": 4,
+    "dex": 15,
+    "con": 11,
+    "int": 3,
+    "wis": 10,
+    "cha": 4
+  },
+  "saving_throws": {},
+  "skills": {
+    "perception": 2,
+    "stealth": 6
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 30,
+    "passive_perception": 12
+  },
+  "languages": [],
+  "challenge_rating": "0",
+  "xp": 10,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Compression",
+      "description": "The octopus can move through a space as narrow as 1 inch without expending extra movement to do so."
+    },
+    {
+      "name": "Water Breathing",
+      "description": "The octopus can breathe only underwater."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Tentacles",
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 1 Bludgeoning damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [
+    {
+      "name": "Ink Cloud (1/Day)",
+      "description": "Trigger: A creature ends its turn within 5 feet of the octopus while underwater. Response: The octopus releases ink that fills a 5-foot Cube centered on itself, and the octopus moves up to its Swim Speed. The Cube is Heavily Obscured for 1 minute or until a strong current or similar effect disperses the ink."
+    }
+  ],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

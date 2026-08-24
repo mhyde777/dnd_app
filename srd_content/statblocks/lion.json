@@ -1,0 +1,79 @@
+{
+  "name": "Lion",
+  "size": "Large",
+  "type": "Beast",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 12,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 22,
+    "dice": "4d10"
+  },
+  "speed": {
+    "walk": 50,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 2,
+  "ability_scores": {
+    "str": 17,
+    "dex": 15,
+    "con": 11,
+    "int": 3,
+    "wis": 12,
+    "cha": 8
+  },
+  "saving_throws": {},
+  "skills": {
+    "perception": 3,
+    "stealth": 4
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 13
+  },
+  "languages": [],
+  "challenge_rating": "1",
+  "xp": 200,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Pack Tactics",
+      "description": "The lion has Advantage on an attack roll against a creature if at least one of the lion's allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition."
+    },
+    {
+      "name": "Running Leap",
+      "description": "With a 10-foot running start, the lion can Long Jump up to 25 feet."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The lion makes two Rend attacks. It can replace one attack with a use of Roar."
+    },
+    {
+      "name": "Rend",
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 7 (1d8 + 3) Slashing damage."
+    },
+    {
+      "name": "Roar",
+      "description": "Wisdom Saving Throw: DC 11, one creature within 15 feet. Failure: The target has the Frightened condition until the start of the lion's next turn."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

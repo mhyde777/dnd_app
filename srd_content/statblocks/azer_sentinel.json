@@ -1,0 +1,76 @@
+{
+  "name": "Azer Sentinel",
+  "size": "Medium",
+  "type": "Elemental",
+  "alignment": "Lawful Neutral",
+  "armor_class": [
+    {
+      "value": 17,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 39,
+    "dice": "6d8 + 12"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 1,
+  "ability_scores": {
+    "str": 17,
+    "dex": 12,
+    "con": 15,
+    "int": 12,
+    "wis": 13,
+    "cha": 10
+  },
+  "saving_throws": {
+    "con": 4
+  },
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Fire",
+    "Poison"
+  ],
+  "condition_immunities": [
+    "Poisoned"
+  ],
+  "senses": {
+    "passive_perception": 11
+  },
+  "languages": [
+    "Primordial (Ignan)"
+  ],
+  "challenge_rating": "2",
+  "xp": 450,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Fire Aura",
+      "description": "At the end of each of the azer's turns, each creature of the azer's choice in a 5-foot Emanation originating from the azer takes 5 (1d10) Fire damage unless the azer has the Incapacitated condition."
+    },
+    {
+      "name": "Illumination",
+      "description": "The azer sheds Bright Light in a 10-foot radius and Dim Light for an additional 10 feet."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Burning Hammer",
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 8 (1d10 + 3) Bludgeoning damage plus 3 (1d6) Fire damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

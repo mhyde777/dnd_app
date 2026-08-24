@@ -1,0 +1,125 @@
+{
+  "name": "Ancient Green Dragon",
+  "size": "Gargantuan",
+  "type": "Dragon (Chromatic)",
+  "alignment": "Lawful Evil",
+  "armor_class": [
+    {
+      "value": 21,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 402,
+    "dice": "23d20 + 161"
+  },
+  "speed": {
+    "walk": 40,
+    "fly": 80,
+    "swim": 40,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 15,
+  "ability_scores": {
+    "str": 27,
+    "dex": 12,
+    "con": 25,
+    "int": 20,
+    "wis": 17,
+    "cha": 22
+  },
+  "saving_throws": {
+    "dex": 8,
+    "wis": 10
+  },
+  "skills": {
+    "deception": 13,
+    "perception": 17,
+    "persuasion": 13,
+    "stealth": 8
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Poison"
+  ],
+  "condition_immunities": [
+    "Poisoned"
+  ],
+  "senses": {
+    "blindsight": 60,
+    "darkvision": 120,
+    "passive_perception": 27
+  },
+  "languages": [
+    "Common",
+    "Draconic"
+  ],
+  "challenge_rating": "22",
+  "xp": 41000,
+  "proficiency_bonus": 7,
+  "special_traits": [
+    {
+      "name": "Amphibious",
+      "description": "The dragon can breathe air and water."
+    },
+    {
+      "name": "Legendary Resistance (4/Day, or 5/Day in Lair)",
+      "description": "If the dragon fails a saving throw, it can choose to succeed instead."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The dragon makes three Rend attacks. It can replace one attack with a use of Spellcasting to cast Mind Spike (level 5 version)."
+    },
+    {
+      "name": "Rend",
+      "description": "Melee Attack Roll: +15, reach 15 ft. Hit: 17 (2d8 + 8) Slashing damage plus 10 (3d6) Poison damage."
+    },
+    {
+      "name": "Poison Breath (Recharge 5-6)",
+      "description": "Constitution Saving Throw: DC 22, each creature in a 90-foot Cone. Failure: 77 (22d6) Poison damage. Success: Half damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": [
+    {
+      "name": "Mind Invasion",
+      "cost": 1,
+      "description": "The dragon uses Spellcasting to cast Mind Spike (level 5 version)."
+    },
+    {
+      "name": "Noxious Miasma",
+      "cost": 1,
+      "description": "Constitution Saving Throw: DC 21, each creature in a 30-foot-radius Sphere centered on a point the dragon can see within 90 feet. Failure: 17 (5d6) Poison damage, and the target takes a -2 penalty to AC until the end of its next turn. Failure or Success: The dragon can't take this action again until the start of its next turn."
+    },
+    {
+      "name": "Pounce",
+      "cost": 1,
+      "description": "The dragon moves up to half its Speed, and it makes one Rend attack."
+    }
+  ],
+  "legendary_action_count": 3,
+  "lair_actions": null,
+  "spellcasting": {
+    "ability": "Charisma",
+    "save_dc": 21,
+    "attack_bonus": null,
+    "cantrip_damage_bonus": null,
+    "slots": {},
+    "spells_by_level": {},
+    "innate": {
+      "at_will": [
+        "detect magic",
+        "mind spike (level 5 version)"
+      ],
+      "1_per_day": [
+        "geas",
+        "modify memory"
+      ]
+    }
+  }
+}

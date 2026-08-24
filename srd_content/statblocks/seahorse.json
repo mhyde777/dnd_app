@@ -1,0 +1,66 @@
+{
+  "name": "Seahorse",
+  "size": "Tiny",
+  "type": "Beast",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 12,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 1,
+    "dice": "1d4 - 1"
+  },
+  "speed": {
+    "walk": 5,
+    "fly": null,
+    "swim": 20,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 1,
+  "ability_scores": {
+    "str": 1,
+    "dex": 12,
+    "con": 8,
+    "int": 1,
+    "wis": 10,
+    "cha": 2
+  },
+  "saving_throws": {},
+  "skills": {
+    "perception": 2,
+    "stealth": 5
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "passive_perception": 12
+  },
+  "languages": [],
+  "challenge_rating": "0",
+  "xp": 0,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Water Breathing",
+      "description": "The seahorse can breathe only underwater."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Bubble Dash",
+      "description": "While underwater, the seahorse moves up to its Swim Speed without provoking Opportunity Attacks."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

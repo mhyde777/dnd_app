@@ -1,0 +1,75 @@
+{
+  "name": "Giant Ape",
+  "size": "Huge",
+  "type": "Beast",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 12,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 168,
+    "dice": "16d12 + 64"
+  },
+  "speed": {
+    "walk": 40,
+    "fly": null,
+    "swim": null,
+    "climb": 40,
+    "burrow": null
+  },
+  "initiative_bonus": 5,
+  "ability_scores": {
+    "str": 23,
+    "dex": 14,
+    "con": 18,
+    "int": 5,
+    "wis": 12,
+    "cha": 7
+  },
+  "saving_throws": {},
+  "skills": {
+    "athletics": 9,
+    "perception": 4,
+    "survival": 4
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "passive_perception": 14
+  },
+  "languages": [],
+  "challenge_rating": "7",
+  "xp": 2900,
+  "proficiency_bonus": 3,
+  "special_traits": [],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The ape makes two Fist attacks."
+    },
+    {
+      "name": "Fist",
+      "description": "Melee Attack Roll: +9, reach 10 ft. Hit: 22 (3d10 + 6) Bludgeoning damage."
+    },
+    {
+      "name": "Boulder Toss (Recharge 6)",
+      "description": "The ape hurls a boulder at a point it can see within 90 feet. Dexterity Saving Throw: DC 17, each creature in a 5-foot-radius Sphere centered on that point. Failure: 24 (7d6) Bludgeoning damage. If the target is a Large or smaller creature, it has the Prone condition. Success: Half damage only."
+    }
+  ],
+  "bonus_actions": [
+    {
+      "name": "Leap",
+      "description": "The ape jumps up to 30 feet by spending 10 feet of movement."
+    }
+  ],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

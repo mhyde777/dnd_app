@@ -1,0 +1,81 @@
+{
+  "name": "Bandit Captain",
+  "size": "Medium or small",
+  "type": "Humanoid",
+  "alignment": "Neutral",
+  "armor_class": [
+    {
+      "value": 15,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 52,
+    "dice": "8d8 + 16"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 3,
+  "ability_scores": {
+    "str": 15,
+    "dex": 16,
+    "con": 14,
+    "int": 14,
+    "wis": 11,
+    "cha": 14
+  },
+  "saving_throws": {
+    "str": 4,
+    "dex": 5,
+    "wis": 2
+  },
+  "skills": {
+    "athletics": 4,
+    "deception": 4
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "passive_perception": 10
+  },
+  "languages": [
+    "Common",
+    "Thieves' Cant"
+  ],
+  "challenge_rating": "2",
+  "xp": 450,
+  "proficiency_bonus": 2,
+  "special_traits": [],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The bandit makes two attacks, using Scimitar and Pistol in any combination."
+    },
+    {
+      "name": "Scimitar",
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 6 (1d6 + 3) Slashing damage."
+    },
+    {
+      "name": "Pistol",
+      "description": "Ranged Attack Roll: +5, range 30/90 ft. Hit: 8 (1d10 + 3) Piercing damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [
+    {
+      "name": "Parry",
+      "description": "Trigger: The bandit is hit by a melee attack roll while holding a weapon. Response: The bandit adds 2 to its AC against that attack, possibly causing it to miss."
+    }
+  ],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

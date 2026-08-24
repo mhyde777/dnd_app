@@ -1,0 +1,83 @@
+{
+  "name": "Gold Dragon Wyrmling",
+  "size": "Medium",
+  "type": "Dragon (Metallic)",
+  "alignment": "Lawful Good",
+  "armor_class": [
+    {
+      "value": 17,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 60,
+    "dice": "8d8 + 24"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": 60,
+    "swim": 30,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 4,
+  "ability_scores": {
+    "str": 19,
+    "dex": 14,
+    "con": 17,
+    "int": 14,
+    "wis": 11,
+    "cha": 16
+  },
+  "saving_throws": {
+    "dex": 4,
+    "wis": 2
+  },
+  "skills": {
+    "perception": 4,
+    "stealth": 4
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Fire"
+  ],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 10,
+    "darkvision": 60,
+    "passive_perception": 14
+  },
+  "languages": [
+    "Draconic"
+  ],
+  "challenge_rating": "3",
+  "xp": 0,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Amphibious",
+      "description": "The dragon can breathe air and water."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The dragon makes two Rend attacks."
+    },
+    {
+      "name": "Rend",
+      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 9 (1d10 + 4) Slashing damage. Fire Breath (Recharge 5-6). Dexterity Saving Throw: DC 13, each creature in a 15-foot Cone. Failure: 22 (4d10) Fire damage. Success: Half damage."
+    },
+    {
+      "name": "Weakening Breath",
+      "description": "Strength Saving Throw: DC 13, each creature that isn't currently affected by this breath in a 15-foot Cone. Failure: The target has Disadvantage on Strength-based D20 Tests and subtracts 2 (1d4) from its damage rolls. It repeats the save at the end of each of its turns, ending the effect on itself on a success. After 1 minute, it succeeds automatically."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

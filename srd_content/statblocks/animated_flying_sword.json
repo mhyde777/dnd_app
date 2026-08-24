@@ -1,0 +1,72 @@
+{
+  "name": "Animated Flying Sword",
+  "size": "Small",
+  "type": "Construct",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 17,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 14,
+    "dice": "4d6"
+  },
+  "speed": {
+    "walk": 5,
+    "fly": 50,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 4,
+  "ability_scores": {
+    "str": 12,
+    "dex": 15,
+    "con": 11,
+    "int": 1,
+    "wis": 5,
+    "cha": 1
+  },
+  "saving_throws": {
+    "dex": 4
+  },
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Poison",
+    "Psychic"
+  ],
+  "condition_immunities": [
+    "Charmed",
+    "Deafened",
+    "Exhaustion",
+    "Frightened",
+    "Paralyzed",
+    "Petrified",
+    "Poisoned"
+  ],
+  "senses": {
+    "blindsight": 60,
+    "passive_perception": 7
+  },
+  "languages": [],
+  "challenge_rating": "1/4",
+  "xp": 50,
+  "proficiency_bonus": 2,
+  "special_traits": [],
+  "actions": [
+    {
+      "name": "Slash",
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 6 (1d8 + 2) Slashing damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

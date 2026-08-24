@@ -1,0 +1,74 @@
+{
+  "name": "Animated Armor",
+  "size": "Medium",
+  "type": "Construct",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 18,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 33,
+    "dice": "6d8 + 6"
+  },
+  "speed": {
+    "walk": 25,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 2,
+  "ability_scores": {
+    "str": 14,
+    "dex": 11,
+    "con": 13,
+    "int": 1,
+    "wis": 3,
+    "cha": 1
+  },
+  "saving_throws": {},
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Poison",
+    "Psychic"
+  ],
+  "condition_immunities": [
+    "Charmed",
+    "Deafened",
+    "Exhaustion",
+    "Frightened",
+    "Paralyzed",
+    "Petrified",
+    "Poisoned"
+  ],
+  "senses": {
+    "blindsight": 60,
+    "passive_perception": 6
+  },
+  "languages": [],
+  "challenge_rating": "1",
+  "xp": 200,
+  "proficiency_bonus": 2,
+  "special_traits": [],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The armor makes two Slam attacks."
+    },
+    {
+      "name": "Slam",
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 5 (1d6 + 2) Bludgeoning damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

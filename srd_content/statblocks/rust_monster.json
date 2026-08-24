@@ -1,0 +1,81 @@
+{
+  "name": "Rust Monster",
+  "size": "Medium",
+  "type": "Monstrosity",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 14,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 33,
+    "dice": "6d8 + 6"
+  },
+  "speed": {
+    "walk": 40,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 1,
+  "ability_scores": {
+    "str": 13,
+    "dex": 12,
+    "con": 13,
+    "int": 2,
+    "wis": 13,
+    "cha": 6
+  },
+  "saving_throws": {},
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 11
+  },
+  "languages": [],
+  "challenge_rating": "1/2",
+  "xp": 100,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Iron Scent",
+      "description": "The rust monster can pinpoint the location of ferrous metal within 30 feet of itself."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The rust monster makes one Bite attack and uses Antennae twice."
+    },
+    {
+      "name": "Bite",
+      "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 5 (1d8 + 1) Piercing damage."
+    },
+    {
+      "name": "Antennae",
+      "description": "The rust monster targets one nonmagical metal object--armor or a weapon--worn or carried by a creature within 5 feet of itself. Dexterity Saving Throw: DC 11, the creature with the object. Failure: The object takes a -1 penalty to the AC it offers (armor) or to its attack rolls (weapon). Armor is destroyed if the penalty reduces its AC to 10, and a weapon is destroyed if its penalty reaches -5. The penalty can be removed by casting the Mending spell on the armor or weapon."
+    },
+    {
+      "name": "Destroy Metal",
+      "description": "The rust monster touches a nonmagical metal object within 5 feet of itself that isn't being worn or carried. The touch destroys a 1-foot Cube of the object."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [
+    {
+      "name": "Reflexive Antennae",
+      "description": "Trigger: An attack roll hits the rust monster. Response: The rust monster uses Antennae."
+    }
+  ],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

@@ -1,0 +1,151 @@
+{
+  "name": "Lich",
+  "size": "Medium",
+  "type": "Undead (Wizard)",
+  "alignment": "Neutral Evil",
+  "armor_class": [
+    {
+      "value": 20,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 315,
+    "dice": "42d8 + 126"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 17,
+  "ability_scores": {
+    "str": 11,
+    "dex": 16,
+    "con": 16,
+    "int": 21,
+    "wis": 14,
+    "cha": 16
+  },
+  "saving_throws": {
+    "dex": 10,
+    "con": 10,
+    "int": 12,
+    "wis": 9
+  },
+  "skills": {
+    "arcana": 19,
+    "history": 12,
+    "insight": 9,
+    "perception": 9
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [
+    "Cold",
+    "Lightning"
+  ],
+  "damage_immunities": [
+    "Necrotic",
+    "Poison"
+  ],
+  "condition_immunities": [
+    "Charmed",
+    "Exhaustion",
+    "Frightened",
+    "Paralyzed",
+    "Poisoned"
+  ],
+  "senses": {
+    "truesight": 120,
+    "passive_perception": 19
+  },
+  "languages": [
+    "All"
+  ],
+  "challenge_rating": "21",
+  "xp": 33000,
+  "proficiency_bonus": 7,
+  "special_traits": [
+    {
+      "name": "Legendary Resistance (4/Day, or 5/Day in Lair)",
+      "description": "If the lich fails a saving throw, it can choose to succeed instead."
+    },
+    {
+      "name": "Spirit Jar",
+      "description": "If destroyed, the lich reforms in 1d10 days if it has a spirit jar, reviving with all its Hit Points. The new body appears in an unoccupied space within the lich's lair."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The lich makes three attacks, using Eldritch Burst or Paralyzing Touch in any combination."
+    },
+    {
+      "name": "Eldritch Burst",
+      "description": "Melee or Ranged Attack Roll: +12, reach 5 ft. or range 120 ft. Hit: 31 (4d12 + 5) Force damage."
+    },
+    {
+      "name": "Paralyzing Touch",
+      "description": "Melee Attack Roll: +12, reach 5 ft. Hit: 15 (3d6 + 5) Cold damage, and the target has the Paralyzed condition until the start of the lich's next turn."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [
+    {
+      "name": "Protective Magic",
+      "description": "The lich casts Counterspell or Shield in response to the spell's trigger, using the same spellcasting ability as Spellcasting."
+    }
+  ],
+  "legendary_actions": [
+    {
+      "name": "Deathly Teleport",
+      "cost": 1,
+      "description": "The lich teleports up to 60 feet to an unoccupied space it can see, and each creature within 10 feet of the space it left takes 11 (2d10) Necrotic damage."
+    },
+    {
+      "name": "Disrupt Life",
+      "cost": 1,
+      "description": "Constitution Saving Throw: DC 20, each creature that isn't an Undead in a 20-foot Emanation originating from the lich. Failure: 31 (9d6) Necrotic damage. Success: Half damage. Failure or Success: The lich can't take this action again until the start of its next turn."
+    },
+    {
+      "name": "Frightening Gaze",
+      "cost": 1,
+      "description": "The lich casts Fear, using the same spellcasting ability as Spellcasting. The lich can't take this action again until the start of its next turn."
+    }
+  ],
+  "legendary_action_count": 3,
+  "lair_actions": null,
+  "spellcasting": {
+    "ability": "Intelligence",
+    "save_dc": 20,
+    "attack_bonus": null,
+    "cantrip_damage_bonus": null,
+    "slots": {},
+    "spells_by_level": {},
+    "innate": {
+      "at_will": [
+        "detect magic",
+        "detect thoughts",
+        "dispel magic",
+        "fireball (level 5 version)",
+        "invisibility",
+        "lightning bolt (level 5 version)",
+        "mage hand",
+        "prestidigitation"
+      ],
+      "2_per_day": [
+        "animate dead",
+        "dimension door",
+        "plane shift"
+      ],
+      "1_per_day": [
+        "chain lightning",
+        "finger of death",
+        "power word kill",
+        "scrying"
+      ]
+    }
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "name": "Killer Whale",
+  "size": "Huge",
+  "type": "Beast",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 12,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 90,
+    "dice": "12d12 + 12"
+  },
+  "speed": {
+    "walk": 5,
+    "fly": null,
+    "swim": 60,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 2,
+  "ability_scores": {
+    "str": 19,
+    "dex": 14,
+    "con": 13,
+    "int": 3,
+    "wis": 12,
+    "cha": 7
+  },
+  "saving_throws": {},
+  "skills": {
+    "perception": 3,
+    "stealth": 4
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 120,
+    "passive_perception": 13
+  },
+  "languages": [],
+  "challenge_rating": "3",
+  "xp": 700,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Hold Breath",
+      "description": "The whale can hold its breath for 30 minutes."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 21 (5d6 + 4) Piercing damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

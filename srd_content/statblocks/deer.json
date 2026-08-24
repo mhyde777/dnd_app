@@ -1,0 +1,66 @@
+{
+  "name": "Deer",
+  "size": "Medium",
+  "type": "Beast",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 13,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 4,
+    "dice": "1d8"
+  },
+  "speed": {
+    "walk": 50,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 3,
+  "ability_scores": {
+    "str": 11,
+    "dex": 16,
+    "con": 11,
+    "int": 2,
+    "wis": 14,
+    "cha": 5
+  },
+  "saving_throws": {},
+  "skills": {
+    "perception": 4
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 14
+  },
+  "languages": [],
+  "challenge_rating": "0",
+  "xp": 10,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Agile",
+      "description": "The deer doesn't provoke an Opportunity Attack when it moves out of an enemy's reach."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Ram",
+      "description": "Melee Attack Roll: +2, reach 5 ft. Hit: 2 (1d4) Bludgeoning damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

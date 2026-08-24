@@ -1,0 +1,83 @@
+{
+  "name": "Behir",
+  "size": "Huge",
+  "type": "Monstrosity",
+  "alignment": "Neutral Evil",
+  "armor_class": [
+    {
+      "value": 17,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 168,
+    "dice": "16d12 + 64"
+  },
+  "speed": {
+    "walk": 50,
+    "fly": null,
+    "swim": null,
+    "climb": 50,
+    "burrow": null
+  },
+  "initiative_bonus": 3,
+  "ability_scores": {
+    "str": 23,
+    "dex": 16,
+    "con": 18,
+    "int": 7,
+    "wis": 14,
+    "cha": 12
+  },
+  "saving_throws": {},
+  "skills": {
+    "perception": 6,
+    "stealth": 7
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Lightning"
+  ],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 90,
+    "passive_perception": 16
+  },
+  "languages": [
+    "Draconic"
+  ],
+  "challenge_rating": "11",
+  "xp": 7200,
+  "proficiency_bonus": 4,
+  "special_traits": [],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The behir makes one Bite attack and uses Constrict."
+    },
+    {
+      "name": "Bite",
+      "description": "Melee Attack Roll: +10, reach 10 ft. Hit: 19 (2d12 + 6) Piercing damage plus 11 (2d10) Lightning damage."
+    },
+    {
+      "name": "Constrict",
+      "description": "Strength Saving Throw: DC 18, one Large or smaller creature the behir can see within 5 feet. Failure: 28 (5d8 + 6) Bludgeoning damage. The target has the Grappled condition (escape DC 16), and it has the Restrained condition until the grapple ends."
+    },
+    {
+      "name": "Lightning Breath (Recharge 5-6)",
+      "description": "Dexterity Saving Throw: DC 16, each creature in a 90-foot-long, 5-footwide Line. Failure: 66 (12d10) Lightning damage. Success: Half damage."
+    }
+  ],
+  "bonus_actions": [
+    {
+      "name": "Swallow",
+      "description": "Dexterity Saving Throw: DC 18, one Large or smaller creature Grappled by the behir (the behir can have only one creature swallowed at a time). Failure: The behir swallows the target, which is no longer Grappled. While swallowed, a creature has the Blinded and Restrained conditions, has Total Cover against attacks and other effects outside the behir, and takes 21 (6d6) Acid damage at the start of each of the behir's turns. If the behir takes 30 damage or more on a single turn from the swallowed creature, the behir must succeed on a DC 14 Constitution saving throw at the end of that turn or regurgitate the creature, which falls in a space within 10 feet of the behir and has the Prone condition. If the behir dies, a swallowed creature is no longer Restrained and can escape from the corpse by using 15 feet of movement, exiting Prone."
+    }
+  ],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

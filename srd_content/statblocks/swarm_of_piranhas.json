@@ -1,0 +1,81 @@
+{
+  "name": "Swarm of Piranhas",
+  "size": "Medium",
+  "type": "Swarm of Tiny Beasts",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 13,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 28,
+    "dice": "8d8 - 8"
+  },
+  "speed": {
+    "walk": 5,
+    "fly": null,
+    "swim": 40,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 3,
+  "ability_scores": {
+    "str": 13,
+    "dex": 16,
+    "con": 9,
+    "int": 1,
+    "wis": 7,
+    "cha": 2
+  },
+  "saving_throws": {},
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [
+    "Bludgeoning",
+    "Piercing",
+    "Slashing"
+  ],
+  "damage_immunities": [],
+  "condition_immunities": [
+    "Charmed",
+    "Frightened",
+    "Grappled",
+    "Paralyzed",
+    "Petrified",
+    "Prone",
+    "Restrained",
+    "Stunned"
+  ],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 8
+  },
+  "languages": [],
+  "challenge_rating": "1",
+  "xp": 200,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Swarm",
+      "description": "The swarm can occupy another creature's space and vice versa, and the swarm can move through any opening large enough for a Tiny piranha. The swarm can't regain Hit Points or gain Temporary Hit Points."
+    },
+    {
+      "name": "Water Breathing",
+      "description": "The swarm can breathe only underwater."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Bites",
+      "description": "Melee Attack Roll: +5 (with Advantage if the target doesn't have all its Hit Points), reach 5 ft. Hit: 8 (2d4 + 3) Piercing damage, or 5 (1d4 + 3) Piercing damage if the swarm is Bloodied."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

@@ -1,0 +1,77 @@
+{
+  "name": "Centaur Trooper",
+  "size": "Large",
+  "type": "Fey",
+  "alignment": "Neutral Good",
+  "armor_class": [
+    {
+      "value": 16,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 45,
+    "dice": "6d10 + 12"
+  },
+  "speed": {
+    "walk": 50,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 2,
+  "ability_scores": {
+    "str": 18,
+    "dex": 14,
+    "con": 14,
+    "int": 9,
+    "wis": 13,
+    "cha": 11
+  },
+  "saving_throws": {},
+  "skills": {
+    "athletics": 6,
+    "perception": 3
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "passive_perception": 13
+  },
+  "languages": [
+    "Elvish",
+    "Sylvan"
+  ],
+  "challenge_rating": "2",
+  "xp": 450,
+  "proficiency_bonus": 2,
+  "special_traits": [],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The centaur makes two attacks, using Pike or Longbow in any combination."
+    },
+    {
+      "name": "Pike",
+      "description": "Melee Attack Roll: +6, reach 10 ft. Hit: 9 (1d10 + 4) Piercing damage."
+    },
+    {
+      "name": "Longbow",
+      "description": "Ranged Attack Roll: +4, range 150/600 ft. Hit: 6 (1d8 + 2) Piercing damage."
+    }
+  ],
+  "bonus_actions": [
+    {
+      "name": "Trampling Charge (Recharge 5-6)",
+      "description": "The centaur moves up to its Speed without provoking Opportunity Attacks and can move through the spaces of Medium or smaller creatures. Each creature whose space the centaur enters is targeted once by the following effect. Strength Saving Throw: DC 14. Failure: 7 (1d6 + 4) Bludgeoning damage, and the target has the Prone condition."
+    }
+  ],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

@@ -1,0 +1,76 @@
+{
+  "name": "Spy",
+  "size": "Medium or small",
+  "type": "Humanoid",
+  "alignment": "Neutral",
+  "armor_class": [
+    {
+      "value": 12,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 27,
+    "dice": "6d8"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": null,
+    "climb": 30,
+    "burrow": null
+  },
+  "initiative_bonus": 4,
+  "ability_scores": {
+    "str": 10,
+    "dex": 15,
+    "con": 10,
+    "int": 12,
+    "wis": 14,
+    "cha": 16
+  },
+  "saving_throws": {},
+  "skills": {
+    "deception": 5,
+    "insight": 4,
+    "investigation": 5,
+    "perception": 6,
+    "sleight of hand": 4,
+    "stealth": 6
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "passive_perception": 16
+  },
+  "languages": [
+    "Common plus one other language"
+  ],
+  "challenge_rating": "1",
+  "xp": 200,
+  "proficiency_bonus": 2,
+  "special_traits": [],
+  "actions": [
+    {
+      "name": "Shortsword",
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 5 (1d6 + 2) Piercing damage plus 7 (2d6) Poison damage."
+    },
+    {
+      "name": "Hand Crossbow",
+      "description": "Ranged Attack Roll: +4, range 30/120 ft. Hit: 5 (1d6 + 2) Piercing damage plus 7 (2d6) Poison damage."
+    }
+  ],
+  "bonus_actions": [
+    {
+      "name": "Cunning Action",
+      "description": "The spy takes the Dash, Disengage, or Hide action."
+    }
+  ],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

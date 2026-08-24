@@ -1,0 +1,91 @@
+{
+  "name": "Drider",
+  "size": "Large",
+  "type": "Monstrosity",
+  "alignment": "Chaotic Evil",
+  "armor_class": [
+    {
+      "value": 19,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 123,
+    "dice": "13d10 + 52"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": null,
+    "climb": 30,
+    "burrow": null
+  },
+  "initiative_bonus": 4,
+  "ability_scores": {
+    "str": 16,
+    "dex": 19,
+    "con": 18,
+    "int": 13,
+    "wis": 16,
+    "cha": 12
+  },
+  "saving_throws": {},
+  "skills": {
+    "perception": 6,
+    "stealth": 10
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 120,
+    "passive_perception": 16
+  },
+  "languages": [
+    "Elvish",
+    "Undercommon"
+  ],
+  "challenge_rating": "6",
+  "xp": 2300,
+  "proficiency_bonus": 3,
+  "special_traits": [
+    {
+      "name": "Spider Climb",
+      "description": "The drider can climb difficult surfaces, including along ceilings, without needing to make an ability check."
+    },
+    {
+      "name": "Sunlight Sensitivity",
+      "description": "While in sunlight, the drider has Disadvantage on ability checks and attack rolls."
+    },
+    {
+      "name": "Web Walker",
+      "description": "The drider ignores movement restrictions caused by webs, and the drider knows the location of any other creature in contact with the same web."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The drider makes three attacks, using Foreleg or Poison Burst in any combination."
+    },
+    {
+      "name": "Foreleg",
+      "description": "Melee Attack Roll: +7, reach 10 ft. Hit: 13 (2d8 + 4) Piercing damage."
+    },
+    {
+      "name": "Poison Burst",
+      "description": "Ranged Attack Roll: +6, range 120 ft. Hit: 13 (3d6 + 3) Poison damage."
+    }
+  ],
+  "bonus_actions": [
+    {
+      "name": "Magic of the Spider Queen (Recharge 5-6)",
+      "description": "The drider casts Darkness, Faerie Fire, or Web, requiring no Material components and using Wisdom as the spellcasting ability (spell save DC 14)."
+    }
+  ],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

@@ -1,0 +1,4 @@
+WARN p275 commoner.json: All ability scores are 10 — may indicate parsing failed
+SKIPPED p109 'Animated Object': not a spell
+SKIPPED p131 'Otherworldly Steed': not a spell
+SKIPPED p166 'Draconic Spirit': not a spell

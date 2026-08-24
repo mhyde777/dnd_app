@@ -1,0 +1,78 @@
+{
+  "name": "Gargoyle",
+  "size": "Medium",
+  "type": "Elemental",
+  "alignment": "Chaotic Evil",
+  "armor_class": [
+    {
+      "value": 15,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 67,
+    "dice": "9d8 + 27"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": 60,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 2,
+  "ability_scores": {
+    "str": 15,
+    "dex": 11,
+    "con": 16,
+    "int": 6,
+    "wis": 11,
+    "cha": 7
+  },
+  "saving_throws": {},
+  "skills": {
+    "stealth": 4
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Poison"
+  ],
+  "condition_immunities": [
+    "Exhaustion",
+    "Petrified",
+    "Poisoned"
+  ],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 10
+  },
+  "languages": [
+    "Primordial (Terran)"
+  ],
+  "challenge_rating": "2",
+  "xp": 450,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Flyby",
+      "description": "The gargoyle doesn't provoke an Opportunity Attack when it flies out of an enemy's reach."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The gargoyle makes two Claw attacks."
+    },
+    {
+      "name": "Claw",
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 7 (2d4 + 2) Slashing damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

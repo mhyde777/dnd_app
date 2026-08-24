@@ -1,0 +1,63 @@
+{
+  "name": "Giant Badger",
+  "size": "Medium",
+  "type": "Beast",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 13,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 15,
+    "dice": "2d8 + 6"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": 10
+  },
+  "initiative_bonus": 0,
+  "ability_scores": {
+    "str": 13,
+    "dex": 10,
+    "con": 17,
+    "int": 2,
+    "wis": 12,
+    "cha": 5
+  },
+  "saving_throws": {},
+  "skills": {
+    "perception": 3
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [
+    "Poison"
+  ],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 13
+  },
+  "languages": [],
+  "challenge_rating": "1/4",
+  "xp": 50,
+  "proficiency_bonus": 2,
+  "special_traits": [],
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 6 (2d4 + 1) Piercing damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

@@ -1,0 +1,118 @@
+{
+  "name": "Archmage",
+  "size": "Medium or small",
+  "type": "Humanoid (Wizard)",
+  "alignment": "Neutral",
+  "armor_class": [
+    {
+      "value": 17,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 170,
+    "dice": "31d8 + 31"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 7,
+  "ability_scores": {
+    "str": 10,
+    "dex": 14,
+    "con": 12,
+    "int": 20,
+    "wis": 15,
+    "cha": 16
+  },
+  "saving_throws": {
+    "int": 9,
+    "wis": 6
+  },
+  "skills": {
+    "arcana": 13,
+    "history": 9,
+    "perception": 6
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Psychic",
+    "Charmed (with Mind Blank)"
+  ],
+  "condition_immunities": [],
+  "senses": {
+    "passive_perception": 16
+  },
+  "languages": [
+    "Common plus five other languages"
+  ],
+  "challenge_rating": "12",
+  "xp": 8000,
+  "proficiency_bonus": 4,
+  "special_traits": [
+    {
+      "name": "Magic Resistance",
+      "description": "The archmage has Advantage on saving throws against spells and other magical effects."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The archmage makes four Arcane Burst attacks."
+    },
+    {
+      "name": "Arcane Burst",
+      "description": "Melee or Ranged Attack Roll: +9, reach 5 ft. or range 150 ft. Hit: 27 (4d10 + 5) Force damage."
+    }
+  ],
+  "bonus_actions": [
+    {
+      "name": "Misty Step (3/Day)",
+      "description": "The mage casts Misty Step, using the same spellcasting ability as Spellcasting."
+    }
+  ],
+  "reactions": [
+    {
+      "name": "Protective Magic (3/Day)",
+      "description": "The archmage casts Counterspell or Shield in response to the spell's trigger, using the same spellcasting ability as Spellcasting."
+    }
+  ],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": {
+    "ability": "Intelligence",
+    "save_dc": 17,
+    "attack_bonus": null,
+    "cantrip_damage_bonus": null,
+    "slots": {},
+    "spells_by_level": {},
+    "innate": {
+      "at_will": [
+        "detect magic",
+        "detect thoughts",
+        "disguise self",
+        "invisibility",
+        "light",
+        "mage armor (included in ac)",
+        "mage hand",
+        "prestidigitation"
+      ],
+      "2_per_day": [
+        "fly",
+        "lightning bolt (level 7 version)"
+      ],
+      "1_per_day": [
+        "cone of cold (level 9 version)",
+        "mind blank (cast before combat)",
+        "scrying",
+        "teleport"
+      ]
+    }
+  }
+}

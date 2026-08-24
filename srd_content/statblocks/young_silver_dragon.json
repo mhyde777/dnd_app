@@ -1,0 +1,80 @@
+{
+  "name": "Young Silver Dragon",
+  "size": "Large",
+  "type": "Dragon (Metallic)",
+  "alignment": "Lawful Good",
+  "armor_class": [
+    {
+      "value": 18,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 168,
+    "dice": "16d10 + 80"
+  },
+  "speed": {
+    "walk": 40,
+    "fly": 80,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 4,
+  "ability_scores": {
+    "str": 23,
+    "dex": 10,
+    "con": 21,
+    "int": 14,
+    "wis": 11,
+    "cha": 19
+  },
+  "saving_throws": {
+    "dex": 4,
+    "wis": 4
+  },
+  "skills": {
+    "history": 6,
+    "perception": 8,
+    "stealth": 4
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Cold"
+  ],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 30,
+    "darkvision": 120,
+    "passive_perception": 18
+  },
+  "languages": [
+    "Common",
+    "Draconic"
+  ],
+  "challenge_rating": "9",
+  "xp": 5000,
+  "proficiency_bonus": 4,
+  "special_traits": [],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The dragon makes three Rend attacks. It can replace one attack with a use of Paralyzing Breath."
+    },
+    {
+      "name": "Rend",
+      "description": "Melee Attack Roll: +10, reach 10 ft. Hit: 15 (2d8 + 6) Slashing damage. Cold Breath (Recharge 5-6). Constitution Saving Throw: DC 17, each creature in a 30-foot Cone. Failure: 49 (11d8) Cold damage. Success: Half damage."
+    },
+    {
+      "name": "Paralyzing Breath",
+      "description": "Constitution Saving Throw: DC 17, each creature in a 30-foot Cone. First Failure: The target has the Incapacitated condition until the end of its next turn, when it repeats the save. Second Failure: The target has the Paralyzed condition, and it repeats the save at the end of each of its turns, ending the effect on itself on a success. After 1 minute, it succeeds automatically."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

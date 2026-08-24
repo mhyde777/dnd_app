@@ -1,0 +1,70 @@
+{
+  "name": "Animated Object",
+  "size": "Huge",
+  "type": "or Smaller Construct",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 15,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 10,
+    "dice": "Medium or smaller"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": null,
+  "ability_scores": {
+    "str": 16,
+    "dex": 10,
+    "con": 10,
+    "int": 3,
+    "wis": 3,
+    "cha": 1
+  },
+  "saving_throws": {},
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Poison",
+    "Psychic"
+  ],
+  "condition_immunities": [
+    "Charmed",
+    "Exhaustion",
+    "Frightened",
+    "Paralyzed",
+    "Poisoned"
+  ],
+  "senses": {
+    "blindsight": 30,
+    "passive_perception": 6
+  },
+  "languages": [
+    "Understands the languages you know"
+  ],
+  "challenge_rating": "0",
+  "xp": 0,
+  "proficiency_bonus": 2,
+  "special_traits": [],
+  "actions": [
+    {
+      "name": "Slam",
+      "description": "Melee Attack Roll: Bonus equals your spell attack modifier, reach 5 ft. Hit: Force damage equal to 1d4 + 3 (Medium or smaller), 2d6 + 3 + your spellcasting ability modifier (Large), or 2d12 + 3 + your spellcasting ability modifier (Huge)."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

@@ -1,0 +1,65 @@
+{
+  "name": "Vulture",
+  "size": "Medium",
+  "type": "Beast",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 10,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 5,
+    "dice": "1d8 + 1"
+  },
+  "speed": {
+    "walk": 10,
+    "fly": 50,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 0,
+  "ability_scores": {
+    "str": 7,
+    "dex": 10,
+    "con": 13,
+    "int": 2,
+    "wis": 12,
+    "cha": 4
+  },
+  "saving_throws": {},
+  "skills": {
+    "perception": 3
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "passive_perception": 13
+  },
+  "languages": [],
+  "challenge_rating": "0",
+  "xp": 10,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Pack Tactics",
+      "description": "The vulture has Advantage on an attack roll against a creature if at least one of the vulture's allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Beak",
+      "description": "Melee Attack Roll: +2, reach 5 ft. Hit: 2 (1d4) Piercing damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

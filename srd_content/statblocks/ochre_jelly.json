@@ -1,0 +1,86 @@
+{
+  "name": "Ochre Jelly",
+  "size": "Large",
+  "type": "Ooze",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 8,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 52,
+    "dice": "7d10 + 14"
+  },
+  "speed": {
+    "walk": 20,
+    "fly": null,
+    "swim": null,
+    "climb": 20,
+    "burrow": null
+  },
+  "initiative_bonus": -2,
+  "ability_scores": {
+    "str": 15,
+    "dex": 6,
+    "con": 14,
+    "int": 2,
+    "wis": 6,
+    "cha": 1
+  },
+  "saving_throws": {},
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [
+    "Acid"
+  ],
+  "damage_immunities": [
+    "Lightning",
+    "Slashing"
+  ],
+  "condition_immunities": [
+    "Charmed",
+    "Deafened",
+    "Exhaustion",
+    "Frightened",
+    "Grappled",
+    "Prone",
+    "Restrained"
+  ],
+  "senses": {
+    "blindsight": 60,
+    "passive_perception": 8
+  },
+  "languages": [],
+  "challenge_rating": "2",
+  "xp": 450,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Amorphous",
+      "description": "The jelly can move through a space as narrow as 1 inch without expending extra movement to do so."
+    },
+    {
+      "name": "Spider Climb",
+      "description": "The jelly can climb difficult surfaces, including along ceilings, without needing to make an ability check."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Pseudopod",
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 12 (3d6 + 2) Acid damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [
+    {
+      "name": "Split",
+      "description": "Trigger: While the jelly is Large or Medium and has 10+ Hit Points, it becomes Bloodied or is subjected to Lightning or Slashing damage. Response: The jelly splits into two new Ochre Jellies. Each new jelly is one size smaller than the original jelly and acts on its Initiative. The original jelly's Hit Points are divided evenly between the new jellies (round down)."
+    }
+  ],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

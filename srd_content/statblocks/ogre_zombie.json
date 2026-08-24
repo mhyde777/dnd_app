@@ -1,0 +1,73 @@
+{
+  "name": "Ogre Zombie",
+  "size": "Large",
+  "type": "Undead",
+  "alignment": "Neutral Evil",
+  "armor_class": [
+    {
+      "value": 8,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 85,
+    "dice": "9d10 + 36"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": -2,
+  "ability_scores": {
+    "str": 19,
+    "dex": 6,
+    "con": 18,
+    "int": 3,
+    "wis": 6,
+    "cha": 5
+  },
+  "saving_throws": {
+    "wis": 0
+  },
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Poison"
+  ],
+  "condition_immunities": [
+    "Exhaustion",
+    "Poisoned"
+  ],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 8
+  },
+  "languages": [
+    "Understands Common and Giant but can't speak"
+  ],
+  "challenge_rating": "2",
+  "xp": 450,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Undead Fortitude",
+      "description": "If damage reduces the zombie to 0 Hit Points, it makes a Constitution saving throw (DC 5 plus the damage taken) unless the damage is Radiant or from a Critical Hit. On a successful save, the zombie drops to 1 Hit Point instead."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Slam",
+      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 13 (2d8 + 4) Bludgeoning damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

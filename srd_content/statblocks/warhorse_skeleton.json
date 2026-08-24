@@ -1,0 +1,66 @@
+{
+  "name": "Warhorse Skeleton",
+  "size": "Large",
+  "type": "Undead",
+  "alignment": "Lawful Evil",
+  "armor_class": [
+    {
+      "value": 13,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 22,
+    "dice": "3d10 + 6"
+  },
+  "speed": {
+    "walk": 60,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 1,
+  "ability_scores": {
+    "str": 18,
+    "dex": 12,
+    "con": 15,
+    "int": 2,
+    "wis": 8,
+    "cha": 5
+  },
+  "saving_throws": {},
+  "skills": {},
+  "damage_vulnerabilities": [
+    "Bludgeoning"
+  ],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Poison"
+  ],
+  "condition_immunities": [
+    "Exhaustion",
+    "Poisoned"
+  ],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 9
+  },
+  "languages": [],
+  "challenge_rating": "1/2",
+  "xp": 100,
+  "proficiency_bonus": 2,
+  "special_traits": [],
+  "actions": [
+    {
+      "name": "Hooves",
+      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 7 (1d6 + 4) Bludgeoning damage. If the target is a Large or smaller creature and the skeleton moved 20+ feet straight toward it immediately before the hit, the target has the Prone condition."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

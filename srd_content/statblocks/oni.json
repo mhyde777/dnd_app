@@ -1,0 +1,110 @@
+{
+  "name": "Oni",
+  "size": "Large",
+  "type": "Fiend",
+  "alignment": "Lawful Evil",
+  "armor_class": [
+    {
+      "value": 17,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 119,
+    "dice": "14d10 + 42"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": 30,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 0,
+  "ability_scores": {
+    "str": 19,
+    "dex": 11,
+    "con": 16,
+    "int": 14,
+    "wis": 12,
+    "cha": 15
+  },
+  "saving_throws": {
+    "dex": 3,
+    "con": 6,
+    "wis": 4,
+    "cha": 5
+  },
+  "skills": {
+    "arcana": 5,
+    "deception": 8,
+    "perception": 4
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [
+    "Cold"
+  ],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 14
+  },
+  "languages": [
+    "Common",
+    "Giant"
+  ],
+  "challenge_rating": "7",
+  "xp": 2900,
+  "proficiency_bonus": 3,
+  "special_traits": [
+    {
+      "name": "Regeneration",
+      "description": "The oni regains 10 Hit Points at the start of each of its turns if it has at least 1 Hit Point."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The oni makes two Claw or Nightmare Ray attacks. It can replace one attack with a use of Spellcasting."
+    },
+    {
+      "name": "Claw",
+      "description": "Melee Attack Roll: +7, reach 10 ft. Hit: 10 (1d12 + 4) Slashing damage plus 9 (2d8) Necrotic damage."
+    },
+    {
+      "name": "Nightmare Ray",
+      "description": "Ranged Attack Roll: +5, range 60 ft. Hit: 9 (2d6 + 2) Psychic damage, and the target has the Frightened condition until the start of the oni's next turn."
+    },
+    {
+      "name": "Shape-Shift",
+      "description": "The oni shape-shifts into a Small or Medium Humanoid or a Large Giant, or it returns to its true form. Other than its size, its game statistics are the same in each form. Any equipment it is wearing or carrying isn't transformed."
+    }
+  ],
+  "bonus_actions": [
+    {
+      "name": "Invisibility",
+      "description": "The oni casts Invisibility on itself, requiring no spell components and using the same spellcasting ability as Spellcasting."
+    }
+  ],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": {
+    "ability": "Charisma",
+    "save_dc": 13,
+    "attack_bonus": null,
+    "cantrip_damage_bonus": null,
+    "slots": {},
+    "spells_by_level": {},
+    "innate": {
+      "1_per_day": [
+        "charm person (level 2 version)",
+        "darkness",
+        "gaseous form",
+        "sleep"
+      ]
+    }
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "name": "Lamia",
+  "size": "Large",
+  "type": "Fiend",
+  "alignment": "Chaotic Evil",
+  "armor_class": [
+    {
+      "value": 13,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 97,
+    "dice": "13d10 + 26"
+  },
+  "speed": {
+    "walk": 40,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 1,
+  "ability_scores": {
+    "str": 16,
+    "dex": 13,
+    "con": 15,
+    "int": 14,
+    "wis": 15,
+    "cha": 16
+  },
+  "saving_throws": {},
+  "skills": {
+    "deception": 7,
+    "insight": 4,
+    "stealth": 5
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 12
+  },
+  "languages": [
+    "Abyssal",
+    "Common"
+  ],
+  "challenge_rating": "4",
+  "xp": 1100,
+  "proficiency_bonus": 2,
+  "special_traits": [],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The lamia makes two Claw attacks. It can replace one attack with a use of Corrupting Touch."
+    },
+    {
+      "name": "Claw",
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 7 (1d8 + 3) Slashing damage plus 7 (2d6) Psychic damage."
+    },
+    {
+      "name": "Corrupting Touch",
+      "description": "Wisdom Saving Throw: DC 13, one creature the lamia can see within 5 feet. Failure: 13 (3d8) Psychic damage, and the target is cursed for 1 hour. Until the curse ends, the target has the Charmed and Poisoned conditions."
+    }
+  ],
+  "bonus_actions": [
+    {
+      "name": "Leap",
+      "description": "The lamia jumps up to 30 feet by spending 10 feet of movement."
+    }
+  ],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": {
+    "ability": "Charisma",
+    "save_dc": 13,
+    "attack_bonus": null,
+    "cantrip_damage_bonus": null,
+    "slots": {},
+    "spells_by_level": {},
+    "innate": {
+      "at_will": [
+        "disguise self (can appear as a large or medium biped)",
+        "minor illusion"
+      ],
+      "1_per_day": [
+        "geas",
+        "major image",
+        "scrying"
+      ]
+    }
+  }
+}

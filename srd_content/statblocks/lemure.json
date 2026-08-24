@@ -1,0 +1,75 @@
+{
+  "name": "Lemure",
+  "size": "Medium",
+  "type": "Fiend (Devil)",
+  "alignment": "Lawful Evil",
+  "armor_class": [
+    {
+      "value": 9,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 9,
+    "dice": "2d8"
+  },
+  "speed": {
+    "walk": 20,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": -3,
+  "ability_scores": {
+    "str": 10,
+    "dex": 5,
+    "con": 11,
+    "int": 1,
+    "wis": 11,
+    "cha": 3
+  },
+  "saving_throws": {},
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [
+    "Cold"
+  ],
+  "damage_immunities": [
+    "Fire",
+    "Poison"
+  ],
+  "condition_immunities": [
+    "Charmed",
+    "Frightened",
+    "Poisoned"
+  ],
+  "senses": {
+    "darkvision": 120,
+    "passive_perception": 10
+  },
+  "languages": [
+    "Understands Infernal but can't speak"
+  ],
+  "challenge_rating": "0",
+  "xp": 10,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Hellish Restoration",
+      "description": "If the lemure dies in the Nine Hells, it revives with all its Hit Points in 1d10 days unless it is killed by a creature under the effects of a Bless spell or its remains are sprinkled with Holy Water."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Vile Slime",
+      "description": "Melee Attack Roll: +2, reach 5 ft. Hit: 2 (1d4) Poison damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

@@ -228,7 +228,13 @@ def _parse_inline_format(lines: list[str]) -> dict:
                     matched = True
                     break
             if not matched:
-                if re.match(r'^[A-Z][A-Za-z /]+:\s*\S', line) and not desc_lines:
+                # An unrecognised property header ("Attack/Save: ...") is a
+                # short label. The length bound matters: without it, a first
+                # description line whose opening clause ends in a colon --
+                # "You touch a creature and remove one of the following
+                # effects from it: ..." -- matches too, and the whole spell
+                # description is silently dropped.
+                if re.match(r'^[A-Z][A-Za-z /]{0,24}:\s*\S', line) and not desc_lines:
                     pass  # unrecognised property header, skip
                 else:
                     in_description = True

@@ -1,0 +1,86 @@
+{
+  "name": "Bugbear Stalker",
+  "size": "Medium",
+  "type": "Fey (Goblinoid)",
+  "alignment": "Chaotic Evil",
+  "armor_class": [
+    {
+      "value": 15,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 65,
+    "dice": "10d8 + 20"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 2,
+  "ability_scores": {
+    "str": 17,
+    "dex": 14,
+    "con": 14,
+    "int": 11,
+    "wis": 12,
+    "cha": 11
+  },
+  "saving_throws": {
+    "con": 4,
+    "wis": 3
+  },
+  "skills": {
+    "stealth": 6,
+    "survival": 3
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 11
+  },
+  "languages": [
+    "Common",
+    "Goblin"
+  ],
+  "challenge_rating": "3",
+  "xp": 700,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Abduct",
+      "description": "The bugbear needn't spend extra movement to move a creature it is grappling."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The bugbear makes two Javelin or Morningstar attacks."
+    },
+    {
+      "name": "Javelin",
+      "description": "Melee or Ranged Attack Roll: +5, reach 10 ft. or range 30/120 ft. Hit: 13 (3d6 + 3) Piercing damage."
+    },
+    {
+      "name": "Morningstar",
+      "description": "Melee Attack Roll: +5 (with Advantage if the target is Grappled by the bugbear), reach 10 ft. Hit: 12 (2d8 + 3) Piercing damage."
+    }
+  ],
+  "bonus_actions": [
+    {
+      "name": "Quick Grapple",
+      "description": "Dexterity Saving Throw: DC 13, one Medium or smaller creature the bugbear can see within 10 feet. Failure: The target has the Grappled condition (escape DC 13)."
+    }
+  ],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

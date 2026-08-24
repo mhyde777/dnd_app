@@ -1,0 +1,70 @@
+{
+  "name": "Blink Dog",
+  "size": "Medium",
+  "type": "Fey",
+  "alignment": "Lawful Good",
+  "armor_class": [
+    {
+      "value": 13,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 22,
+    "dice": "4d8 + 4"
+  },
+  "speed": {
+    "walk": 40,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 3,
+  "ability_scores": {
+    "str": 12,
+    "dex": 17,
+    "con": 12,
+    "int": 10,
+    "wis": 13,
+    "cha": 11
+  },
+  "saving_throws": {},
+  "skills": {
+    "perception": 5,
+    "stealth": 5
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 15
+  },
+  "languages": [
+    "Blink Dog",
+    "understands Elvish and Sylvan but can't speak them"
+  ],
+  "challenge_rating": "1/4",
+  "xp": 50,
+  "proficiency_bonus": 2,
+  "special_traits": [],
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 5 (1d4 + 3) Piercing damage."
+    }
+  ],
+  "bonus_actions": [
+    {
+      "name": "Teleport (Recharge 4-6)",
+      "description": "The dog teleports up to 40 feet to an unoccupied space it can see."
+    }
+  ],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

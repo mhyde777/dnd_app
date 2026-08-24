@@ -1,0 +1,103 @@
+{
+  "name": "Nalfeshnee",
+  "size": "Large",
+  "type": "Fiend (Demon)",
+  "alignment": "Chaotic Evil",
+  "armor_class": [
+    {
+      "value": 18,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 184,
+    "dice": "16d10 + 96"
+  },
+  "speed": {
+    "walk": 20,
+    "fly": 30,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 5,
+  "ability_scores": {
+    "str": 21,
+    "dex": 10,
+    "con": 22,
+    "int": 19,
+    "wis": 12,
+    "cha": 15
+  },
+  "saving_throws": {
+    "con": 11,
+    "int": 9,
+    "wis": 6,
+    "cha": 7
+  },
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [
+    "Cold",
+    "Fire",
+    "Lightning"
+  ],
+  "damage_immunities": [
+    "Poison"
+  ],
+  "condition_immunities": [
+    "Frightened",
+    "Poisoned"
+  ],
+  "senses": {
+    "truesight": 120,
+    "passive_perception": 11
+  },
+  "languages": [
+    "Abyssal",
+    "telepathy 120 ft."
+  ],
+  "challenge_rating": "13",
+  "xp": 10000,
+  "proficiency_bonus": 5,
+  "special_traits": [
+    {
+      "name": "Demonic Restoration",
+      "description": "If the nalfeshnee dies outside the Abyss, its body dissolves into ichor, and it gains a new body instantly, reviving with all its Hit Points somewhere in the Abyss."
+    },
+    {
+      "name": "Magic Resistance",
+      "description": "The nalfeshnee has Advantage on saving throws against spells and other magical effects."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The nalfeshnee makes three Rend attacks."
+    },
+    {
+      "name": "Rend",
+      "description": "Melee Attack Roll: +10, reach 10 ft. Hit: 16 (2d10 + 5) Slashing damage plus 11 (2d10) Force damage."
+    },
+    {
+      "name": "Teleport",
+      "description": "The nalfeshnee teleports up to 120 feet to an unoccupied space it can see."
+    }
+  ],
+  "bonus_actions": [
+    {
+      "name": "Horror Nimbus (Recharge 5-6)",
+      "description": "Wisdom Saving Throw: DC 15, each creature in a 15-foot Emanation originating from the nalfeshnee. Failure: 28 (8d6) Psychic damage, and the target has the Frightened condition for 1 minute, until it takes damage, or until it ends its turn with the nalfeshnee out of line of sight. Success: The target is immune to this nalfeshnee's Horror Nimbus for 24 hours."
+    }
+  ],
+  "reactions": [
+    {
+      "name": "Pursuit",
+      "description": "Trigger: Another creature the nalfeshnee can see ends its move within 120 feet of the nalfeshnee. Response: The nalfeshnee uses Teleport, but its destination space must be within 10 feet of the triggering creature."
+    }
+  ],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

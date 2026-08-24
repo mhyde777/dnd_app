@@ -1,0 +1,104 @@
+{
+  "name": "Ancient White Dragon",
+  "size": "Gargantuan",
+  "type": "Dragon (Chromatic)",
+  "alignment": "Chaotic Evil",
+  "armor_class": [
+    {
+      "value": 20,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 333,
+    "dice": "18d20 + 144"
+  },
+  "speed": {
+    "walk": 40,
+    "fly": 80,
+    "swim": 40,
+    "climb": null,
+    "burrow": 40
+  },
+  "initiative_bonus": 12,
+  "ability_scores": {
+    "str": 26,
+    "dex": 10,
+    "con": 26,
+    "int": 10,
+    "wis": 13,
+    "cha": 18
+  },
+  "saving_throws": {
+    "dex": 6,
+    "wis": 7
+  },
+  "skills": {
+    "perception": 13,
+    "stealth": 6
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Cold"
+  ],
+  "condition_immunities": [],
+  "senses": {
+    "blindsight": 60,
+    "darkvision": 120,
+    "passive_perception": 23
+  },
+  "languages": [
+    "Common",
+    "Draconic"
+  ],
+  "challenge_rating": "20",
+  "xp": 25000,
+  "proficiency_bonus": 6,
+  "special_traits": [
+    {
+      "name": "Ice Walk",
+      "description": "The dragon can move across and climb icy surfaces without needing to make an ability check. Additionally, Difficult Terrain composed of ice or snow doesn't cost it extra movement."
+    },
+    {
+      "name": "Legendary Resistance (4/Day, or 5/Day in Lair)",
+      "description": "If the dragon fails a saving throw, it can choose to succeed instead."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The dragon makes three Rend attacks."
+    },
+    {
+      "name": "Rend",
+      "description": "Melee Attack Roll: +14, reach 15 ft. Hit: 17 (2d8 + 8) Slashing damage plus 7 (2d6) Cold damage."
+    },
+    {
+      "name": "Cold Breath (Recharge 5-6)",
+      "description": "Constitution Saving Throw: DC 22, each creature in a 90-foot Cone. Failure: 63 (14d8) Cold damage. Success: Half damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": [
+    {
+      "name": "Freezing Burst",
+      "cost": 1,
+      "description": "Constitution Saving Throw: DC 20, each creature in a 30-foot-radius Sphere centered on a point the dragon can see within 120 feet. Failure: 14 (4d6) Cold damage, and the target's Speed is 0 until the end of the target's next turn. Failure or Success: The dragon can't take this action again until the start of its next turn."
+    },
+    {
+      "name": "Frightful Presence",
+      "cost": 1,
+      "description": "The dragon casts Fear, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 18). The dragon can't take this action again until the start of its next turn."
+    },
+    {
+      "name": "Pounce",
+      "cost": 1,
+      "description": "The dragon moves up to half its Speed, and it makes one Rend attack."
+    }
+  ],
+  "legendary_action_count": 3,
+  "lair_actions": null,
+  "spellcasting": null
+}

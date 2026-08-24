@@ -1,0 +1,81 @@
+{
+  "name": "Magma Mephit",
+  "size": "Small",
+  "type": "Elemental",
+  "alignment": "Neutral Evil",
+  "armor_class": [
+    {
+      "value": 11,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 18,
+    "dice": "4d6 + 4"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": 30,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 1,
+  "ability_scores": {
+    "str": 8,
+    "dex": 12,
+    "con": 12,
+    "int": 7,
+    "wis": 10,
+    "cha": 10
+  },
+  "saving_throws": {},
+  "skills": {
+    "stealth": 3
+  },
+  "damage_vulnerabilities": [
+    "Cold"
+  ],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Fire",
+    "Poison"
+  ],
+  "condition_immunities": [
+    "Exhaustion",
+    "Poisoned"
+  ],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 10
+  },
+  "languages": [
+    "Primordial (Ignan",
+    "Terran)"
+  ],
+  "challenge_rating": "1/2",
+  "xp": 100,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Death Burst",
+      "description": "The mephit explodes when it dies. Dexterity Saving Throw: DC 11, each creature in a 5-foot Emanation originating from the mephit. Failure: 7 (2d6) Fire damage. Success: Half damage."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Claw",
+      "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 3 (1d4 + 1) Slashing damage plus 3 (1d6) Fire damage."
+    },
+    {
+      "name": "Fire Breath (Recharge 6)",
+      "description": "Dexterity Saving Throw: DC 11, each creature in a 15-foot Cone. Failure: 7 (2d6) Fire damage. Success: Half damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

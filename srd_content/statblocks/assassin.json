@@ -1,0 +1,88 @@
+{
+  "name": "Assassin",
+  "size": "Medium or small",
+  "type": "Humanoid",
+  "alignment": "Neutral",
+  "armor_class": [
+    {
+      "value": 16,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 97,
+    "dice": "15d8 + 30"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 10,
+  "ability_scores": {
+    "str": 11,
+    "dex": 18,
+    "con": 14,
+    "int": 16,
+    "wis": 11,
+    "cha": 10
+  },
+  "saving_throws": {
+    "dex": 7,
+    "int": 6
+  },
+  "skills": {
+    "acrobatics": 7,
+    "perception": 6,
+    "stealth": 10
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [
+    "Poison"
+  ],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "passive_perception": 16
+  },
+  "languages": [
+    "Common",
+    "Thieves' Cant"
+  ],
+  "challenge_rating": "8",
+  "xp": 3900,
+  "proficiency_bonus": 3,
+  "special_traits": [
+    {
+      "name": "Evasion",
+      "description": "If the assassin is subjected to an effect that allows it to make a Dexterity saving throw to take only half damage, the assassin instead takes no damage if it succeeds on the save and only half damage if it fails. It can't use this trait if it has the Incapacitated condition."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The assassin makes three attacks, using Shortsword or Light Crossbow in any combination."
+    },
+    {
+      "name": "Shortsword",
+      "description": "Melee Attack Roll: +7, reach 5 ft. Hit: 7 (1d6 + 4) Piercing damage plus 17 (5d6) Poison damage, and the target has the Poisoned condition until the start of the assassin's next turn."
+    },
+    {
+      "name": "Light Crossbow",
+      "description": "Ranged Attack Roll: +7, range 80/320 ft. Hit: 8 (1d8 + 4) Piercing damage plus 21 (6d6) Poison damage."
+    }
+  ],
+  "bonus_actions": [
+    {
+      "name": "Cunning Action",
+      "description": "The assassin takes the Dash, Disengage, or Hide action."
+    }
+  ],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

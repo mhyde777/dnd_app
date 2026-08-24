@@ -1,0 +1,86 @@
+{
+  "name": "Draconic Spirit",
+  "size": "Large",
+  "type": "Dragon",
+  "alignment": "Neutral",
+  "armor_class": [
+    {
+      "value": 14,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 50,
+    "dice": null
+  },
+  "speed": {
+    "walk": 30,
+    "fly": 60,
+    "swim": 30,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": null,
+  "ability_scores": {
+    "str": 19,
+    "dex": 14,
+    "con": 17,
+    "int": 10,
+    "wis": 14,
+    "cha": 14
+  },
+  "saving_throws": {},
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [
+    "Acid",
+    "Cold",
+    "Fire",
+    "Lightning",
+    "Poison"
+  ],
+  "damage_immunities": [],
+  "condition_immunities": [
+    "Charmed",
+    "Frightened",
+    "Poisoned"
+  ],
+  "senses": {
+    "blindsight": 30,
+    "darkvision": 60,
+    "passive_perception": 12
+  },
+  "languages": [
+    "Draconic",
+    "understands the languages you know"
+  ],
+  "challenge_rating": "0",
+  "xp": 0,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Shared Resistances",
+      "description": "When you summon the spirit, choose one of its Resistances. You have Resistance to the chosen damage type until the spell ends."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The spirit makes a number of Rend attacks equal to half the spell's level (round down), and it uses Breath Weapon."
+    },
+    {
+      "name": "Rend",
+      "description": "Melee Attack Roll: Bonus equals your spell attack modifier, reach 10 feet. Hit: 1d6 + 4 + the spell's level Piercing damage."
+    },
+    {
+      "name": "Breath Weapon",
+      "description": "Dexterity Saving Throw: DC equals your spell save DC, each creature in a 30-foot Cone. Failure: 2d6 damage of a type this spirit has Resistance to (your choice when you cast the spell). Success: Half damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

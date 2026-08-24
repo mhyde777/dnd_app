@@ -1,0 +1,72 @@
+{
+  "name": "Giant Octopus",
+  "size": "Large",
+  "type": "Beast",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 11,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 45,
+    "dice": "7d10 + 7"
+  },
+  "speed": {
+    "walk": 10,
+    "fly": null,
+    "swim": 60,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 1,
+  "ability_scores": {
+    "str": 17,
+    "dex": 13,
+    "con": 13,
+    "int": 5,
+    "wis": 10,
+    "cha": 4
+  },
+  "saving_throws": {},
+  "skills": {
+    "perception": 4,
+    "stealth": 5
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 14
+  },
+  "languages": [],
+  "challenge_rating": "1",
+  "xp": 200,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Water Breathing",
+      "description": "The octopus can breathe only underwater. It can hold its breath for 1 hour outside water."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Tentacles",
+      "description": "Melee Attack Roll: +5, reach 10 ft. Hit: 10 (2d6 + 3) Bludgeoning damage. If the target is a Medium or smaller creature, it has the Grappled condition (escape DC 13) from all eight tentacles. While Grappled, the target has the Restrained condition."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [
+    {
+      "name": "Ink Cloud (1/Day)",
+      "description": "Trigger: The octopus takes damage while underwater. Response: The octopus releases ink that fills a 10-foot Cube centered on itself, and the octopus moves up to its Swim Speed. The Cube is Heavily Obscured for 1 minute or until a strong current or similar effect disperses the ink."
+    }
+  ],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

@@ -1,0 +1,64 @@
+{
+  "name": "Lizard",
+  "size": "Tiny",
+  "type": "Beast",
+  "alignment": "Unaligned",
+  "armor_class": [
+    {
+      "value": 10,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 2,
+    "dice": "1d4"
+  },
+  "speed": {
+    "walk": 20,
+    "fly": null,
+    "swim": null,
+    "climb": 20,
+    "burrow": null
+  },
+  "initiative_bonus": 0,
+  "ability_scores": {
+    "str": 2,
+    "dex": 11,
+    "con": 10,
+    "int": 1,
+    "wis": 8,
+    "cha": 3
+  },
+  "saving_throws": {},
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 30,
+    "passive_perception": 9
+  },
+  "languages": [],
+  "challenge_rating": "0",
+  "xp": 10,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Spider Climb",
+      "description": "The lizard can climb difficult surfaces, including along ceilings, without needing to make an ability check."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Bite",
+      "description": "Melee Attack Roll: +2, reach 5 ft. Hit: 1 Piercing damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

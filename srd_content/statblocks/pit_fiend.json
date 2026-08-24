@@ -1,0 +1,108 @@
+{
+  "name": "Pit Fiend",
+  "size": "Large",
+  "type": "Fiend (Devil)",
+  "alignment": "Lawful Evil",
+  "armor_class": [
+    {
+      "value": 21,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 337,
+    "dice": "27d10 + 189"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": 60,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 14,
+  "ability_scores": {
+    "str": 26,
+    "dex": 14,
+    "con": 24,
+    "int": 22,
+    "wis": 18,
+    "cha": 24
+  },
+  "saving_throws": {
+    "dex": 8,
+    "wis": 10
+  },
+  "skills": {
+    "perception": 10,
+    "persuasion": 19
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [
+    "Cold"
+  ],
+  "damage_immunities": [
+    "Fire",
+    "Poison"
+  ],
+  "condition_immunities": [
+    "Poisoned"
+  ],
+  "senses": {
+    "truesight": 120,
+    "passive_perception": 20
+  },
+  "languages": [
+    "Infernal",
+    "telepathy 120 ft."
+  ],
+  "challenge_rating": "20",
+  "xp": 25000,
+  "proficiency_bonus": 6,
+  "special_traits": [
+    {
+      "name": "Diabolical Restoration",
+      "description": "If the pit fiend dies outside the Nine Hells, its body disappears in sulfurous smoke, and it gains a new body instantly, reviving with all its Hit Points somewhere in the Nine Hells."
+    },
+    {
+      "name": "Fear Aura",
+      "description": "The pit fiend emanates an aura in a 20foot Emanation while it doesn't have the Incapacitated condition. Wisdom Saving Throw: DC 21, any enemy that starts its turn in the aura. Failure: The target has the Frightened condition until the start of its next turn. Success: The target is immune to this pit fiend's aura for 24 hours."
+    },
+    {
+      "name": "Legendary Resistance (4/Day)",
+      "description": "If the pit fiend fails a saving throw, it can choose to succeed instead."
+    },
+    {
+      "name": "Magic Resistance",
+      "description": "The pit fiend has Advantage on saving throws against spells and other magical effects."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The pit fiend makes one Bite attack, two Devilish Claw attacks, and one Fiery Mace attack."
+    },
+    {
+      "name": "Bite",
+      "description": "Melee Attack Roll: +14, reach 10 ft. Hit: 18 (3d6 + 8) Piercing damage. If the target is a creature, it must make the following saving throw. Constitution Saving Throw: DC 21. Failure: The target has the Poisoned condition. While Poisoned, the target can't regain Hit Points and takes 21 (6d6) Poison damage at the start of each of its turns, and it repeats the save at the end of each of its turns, ending the effect on itself on a success. After 1 minute, it succeeds automatically."
+    },
+    {
+      "name": "Devilish Claw",
+      "description": "Melee Attack Roll: +14, reach 10 ft. Hit: 26 (4d8 + 8) Necrotic damage."
+    },
+    {
+      "name": "Fiery Mace",
+      "description": "Melee Attack Roll: +14, reach 10 ft. Hit: 22 (4d6 + 8) Force damage plus 21 (6d6) Fire damage."
+    },
+    {
+      "name": "Hellfire Spellcasting (Recharge 4-6)",
+      "description": "The pit fiend casts Fireball (level 5 version) twice, requiring no Material components and using Charisma as the spellcasting ability (spell save DC 21). It can replace one Fireball with Hold Monster (level 7 version) or Wall of Fire."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

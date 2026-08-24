@@ -1,0 +1,77 @@
+{
+  "name": "Nightmare",
+  "size": "Large",
+  "type": "Fiend",
+  "alignment": "Neutral Evil",
+  "armor_class": [
+    {
+      "value": 13,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 68,
+    "dice": "8d10 + 24"
+  },
+  "speed": {
+    "walk": 60,
+    "fly": 90,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 2,
+  "ability_scores": {
+    "str": 18,
+    "dex": 15,
+    "con": 16,
+    "int": 10,
+    "wis": 13,
+    "cha": 15
+  },
+  "saving_throws": {},
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Fire"
+  ],
+  "condition_immunities": [],
+  "senses": {
+    "passive_perception": 11
+  },
+  "languages": [
+    "Understands Abyssal",
+    "Common",
+    "and Infernal but can't speak"
+  ],
+  "challenge_rating": "3",
+  "xp": 700,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Confer Fire Resistance",
+      "description": "The nightmare can grant Resistance to Fire damage to a rider while it is on the nightmare."
+    },
+    {
+      "name": "Illumination",
+      "description": "The nightmare sheds Bright Light in a 10foot radius and Dim Light for an additional 10 feet."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Hooves",
+      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 13 (2d8 + 4) Bludgeoning damage plus 10 (3d6) Fire damage."
+    },
+    {
+      "name": "Ethereal Stride",
+      "description": "The nightmare and up to three willing creatures within 5 feet of it teleport to the Ethereal Plane from the Material Plane or vice versa."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

@@ -1,0 +1,111 @@
+{
+  "name": "Guardian Naga",
+  "size": "Large",
+  "type": "Celestial",
+  "alignment": "Lawful Good",
+  "armor_class": [
+    {
+      "value": 18,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 136,
+    "dice": "16d10 + 48"
+  },
+  "speed": {
+    "walk": 40,
+    "fly": null,
+    "swim": 40,
+    "climb": 40,
+    "burrow": null
+  },
+  "initiative_bonus": 4,
+  "ability_scores": {
+    "str": 19,
+    "dex": 18,
+    "con": 16,
+    "int": 16,
+    "wis": 19,
+    "cha": 18
+  },
+  "saving_throws": {
+    "dex": 8,
+    "con": 7,
+    "int": 7,
+    "wis": 8,
+    "cha": 8
+  },
+  "skills": {
+    "arcana": 11,
+    "history": 11,
+    "religion": 11
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Poison"
+  ],
+  "condition_immunities": [
+    "Charmed",
+    "Paralyzed",
+    "Poisoned",
+    "Restrained"
+  ],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 14
+  },
+  "languages": [
+    "Celestial",
+    "Common"
+  ],
+  "challenge_rating": "10",
+  "xp": 5900,
+  "proficiency_bonus": 4,
+  "special_traits": [
+    {
+      "name": "Celestial Restoration",
+      "description": "If the naga dies, it returns to life in 1d6 days and regains all its Hit Points unless Dispel Evil and Good is cast on its remains."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The naga makes two Bite attacks. It can replace any attack with a use of Poisonous Spittle."
+    },
+    {
+      "name": "Bite",
+      "description": "Melee Attack Roll: +8, reach 10 ft. Hit: 17 (2d12 + 4) Piercing damage plus 22 (4d10) Poison damage."
+    },
+    {
+      "name": "Poisonous Spittle",
+      "description": "Constitution Saving Throw: DC 16, one creature the naga can see within 60 feet. Failure: 31 (7d8) Poison damage, and the target has the Blinded condition until the start of the naga's next turn. Success: Half damage only."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": {
+    "ability": "Wisdom",
+    "save_dc": 16,
+    "attack_bonus": null,
+    "cantrip_damage_bonus": null,
+    "slots": {},
+    "spells_by_level": {},
+    "innate": {
+      "at_will": [
+        "thaumaturgy"
+      ],
+      "1_per_day": [
+        "clairvoyance",
+        "cure wounds (level 6 version)",
+        "flame strike (level 6 version)",
+        "geas",
+        "true seeing"
+      ]
+    }
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "name": "Swarm of Crawling Claws",
+  "size": "Medium",
+  "type": "Swarm of Tiny Undead",
+  "alignment": "Neutral Evil",
+  "armor_class": [
+    {
+      "value": 12,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 49,
+    "dice": "11d8"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": null,
+    "climb": 30,
+    "burrow": null
+  },
+  "initiative_bonus": 2,
+  "ability_scores": {
+    "str": 14,
+    "dex": 14,
+    "con": 11,
+    "int": 5,
+    "wis": 10,
+    "cha": 4
+  },
+  "saving_throws": {},
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [
+    "Bludgeoning",
+    "Piercing",
+    "Slashing"
+  ],
+  "damage_immunities": [
+    "Necrotic",
+    "Poison"
+  ],
+  "condition_immunities": [
+    "Charmed",
+    "Exhaustion",
+    "Frightened",
+    "Grappled",
+    "Incapacitated",
+    "Paralyzed",
+    "Petrified",
+    "Poisoned",
+    "Prone",
+    "Restrained",
+    "Stunned"
+  ],
+  "senses": {
+    "blindsight": 30,
+    "passive_perception": 10
+  },
+  "languages": [
+    "Understands Common but can't speak"
+  ],
+  "challenge_rating": "3",
+  "xp": 700,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Swarm",
+      "description": "The swarm can occupy another creature's space and vice versa, and the swarm can move through any opening large enough for a Tiny creature. The swarm can't regain Hit Points or gain Temporary Hit Points."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Swarm of Grasping Hands",
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 20 (4d8 + 2) Necrotic damage, or 11 (2d8 + 2) Necrotic damage if the swarm is Bloodied. If the target is a Medium or smaller creature, it has the Prone condition."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

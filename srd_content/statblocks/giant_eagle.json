@@ -1,0 +1,70 @@
+{
+  "name": "Giant Eagle",
+  "size": "Large",
+  "type": "Celestial",
+  "alignment": "Neutral Good",
+  "armor_class": [
+    {
+      "value": 13,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 26,
+    "dice": "4d10 + 4"
+  },
+  "speed": {
+    "walk": 10,
+    "fly": 80,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 3,
+  "ability_scores": {
+    "str": 16,
+    "dex": 17,
+    "con": 13,
+    "int": 8,
+    "wis": 14,
+    "cha": 10
+  },
+  "saving_throws": {},
+  "skills": {
+    "perception": 6
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [
+    "Necrotic",
+    "Radiant"
+  ],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "passive_perception": 16
+  },
+  "languages": [
+    "Celestial",
+    "understands Common and Primordial (Auran) but can't speak them"
+  ],
+  "challenge_rating": "1",
+  "xp": 200,
+  "proficiency_bonus": 2,
+  "special_traits": [],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The eagle makes two Rend attacks."
+    },
+    {
+      "name": "Rend",
+      "description": "Melee Attack Roll: +5, reach 5 ft. Hit: 5 (1d4 + 3) Slashing damage plus 3 (1d6) Radiant damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

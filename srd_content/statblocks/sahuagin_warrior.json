@@ -1,0 +1,88 @@
+{
+  "name": "Sahuagin Warrior",
+  "size": "Medium",
+  "type": "Fiend",
+  "alignment": "Lawful Evil",
+  "armor_class": [
+    {
+      "value": 12,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 22,
+    "dice": "4d8 + 4"
+  },
+  "speed": {
+    "walk": 30,
+    "fly": null,
+    "swim": 40,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 0,
+  "ability_scores": {
+    "str": 13,
+    "dex": 11,
+    "con": 12,
+    "int": 12,
+    "wis": 13,
+    "cha": 9
+  },
+  "saving_throws": {},
+  "skills": {
+    "perception": 5
+  },
+  "damage_vulnerabilities": [],
+  "damage_resistances": [
+    "Acid",
+    "Cold"
+  ],
+  "damage_immunities": [],
+  "condition_immunities": [],
+  "senses": {
+    "darkvision": 120,
+    "passive_perception": 15
+  },
+  "languages": [
+    "Sahuagin"
+  ],
+  "challenge_rating": "1/2",
+  "xp": 100,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Blood Frenzy",
+      "description": "The sahuagin has Advantage on attack rolls against any creature that doesn't have all its Hit Points."
+    },
+    {
+      "name": "Limited Amphibiousness",
+      "description": "The sahuagin can breathe air and water, but it must be submerged at least once every 4 hours to avoid suffocating outside water."
+    },
+    {
+      "name": "Shark Telepathy",
+      "description": "The sahuagin can magically control sharks within 120 feet of itself, using a special telepathy."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The sahuagin makes two Claw attacks."
+    },
+    {
+      "name": "Claw",
+      "description": "Melee Attack Roll: +3, reach 5 ft. Hit: 4 (1d6 + 1) Slashing damage."
+    }
+  ],
+  "bonus_actions": [
+    {
+      "name": "Aquatic Charge",
+      "description": "The sahuagin swims up to its Swim Speed straight toward an enemy it can see."
+    }
+  ],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

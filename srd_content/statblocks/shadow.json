@@ -1,0 +1,96 @@
+{
+  "name": "Shadow",
+  "size": "Medium",
+  "type": "Undead",
+  "alignment": "Chaotic Evil",
+  "armor_class": [
+    {
+      "value": 12,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 27,
+    "dice": "5d8 + 5"
+  },
+  "speed": {
+    "walk": 40,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 2,
+  "ability_scores": {
+    "str": 6,
+    "dex": 14,
+    "con": 13,
+    "int": 6,
+    "wis": 10,
+    "cha": 8
+  },
+  "saving_throws": {},
+  "skills": {
+    "stealth": 6
+  },
+  "damage_vulnerabilities": [
+    "Radiant"
+  ],
+  "damage_resistances": [
+    "Acid",
+    "Cold",
+    "Fire",
+    "Lightning",
+    "Thunder"
+  ],
+  "damage_immunities": [
+    "Necrotic",
+    "Poison"
+  ],
+  "condition_immunities": [
+    "Exhaustion",
+    "Frightened",
+    "Grappled",
+    "Paralyzed",
+    "Petrified",
+    "Poisoned",
+    "Prone",
+    "Restrained",
+    "Unconscious"
+  ],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 10
+  },
+  "languages": [],
+  "challenge_rating": "1/2",
+  "xp": 100,
+  "proficiency_bonus": 2,
+  "special_traits": [
+    {
+      "name": "Amorphous",
+      "description": "The shadow can move through a space as narrow as 1 inch without expending extra movement to do so."
+    },
+    {
+      "name": "Sunlight Weakness",
+      "description": "While in sunlight, the shadow has Disadvantage on D20 Tests."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Draining Swipe",
+      "description": "Melee Attack Roll: +4, reach 5 ft. Hit: 5 (1d6 + 2) Necrotic damage, and the target's Strength score decreases by 1d4. The target dies if this reduces that score to 0. If a Humanoid is slain by this attack, a\nShadow rises from the corpse 1d4 hours later."
+    }
+  ],
+  "bonus_actions": [
+    {
+      "name": "Shadow Stealth",
+      "description": "While in Dim Light or Darkness, the shadow takes the Hide action."
+    }
+  ],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}

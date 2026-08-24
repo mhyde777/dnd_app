@@ -1,0 +1,106 @@
+{
+  "name": "Spirit Naga",
+  "size": "Large",
+  "type": "Fiend",
+  "alignment": "Chaotic Evil",
+  "armor_class": [
+    {
+      "value": 17,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 135,
+    "dice": "18d10 + 36"
+  },
+  "speed": {
+    "walk": 40,
+    "fly": null,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 3,
+  "ability_scores": {
+    "str": 18,
+    "dex": 17,
+    "con": 14,
+    "int": 16,
+    "wis": 15,
+    "cha": 16
+  },
+  "saving_throws": {
+    "dex": 6,
+    "con": 5,
+    "wis": 5,
+    "cha": 6
+  },
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [],
+  "damage_immunities": [
+    "Poison"
+  ],
+  "condition_immunities": [
+    "Charmed",
+    "Poisoned"
+  ],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 12
+  },
+  "languages": [
+    "Abyssal",
+    "Common"
+  ],
+  "challenge_rating": "8",
+  "xp": 3900,
+  "proficiency_bonus": 3,
+  "special_traits": [
+    {
+      "name": "Fiendish Restoration",
+      "description": "If it dies, the naga returns to life in 1d6 days and regains all its Hit Points. Only a Wish spell can prevent this trait from functioning."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Multiattack",
+      "description": "The naga makes three attacks, using Bite or Necrotic Ray in any combination."
+    },
+    {
+      "name": "Bite",
+      "description": "Melee Attack Roll: +7, reach 10 ft. Hit: 7 (1d6 + 4) Piercing damage plus 14 (4d6) Poison damage."
+    },
+    {
+      "name": "Necrotic Ray",
+      "description": "Ranged Attack Roll: +6, range 60 ft. Hit: 21 (6d6) Necrotic damage."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": {
+    "ability": "Intelligence",
+    "save_dc": 14,
+    "attack_bonus": null,
+    "cantrip_damage_bonus": null,
+    "slots": {},
+    "spells_by_level": {},
+    "innate": {
+      "at_will": [
+        "detect magic",
+        "mage hand",
+        "minor illusion",
+        "water breathing"
+      ],
+      "2_per_day": [
+        "detect thoughts",
+        "dimension door",
+        "hold person (level 3 version)",
+        "lightning bolt (level 4 version)"
+      ]
+    }
+  }
+}

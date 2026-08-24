@@ -1,0 +1,94 @@
+{
+  "name": "Wraith",
+  "size": "Medium or small",
+  "type": "Undead",
+  "alignment": "Neutral Evil",
+  "armor_class": [
+    {
+      "value": 13,
+      "source": null
+    }
+  ],
+  "hit_points": {
+    "average": 67,
+    "dice": "9d8 + 27"
+  },
+  "speed": {
+    "walk": 5,
+    "fly": 60,
+    "swim": null,
+    "climb": null,
+    "burrow": null
+  },
+  "initiative_bonus": 3,
+  "ability_scores": {
+    "str": 6,
+    "dex": 16,
+    "con": 16,
+    "int": 12,
+    "wis": 14,
+    "cha": 15
+  },
+  "saving_throws": {},
+  "skills": {},
+  "damage_vulnerabilities": [],
+  "damage_resistances": [
+    "Acid",
+    "Bludgeoning",
+    "Cold",
+    "Fire",
+    "Piercing",
+    "Slashing"
+  ],
+  "damage_immunities": [
+    "Necrotic",
+    "Poison"
+  ],
+  "condition_immunities": [
+    "Charmed",
+    "Exhaustion",
+    "Grappled",
+    "Paralyzed",
+    "Petrified",
+    "Poisoned",
+    "Prone",
+    "Restrained",
+    "Unconscious"
+  ],
+  "senses": {
+    "darkvision": 60,
+    "passive_perception": 12
+  },
+  "languages": [
+    "Common plus two other languages"
+  ],
+  "challenge_rating": "5",
+  "xp": 1800,
+  "proficiency_bonus": 3,
+  "special_traits": [
+    {
+      "name": "Incorporeal Movement",
+      "description": "The wraith can move through other creatures and objects as if they were Difficult Terrain. It takes 5 (1d10) Force damage if it ends its turn inside an object."
+    },
+    {
+      "name": "Sunlight Sensitivity",
+      "description": "While in sunlight, the wraith has Disadvantage on ability checks and attack rolls."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Life Drain",
+      "description": "Melee Attack Roll: +6, reach 5 ft. Hit: 21 (4d8 + 3) Necrotic damage. If the target is a creature, its Hit Point maximum decreases by an amount equal to the damage taken."
+    },
+    {
+      "name": "Create Specter",
+      "description": "The wraith targets a Humanoid corpse within 10 feet of itself that has been dead for no longer than 1 minute. The target's spirit rises as a Specter in the space of its corpse or in the nearest unoccupied space. The specter is under the wraith's control. The wraith can have no more than seven specters under its control at a time."
+    }
+  ],
+  "bonus_actions": [],
+  "reactions": [],
+  "legendary_actions": null,
+  "legendary_action_count": null,
+  "lair_actions": null,
+  "spellcasting": null
+}
