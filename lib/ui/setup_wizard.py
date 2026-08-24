@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import (
     QButtonGroup,
     QCheckBox,
     QDialog,
+    QWidget,
     QFileDialog,
     QFrame,
     QGroupBox,
@@ -112,6 +113,9 @@ class SetupWizard(QDialog):
 
         self.local_radio.toggled.connect(self._on_mode_changed)
 
+        # --- Foundry VTT ---
+        self._build_bridge_box(root)
+
         # --- Included content ---
         self._build_content_box(root)
 
@@ -126,6 +130,98 @@ class SetupWizard(QDialog):
         root.addLayout(btn_row)
 
         self._prefill()
+        self._prefill_bridge()
+
+    def _build_bridge_box(self, root) -> None:
+        """Foundry sync, collapsed behind a single switch.
+
+        Everything below the checkbox is meaningless to someone who does not
+        run Foundry -- a bridge URL and a shared secret invite exactly the
+        "what is this and do I need it?" that keeps people from finishing
+        setup. So the switch is the only thing visible until it is on.
+        """
+        box = QGroupBox("Foundry VTT")
+        outer = QVBoxLayout(box)
+
+        self.bridge_enabled_check = QCheckBox("Sync with Foundry VTT")
+        self.bridge_enabled_check.setToolTip(
+            "Two-way sync of initiative, HP and conditions with a Foundry game"
+        )
+        outer.addWidget(self.bridge_enabled_check)
+
+        self.bridge_details = QWidget()
+        details = QVBoxLayout(self.bridge_details)
+        details.setContentsMargins(18, 4, 0, 0)
+
+        row_url = QHBoxLayout()
+        lbl_url = QLabel("Bridge URL:")
+        lbl_url.setFixedWidth(95)
+        self.bridge_url_edit = QLineEdit()
+        self.bridge_url_edit.setPlaceholderText("http://127.0.0.1:8787")
+        row_url.addWidget(lbl_url)
+        row_url.addWidget(self.bridge_url_edit)
+        details.addLayout(row_url)
+
+        row_secret = QHBoxLayout()
+        lbl_secret = QLabel("Shared secret:")
+        lbl_secret.setFixedWidth(95)
+        self.bridge_token_edit = QLineEdit()
+        self.bridge_token_edit.setEchoMode(QLineEdit.Password)
+        self.bridge_token_edit.setPlaceholderText("must match the Foundry module setting")
+        row_secret.addWidget(lbl_secret)
+        row_secret.addWidget(self.bridge_token_edit)
+        details.addLayout(row_secret)
+
+        self.local_bridge_check = QCheckBox(
+            "Run the bridge on this computer (Foundry is on this machine)"
+        )
+        details.addWidget(self.local_bridge_check)
+
+        self.bridge_stream_check = QCheckBox("Use live streaming instead of polling")
+        details.addWidget(self.bridge_stream_check)
+
+        hint = QLabel("See docs/foundry-bridge.md for the Foundry-side setup.")
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: #888; font-size: 11px;")
+        details.addWidget(hint)
+
+        outer.addWidget(self.bridge_details)
+        self.bridge_enabled_check.toggled.connect(self.bridge_details.setVisible)
+        self.bridge_details.setVisible(False)
+
+        root.addWidget(box)
+
+    def _prefill_bridge(self) -> None:
+        from app.config import (
+            bridge_flag,
+            bridge_stream_enabled,
+            bridge_value,
+            foundry_bridge_enabled,
+        )
+        enabled = foundry_bridge_enabled()
+        self.bridge_enabled_check.setChecked(enabled)
+        self.bridge_details.setVisible(enabled)
+        self.bridge_url_edit.setText(bridge_value("BRIDGE_URL", ""))
+        self.bridge_token_edit.setText(bridge_value("BRIDGE_TOKEN", ""))
+        self.local_bridge_check.setChecked(bridge_flag("LOCAL_BRIDGE_ENABLED", False))
+        self.bridge_stream_check.setChecked(bridge_stream_enabled())
+
+    def _bridge_changes(self) -> dict:
+        enabled = self.bridge_enabled_check.isChecked()
+        changes = {"foundry_bridge_enabled": enabled}
+        if not enabled:
+            return changes
+        token = self.bridge_token_edit.text().strip()
+        changes.update({
+            "bridge_url": self.bridge_url_edit.text().strip(),
+            "bridge_token": token,
+            # The ingest secret has always defaulted to the token; keeping them
+            # in step means one field to fill in instead of two identical ones.
+            "bridge_ingest_secret": token,
+            "local_bridge_enabled": self.local_bridge_check.isChecked(),
+            "bridge_stream_enabled": self.bridge_stream_check.isChecked(),
+        })
+        return changes
 
     def _build_content_box(self, root) -> None:
         """Offer to install the bundled SRD library into the chosen backend.
@@ -276,6 +372,7 @@ class SetupWizard(QDialog):
         # every time this dialog was used from File -> Settings.
         merged = dict(settings.load())
         merged.update(changes)
+        merged.update(self._bridge_changes())
         settings.save(merged)
 
         self._install_content(changes["storage_mode"], local_dir, url)

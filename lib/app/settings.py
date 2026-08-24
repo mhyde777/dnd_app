@@ -44,8 +44,15 @@ def load() -> dict:
 def save(data: dict) -> None:
     global _cache
     os.makedirs(config_dir(), exist_ok=True)
-    with open(settings_path(), "w", encoding="utf-8") as f:
+    path = settings_path()
+    with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
+    # This file holds the storage API key and the Foundry secret, so it should
+    # not be group- or world-readable. chmod is a no-op on Windows.
+    try:
+        os.chmod(path, 0o600)
+    except OSError:
+        pass
     _cache = dict(data)
 
 

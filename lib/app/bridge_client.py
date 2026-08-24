@@ -8,10 +8,13 @@ import requests
 
 
 def _get_env(name: str, default: str = "") -> str:
-    value = os.getenv(name, "").strip()
-    if value:
-        return value
-    return default
+    """Bridge config, from settings.json first and the environment second.
+
+    Routed through config so the GUI is authoritative and users never edit a
+    dotfile; .env still works for setups that predate the dialog.
+    """
+    from app.config import bridge_value
+    return bridge_value(name, default)
 
 
 def _build_headers(token: str) -> Dict[str, str]:

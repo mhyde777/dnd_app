@@ -21,6 +21,7 @@ from app.config import (
     get_storage_api_base,
     get_config_path,
     get_local_data_dir,
+    foundry_bridge_enabled,
     local_bridge_enabled,
     use_storage_api_only,
 )
@@ -37,7 +38,6 @@ from ui.death_saves_dialog import DeathSavesDialog
 from ui.enter_initiatives_dialog import EnterInitiativesDialog
 
 load_dotenv(get_config_path(".env"), override=False)
-load_dotenv(override=False)
 
 class Application:
 
@@ -122,6 +122,10 @@ class Application:
             self.storage_api = LocalStorage(data_dir)
 
     def start_bridge_polling(self) -> None:
+        if not foundry_bridge_enabled():
+            if hasattr(self, "set_bridge_status"):
+                self.set_bridge_status("disabled")
+            return
         if not self.bridge_client.enabled:
             self._log("[Bridge] BRIDGE_TOKEN is not set; bridge sync is disabled.")
             if hasattr(self, "set_bridge_status"):

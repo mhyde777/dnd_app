@@ -13,6 +13,18 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ## [Unreleased]
 
+### Changed
+
+- **Foundry sync is configured in the app, not a dotfile.** File → Settings has
+  a single "Sync with Foundry VTT" switch; the bridge URL, shared secret and
+  transport options stay hidden until it is on, so anyone not using Foundry
+  never sees them. Existing `.env` files still work and are never written to.
+- `settings.json` is now written 0600. It holds the storage API key and the
+  Foundry secret, and was previously group- and world-readable.
+- Removed two `load_dotenv()` calls that searched upward from the working
+  directory, so a packaged app could absorb an unrelated `.env` from wherever
+  its launcher happened to start it.
+
 ## [0.1.0] — 2026-08-24
 
 First release intended for anyone other than its author.

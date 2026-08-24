@@ -1,5 +1,3 @@
-from dotenv import load_dotenv
-load_dotenv()
 import os, sys
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtGui import QIcon

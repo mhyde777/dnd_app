@@ -33,9 +33,51 @@ def get_local_data_dir() -> str:
     """User-configured local data directory (empty = use default)."""
     return _settings.get("local_data_dir") or os.getenv("LOCAL_DATA_DIR", "")
 
+# ---- Bridge configuration ----
+#
+# Every bridge value follows the same precedence: a settings.json key (written
+# by the GUI), then the matching environment variable, then a default. The
+# settings key is the env name lowercased, so BRIDGE_URL <-> "bridge_url".
+# Keeping .env working means existing installs are untouched, while a new user
+# configures everything from the Settings dialog and never learns .env exists.
+
+
+def bridge_value(env_name: str, default: str = "") -> str:
+    configured = _settings.get(env_name.lower())
+    if configured not in (None, ""):
+        return str(configured).strip()
+    return os.getenv(env_name, "").strip() or default
+
+
+def bridge_flag(env_name: str, default: bool) -> bool:
+    configured = _settings.get(env_name.lower())
+    if configured is not None:
+        return bool(configured)
+    raw = os.getenv(env_name, "").strip()
+    if raw == "":
+        return default
+    return raw not in ("0", "false", "False")
+
+
+def foundry_bridge_enabled() -> bool:
+    """Master switch for all Foundry sync.
+
+    Off unless asked for, and it gates the settings UI as well as the runtime:
+    someone who does not use Foundry should never be shown a bridge URL and a
+    shared secret and have to wonder what they are for.
+
+    Defaults on for anyone whose .env already configures a bridge, so existing
+    installs keep working without visiting the dialog.
+    """
+    configured = _settings.get("foundry_bridge_enabled")
+    if configured is not None:
+        return bool(configured)
+    return bool(os.getenv("BRIDGE_TOKEN", "").strip())
+
+
 # ---- Feature flags ----
 
-def local_bridge_enabled() -> bool:
+def local_bridge_enabled() -> bool:  # noqa: D401
     """Whether to start the in-process bridge server.
 
     Off unless asked for. It binds a port and invents a token when none is set,
@@ -43,10 +85,9 @@ def local_bridge_enabled() -> bool:
     so a fresh install starts nothing until the user opts in. An existing .env
     still wins, so setups that predate the settings key keep working.
     """
-    configured = _settings.get("local_bridge_enabled")
-    if configured is not None:
-        return bool(configured)
-    return os.getenv("LOCAL_BRIDGE_ENABLED", "0").strip() not in ("", "0", "false", "False")
+    if not foundry_bridge_enabled():
+        return False
+    return bridge_flag("LOCAL_BRIDGE_ENABLED", False)
 
 def update_check_enabled() -> bool:
     """Whether to ask GitHub about newer releases on startup.
@@ -62,4 +103,4 @@ def update_check_enabled() -> bool:
 
 
 def bridge_stream_enabled() -> bool:
-    return os.getenv("BRIDGE_STREAM_ENABLED", "1").strip() not in ("", "0", "false", "False")
+    return bridge_flag("BRIDGE_STREAM_ENABLED", True)
