@@ -15,6 +15,12 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ### Fixed
 
+- **The Shop Generator no longer locks the window for half a minute.** It
+  fetched every item in the library one HTTP request at a time, on the UI
+  thread — and did it again on every Generate click. Fetching concurrently and
+  caching the result took a 505-item library from ~21s per click to ~2.8s on
+  open and effectively nothing thereafter. Reopen the dialog to pick up newly
+  added items.
 - **Foundry streaming (SSE) mode now works.** Snapshots arrived on the reader
   thread and were handed to the UI with a timer created in a thread that has
   no event loop, so it never fired and every streamed update was silently

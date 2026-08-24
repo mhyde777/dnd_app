@@ -3,12 +3,14 @@ from __future__ import annotations
 
 from typing import Optional
 
+from concurrent.futures import ThreadPoolExecutor
+
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QComboBox, QSpinBox, QCheckBox, QTableWidget, QTableWidgetItem,
-    QHeaderView, QSizePolicy, QStatusBar,
+    QHeaderView, QSizePolicy, QStatusBar, QApplication,
 )
 
 from app.shop_generator import generate_shop, BUILTIN_PROFILES
@@ -151,10 +153,20 @@ class ShopGeneratorDialog(QDialog):
 
     # ── Item loading ─────────────────────────────────────────────────
 
-    def _load_items(self) -> None:
+    # The library is fetched one item per HTTP request -- there is no bulk
+    # endpoint -- so 500 items serially is ten seconds of frozen window at
+    # best, and much worse on a slow link. Fetching them concurrently turns
+    # that into about a second. Kept at 8 because requests' default connection
+    # pool holds 10; going wider just queues and logs pool-full warnings.
+    _FETCH_WORKERS = 8
+
+    def _load_items(self, force: bool = False) -> None:
+        """Populate self._items, fetching concurrently and caching the result."""
         if self.storage_api is None:
             self._status.showMessage("No storage configured.")
             return
+        if self._items and not force:
+            return  # already loaded; refetching on every click was the old bug
 
         try:
             keys = self.storage_api.list_item_keys()
@@ -162,21 +174,31 @@ class ShopGeneratorDialog(QDialog):
             self._status.showMessage(f"Failed to load items: {exc}")
             return
 
+        self._status.showMessage(f"Loading {len(keys)} items…")
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        QApplication.processEvents()
+
         items: list[dict] = []
-        for key in keys:
-            try:
-                item = self.storage_api.get_item(key)
-                if item:
-                    items.append(item)
-            except Exception:
-                pass
+        try:
+            with ThreadPoolExecutor(max_workers=self._FETCH_WORKERS) as pool:
+                for item in pool.map(self._fetch_item, keys):
+                    if item:
+                        items.append(item)
+        finally:
+            QApplication.restoreOverrideCursor()
 
         self._items = items
+        self._status.showMessage(f"{len(items)} items loaded.")
+
+    def _fetch_item(self, key: str):
+        try:
+            return self.storage_api.get_item(key)
+        except Exception:
+            return None
 
     # ── Generate ─────────────────────────────────────────────────────
 
     def _on_generate(self) -> None:
-        # Reload items on each generate click
         self._load_items()
 
         if self.storage_api is None:
