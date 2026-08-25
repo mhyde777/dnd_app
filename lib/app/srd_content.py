@@ -18,13 +18,14 @@ import sys
 from pathlib import Path
 from typing import Iterator, Optional
 
-CATEGORIES = ("statblocks", "spells")
+CATEGORIES = ("statblocks", "spells", "items")
 
 # Category -> (storage list method, storage save method), so callers can treat
 # both the local and remote backends through one interface.
 STORAGE_METHODS = {
     "statblocks": ("list_statblock_keys", "save_statblock"),
     "spells": ("list_spell_keys", "save_spell"),
+    "items": ("list_item_keys", "save_item"),
 }
 
 _DIR_NAME = "srd_content"

@@ -16,6 +16,7 @@ class FakeStorage:
     def __init__(self, existing=(), fail_keys=(), raise_on_list=False):
         self.statblocks = {}
         self.spells = {}
+        self.items = {}
         self._existing = set(existing)
         self._fail_keys = set(fail_keys)
         self._raise_on_list = raise_on_list
@@ -30,6 +31,11 @@ class FakeStorage:
             raise RuntimeError("backend unreachable")
         return sorted(self.spells)
 
+    def list_item_keys(self):
+        if self._raise_on_list:
+            raise RuntimeError("backend unreachable")
+        return sorted(self.items)
+
     def save_statblock(self, key, data):
         if key in self._fail_keys:
             return False
@@ -40,18 +46,27 @@ class FakeStorage:
         self.spells[key] = data
         return True
 
+    def save_item(self, key, data):
+        self.items[key] = data
+        return True
+
 
 @pytest.fixture(autouse=True)
 def _fake_payload(monkeypatch):
-    """Fixed two-and-two payload, so counts don't shift with the real content."""
+    """Two entries per category, so counts don't shift with the real content."""
     entries = {
         "statblocks": [("goblin.json", {"name": "Goblin"}),
                        ("orc.json", {"name": "Orc"})],
         "spells": [("fireball.json", {"name": "Fireball"}),
                    ("shield.json", {"name": "Shield"})],
+        "items": [("bag_of_holding.json", {"name": "Bag of Holding"}),
+                  ("cloak_of_elvenkind.json", {"name": "Cloak of Elvenkind"})],
     }
     monkeypatch.setattr(srd_content, "is_available", lambda: True)
-    monkeypatch.setattr(srd_content, "counts", lambda: {"statblocks": 2, "spells": 2})
+    monkeypatch.setattr(
+        srd_content, "counts",
+        lambda: {"statblocks": 2, "spells": 2, "items": 2},
+    )
     monkeypatch.setattr(srd_content, "iter_entries", lambda c: iter(entries[c]))
     monkeypatch.setattr(srd_content, "version", lambda: "SRD test")
 
@@ -59,11 +74,12 @@ def _fake_payload(monkeypatch):
 def test_installs_every_entry():
     storage = FakeStorage()
     result = install_srd(storage)
-    assert result.installed == 4
+    assert result.installed == 6
     assert result.skipped == 0
     assert result.failed == []
     assert set(storage.statblocks) == {"goblin.json", "orc.json"}
     assert set(storage.spells) == {"fireball.json", "shield.json"}
+    assert set(storage.items) == {"bag_of_holding.json", "cloak_of_elvenkind.json"}
 
 
 def test_skips_entries_already_present():
@@ -98,7 +114,7 @@ def test_cancel_stops_promptly_and_leaves_resumable_state():
     # Resuming installs what the cancelled run did not.
     again = install_srd(storage)
     assert again.cancelled is False
-    assert again.installed == 4
+    assert again.installed == 6
 
 
 def test_failures_are_recorded_not_raised():

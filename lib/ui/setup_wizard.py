@@ -295,7 +295,8 @@ class SetupWizard(QDialog):
 
         self.install_statblocks = QCheckBox(f"Monsters ({counts.get('statblocks', 0)})")
         self.install_spells = QCheckBox(f"Spells ({counts.get('spells', 0)})")
-        for box in (self.install_statblocks, self.install_spells):
+        self.install_items = QCheckBox(f"Magic items ({counts.get('items', 0)})")
+        for box in (self.install_statblocks, self.install_spells, self.install_items):
             box.setChecked(True)
             layout.addWidget(box)
 
@@ -310,6 +311,7 @@ class SetupWizard(QDialog):
             layout.addWidget(note)
             self.install_statblocks.setChecked(False)
             self.install_spells.setChecked(False)
+            self.install_items.setChecked(False)
 
         licence = QLabel(
             "SRD 5.2.1 by Wizards of the Coast LLC, used under CC-BY-4.0. "
@@ -329,6 +331,8 @@ class SetupWizard(QDialog):
             chosen.append("statblocks")
         if self.install_spells.isChecked():
             chosen.append("spells")
+        if self.install_items.isChecked():
+            chosen.append("items")
         return chosen
 
     def _storage_for(self, mode: str, local_dir: str, api_url: str):

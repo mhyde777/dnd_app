@@ -44,7 +44,11 @@ class _InstallWorker(QObject):
         self.finished.emit(result)
 
 
-_CATEGORY_LABELS = {"statblocks": "monsters", "spells": "spells"}
+_CATEGORY_LABELS = {
+    "statblocks": "monsters",
+    "spells": "spells",
+    "items": "magic items",
+}
 
 
 def run_install(

@@ -35,33 +35,30 @@ This project uses **pipenv** as the primary dependency manager, driven by the `P
     python main.py 
     ```
 
-## Packaging the app {PyInstaller}
-The packagin flow builds a standalone binary and Linux or Windows application folder layout.
+## Packaging the app (PyInstaller)
+The packaging flow builds a standalone binary and a release zip. PyInstaller
+cannot cross-compile, so each platform's build has to run on that platform.
 
-1. Install dependencies (including PyIntsaller):
+1. Install dependencies, PyInstaller included:
     ```bash
-    pip install -r requirements.txt pyinstaller 
+    pipenv install
     ```
-2. Build the executable and package directory:
+2. Build:
     ```bash
-    ../package.sh    
+    ./package.sh        # Linux
+    ./package_WIN.sh    # Windows, from Git Bash
     ```
-    or, on Windows (Git-Bash):
-    ```bash
-    ./package_WIN.sh
-    ```
-3. The bundled app is availalbe at:
-    ```text
-    dist/combat_tracker/
-    ```
-    A Linux-ready folder layout is staged at:
-    ```text
-    package/
-    ```
-    A Windows-readh folder layout is staged at:
-    ```text
-    package_win/
-    ```
+3. The release artifact is a versioned zip in `dist/`, e.g.
+   `dist/combat-tracker-0.1.0-windows-x64.zip`, with the staged tree beside it
+   in `package/` (Linux) or `package_win/` (Windows). Extract it outside the
+   repo — every build deletes `dist/`, `build/`, `package/` and `package_win/`.
+
+Both scripts take `--dev-install` to also install this machine's `.env` into
+`~/.dnd_tracker_config/`. Release builds never write outside the repo.
+
+See [docs/updating-windows.md](docs/updating-windows.md) for updating an
+existing Windows install, and [docs/packaging-macos.md](docs/packaging-macos.md)
+for macOS.
 
 ## Storage API Configuration
 The app can optionally persist encounters to a storage API. Configuration is controlled by two environmental variables (e.g., in a `.env` file next to `main.py`):

@@ -23,7 +23,7 @@ if _srd_content.is_dir():
     # Ship the library and its manifest, not extraction_report.txt -- that is
     # a dev artefact from scripts/extract_srd.py and means nothing to a user.
     datas.append((_srd_content / "MANIFEST.json", "srd_content"))
-    for _sub in ("statblocks", "spells"):
+    for _sub in ("statblocks", "spells", "items"):
         if (_srd_content / _sub).is_dir():
             datas.append((_srd_content / _sub, f"srd_content/{_sub}"))
 binaries = []
