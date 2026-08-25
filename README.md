@@ -132,6 +132,12 @@ and duplicates are resolved across the whole run rather than per file. A `Legacy
 block is kept only when no non-legacy version of the same item turned up
 anywhere in the run.
 
+Both D&D Beyond paste formats work and are detected automatically: the equipment
+listing (name, type, cost, weight) and the magic items listing (name, rarity,
+type, then the type line). **Items you do not own are skipped and listed by
+name** — D&D Beyond shows those with a "purchase the book" blurb where the
+description would be, so there is nothing to import.
+
 **Items already in your library are left alone.** That is the default because
 the library also holds the bundled SRD items and anything you have edited by
 hand; pass `--overwrite` when you actually mean to replace them.

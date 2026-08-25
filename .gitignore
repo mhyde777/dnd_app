@@ -186,3 +186,4 @@ images/*
 # silently kept 338 bundled SRD spells out of a commit.
 /spells/
 /items/
+/magic_items/

@@ -16,6 +16,22 @@ Handles the DnD Beyond positional format:
     <tag2>
     <Source>
 
+D&D Beyond's *magic items* listing is a second, different shape, and is
+detected and parsed separately (see _parse_magic_item_list):
+    <Name>
+    <Rarity>           ("Uncommon", "Very Rare", "Varies", ...)
+    <Type>             ("Wondrous Item", "Weapon", ...)
+    [<Subtype>]        ("Glaive", "Shield")
+    <Attunement>       ("Required" or an em dash)
+    [<Notes line>]     ("Bonus: Magic, Damage: Force")
+    <Type line>        ("Weapon (any sword), rare (requires attunement)")
+    <Description>      (multi-line prose)
+    View Details Page
+    [Tags: ...]
+    <Source>
+It has no cost or weight, and an item you do not own ends at "View Marketplace"
+instead, carrying no type line and no description.
+
 Items without "View Details Page" are treated as incomplete (not owned) and skipped.
 Legacy items are included when there is no non-legacy counterpart.
 
@@ -30,6 +46,7 @@ from dataclasses import dataclass
 from typing import Iterable
 
 from app.item_parser import (
+    _RARITY_MAP, _TYPE_MAP,
     item_key, validate_item,
     _parse_type_line, _parse_cost_gp, _parse_weight, _build_tags, _normalize,
 )
@@ -321,6 +338,200 @@ def _parse_item_segment(segment: list[str]) -> tuple[dict, bool] | None:
     return data, is_legacy
 
 
+# ── Magic-item listing format ─────────────────────────────────────────────────
+#
+# A different D&D Beyond view with a different shape: rarity and type as
+# separate header lines, no cost or weight, and the canonical type line further
+# down. An item you do not own carries none of that -- it ends at "View
+# Marketplace" with a "purchase the book" blurb where the description belongs --
+# so ownership is what decides whether a block is importable.
+
+_RARITY_WORDS = frozenset(_RARITY_MAP)
+
+# The types this listing uses. A subset of _TYPE_MAP: mundane gear never
+# appears here, and admitting it would let a description line masquerade as a
+# header.
+_MAGIC_TYPE_WORDS = frozenset({
+    "weapon", "armor", "potion", "scroll", "wondrous item",
+    "ring", "rod", "staff", "wand", "ammunition",
+})
+
+_MARKETPLACE_LOWER = "view marketplace"
+_DETAILS_LOWER = "view details page"
+
+# "Weapon (any sword), rare (requires attunement)" -- the line _parse_type_line
+# already understands, and the one an unowned item never has.
+_CANONICAL_TYPE_RE = re.compile(
+    r"^(?:{types})\b[^,]*,\s*(?:{rarities})\b".format(
+        types="|".join(sorted(_MAGIC_TYPE_WORDS, key=len, reverse=True)),
+        rarities="|".join(sorted(_RARITY_WORDS, key=len, reverse=True)),
+    ),
+    re.IGNORECASE,
+)
+
+_NOTES_PREFIX_RE = re.compile(r"^notes\s*:\s*(.+)$", re.IGNORECASE)
+
+
+def _find_magic_item_starts(lines: list[str]) -> list[int]:
+    """Indices where a magic-item block begins: name → [Legacy] → rarity → type."""
+    starts: list[int] = []
+    n = len(lines)
+    for i in range(n):
+        if not _looks_like_name(lines[i]):
+            continue
+        j = i + 1
+        if j < n and lines[j].strip().lower() == _LEGACY_LOWER:
+            j += 1
+        if j + 1 >= n:
+            continue
+        if lines[j].strip().lower() not in _RARITY_WORDS:
+            continue
+        if lines[j + 1].strip().lower() not in _MAGIC_TYPE_WORDS:
+            continue
+        starts.append(i)
+    return starts
+
+
+def is_magic_item_listing(lines: list[str]) -> bool:
+    """True when this paste is the magic-item listing rather than the equipment one.
+
+    The equipment listing puts the type on the line after the name, never a
+    rarity, so one match is enough to tell them apart.
+    """
+    return bool(_find_magic_item_starts(lines))
+
+
+def _split_notes(value: str) -> list[str]:
+    """Turn a "Bonus: Magic, Damage: Force" line into individual tags."""
+    return [part.strip().lower() for part in value.split(",") if part.strip()]
+
+
+def _parse_magic_item_segment(segment: list[str]) -> tuple[dict, bool] | None:
+    """Parse one magic-item block. None when the item is not owned."""
+    if not segment:
+        return None
+
+    lower = [line.strip().lower() for line in segment]
+    if _DETAILS_LOWER not in lower:
+        return None  # unowned: ends at "View Marketplace", nothing to import
+
+    idx = 0
+    name = segment[idx].strip()
+    idx += 1
+
+    is_legacy = False
+    if idx < len(segment) and lower[idx] == _LEGACY_LOWER:
+        is_legacy = True
+        idx += 1
+
+    header_rarity = segment[idx].strip() if idx < len(segment) else ""
+    idx += 1
+    header_type = segment[idx].strip() if idx < len(segment) else ""
+    idx += 1
+
+    vdp_idx = lower.index(_DETAILS_LOWER)
+
+    # The canonical type line carries the subtype and the attunement clause,
+    # so prefer it and fall back to the two header lines only if it is absent.
+    type_line = ""
+    body_start = idx
+    for i in range(idx, vdp_idx):
+        if _CANONICAL_TYPE_RE.match(segment[i].strip()):
+            type_line = segment[i].strip()
+            body_start = i + 1
+            break
+    else:
+        # No canonical line: reconstruct from the header, and take attunement
+        # from the "Required" line the header carries instead.
+        type_line = f"{header_type}, {header_rarity}"
+        if any(l == "required" for l in lower[idx:vdp_idx]):
+            type_line += ", Requires Attunement"
+
+    item_type, subtype, rarity, attunement = _parse_type_line(type_line)
+
+    # "Notes: Bonus: Magic, Damage: Force" repeats the header's notes line and
+    # is not part of the prose.
+    note_tags: list[str] = []
+    body: list[str] = []
+    for line in segment[body_start:vdp_idx]:
+        m = _NOTES_PREFIX_RE.match(line.strip())
+        if m:
+            note_tags.extend(_split_notes(m.group(1)))
+        else:
+            body.append(line)
+
+    description = "\n\n".join(
+        para.strip()
+        for para in "\n".join(body).split("\n\n")
+        if para.strip()
+    )
+
+    # After the details link: an optional "Tags:" list, then the source book.
+    # "Partnered Content" is a marketplace badge, not part of either.
+    after = [
+        line.strip() for line in segment[vdp_idx + 1:]
+        if line.strip() and line.strip().lower() != "partnered content"
+    ]
+    source = after[-1] if after else ""
+    page_tags: list[str] = []
+    if after and after[0].lower() == "tags:":
+        page_tags = [line.lower() for line in after[1:-1]]
+
+    # Everything in this listing is a magic item by definition, including the
+    # common and "varies" ones that _build_tags would not tag on rarity alone.
+    tags = _build_tags(item_type, rarity, subtype)
+    for tag in ["magic_item"] + note_tags + page_tags:
+        if tag not in tags:
+            tags.append(tag)
+
+    data: dict = {
+        "name": name,
+        "item_type": item_type,
+        "subtype": subtype,
+        "rarity": rarity,
+        "requires_attunement": attunement,
+        "cost": "",
+        "cost_gp": 0.0,
+        "weight": 0.0,
+        "properties": [],
+        "damage": "",
+        "ac": "",
+        "description": description,
+        "tags": tags,
+        "source": source,
+    }
+    return data, is_legacy
+
+
+def _parse_magic_item_listing(
+    lines: list[str],
+) -> tuple[list[ParsedItemBlock], list[str]]:
+    starts = _find_magic_item_starts(lines)
+    if not starts:
+        return [], []
+
+    parsed: list[ParsedItemBlock] = []
+    unowned: list[str] = []
+    boundaries = starts + [len(lines)]
+    for start, end in zip(boundaries, boundaries[1:]):
+        segment = lines[start:end]
+        result = _parse_magic_item_segment(segment)
+        if result is None:
+            unowned.append(segment[0].strip())
+            continue
+        data, is_legacy = result
+        if not data.get("name", "").strip():
+            continue
+        parsed.append(ParsedItemBlock(
+            name=data["name"],
+            key=item_key(data["name"]),
+            data=data,
+            warnings=validate_item(data),
+            is_legacy=is_legacy,
+        ))
+    return parsed, unowned
+
+
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def parse_bulk_items(
@@ -335,21 +546,43 @@ def parse_bulk_items(
     Call dedupe_prefer_non_legacy() afterwards to drop legacy entries that
     have a non-legacy counterpart in the same paste.
     """
+    return parse_bulk_items_report(text, include_legacy=include_legacy)[0]
+
+
+def parse_bulk_items_report(
+    text: str,
+    *,
+    include_legacy: bool = True,
+) -> tuple[list[ParsedItemBlock], list[str]]:
+    """As parse_bulk_items, plus the names of blocks skipped as not owned.
+
+    A block you do not own carries a "purchase the book" blurb where its
+    description should be, so there is nothing to import -- but silently
+    dropping a third of a paste is alarming, so the caller gets to say so.
+    """
     lines = _normalize_lines(text)
     if not lines:
-        return []
+        return [], []
+
+    if is_magic_item_listing(lines):
+        parsed, unowned = _parse_magic_item_listing(lines)
+        if not include_legacy:
+            parsed = [item for item in parsed if not item.is_legacy]
+        return parsed, unowned
 
     starts = _find_item_starts(lines)
     if not starts:
-        return []
+        return [], []
 
     parsed: list[ParsedItemBlock] = []
+    unowned: list[str] = []
     boundaries = starts + [len(lines)]
 
     for start, end in zip(boundaries, boundaries[1:]):
         segment = lines[start:end]
         result = _parse_item_segment(segment)
         if result is None:
+            unowned.append(segment[0].strip())
             continue
 
         data, is_legacy = result
@@ -368,7 +601,7 @@ def parse_bulk_items(
             is_legacy=is_legacy,
         ))
 
-    return parsed
+    return parsed, unowned
 
 
 def dedupe_prefer_non_legacy(

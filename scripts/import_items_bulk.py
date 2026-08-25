@@ -14,6 +14,10 @@ across the whole run, not per file.
 By default it **skips items already in your library**, so a re-run adds only
 what is new and never overwrites an entry you have edited or one that came
 from the bundled SRD. Pass --overwrite when you actually mean to replace.
+
+Items you do not own are skipped too, and listed by name at the end. D&D
+Beyond shows them in the listing with a "purchase the book" blurb where the
+description would be, so there is nothing to import.
 """
 from __future__ import annotations
 
@@ -28,7 +32,7 @@ from app import config
 from app.bulk_item_import import (
     ParsedItemBlock,
     dedupe_prefer_non_legacy,
-    parse_bulk_items,
+    parse_bulk_items_report,
 )
 
 
@@ -155,10 +159,13 @@ def main() -> int:
     # Parse legacy blocks throughout, so dedupe can prefer the non-legacy
     # version of an item that appears in two different files.
     items: list[ParsedItemBlock] = []
+    unowned: list[str] = []
     for path, raw in sources:
-        found = parse_bulk_items(raw, include_legacy=True)
-        print(f"{path}: {len(found)} parsed")
+        found, missing = parse_bulk_items_report(raw, include_legacy=True)
+        note = f", {len(missing)} not owned" if missing else ""
+        print(f"{path}: {len(found)} parsed{note}")
         items.extend(found)
+        unowned.extend(missing)
 
     if not args.no_dedupe:
         before = len(items)
@@ -171,6 +178,15 @@ def main() -> int:
         if len(kept) != len(items):
             print(f"Dropped {len(items) - len(kept)} legacy items")
         items = kept
+
+    if unowned:
+        # These are the entries the listing shows but you have not bought --
+        # they carry no description to import. Named, not just counted, so a
+        # missing item can be told from a parse failure.
+        print(f"\nSkipped {len(unowned)} items you do not own:")
+        for name in unowned:
+            print(f"  {name}")
+        print()
 
     if not items:
         print("No parseable items found.")
