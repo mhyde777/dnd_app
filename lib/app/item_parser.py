@@ -157,6 +157,24 @@ def _parse_attunement(value: str) -> bool | str:
     return True
 
 
+_ATTUNEMENT_PAREN_RE = re.compile(
+    r"^(.*?)\s*\((requires?\s+attunement[^)]*)\)\s*$", re.IGNORECASE
+)
+
+
+def _split_attunement_paren(part: str) -> list[str]:
+    """Split "Rare (Requires Attunement)" into its rarity and attunement halves.
+
+    Returns the part unchanged when it carries no attunement parenthetical, so
+    the already-separated form ("Rare, Requires Attunement") is untouched.
+    """
+    m = _ATTUNEMENT_PAREN_RE.match(part.strip())
+    if not m:
+        return [part]
+    head, attunement = m.group(1).strip(), m.group(2).strip()
+    return ([head] if head else []) + [attunement]
+
+
 def _parse_type_line(line: str) -> tuple[str, str, str, bool | str]:
     """
     Parse a D&D Beyond type line into (item_type, subtype, rarity, requires_attunement).
@@ -193,6 +211,13 @@ def _parse_type_line(line: str) -> tuple[str, str, str, bool | str]:
             current.append(ch)
     if current:
         parts.append(''.join(current).strip())
+
+    # Both the SRD and D&D Beyond append attunement to the rarity in
+    # parentheses -- "Wondrous Item, Rare (Requires Attunement)" -- rather than
+    # giving it its own comma-separated part. Left joined, "Rare (Requires
+    # Attunement)" matches no rarity and no attunement, and both are lost
+    # silently. Split it back out so the loop below sees the shape it expects.
+    parts = [sub for part in parts for sub in _split_attunement_paren(part)]
 
     if not parts:
         return item_type, subtype, rarity, requires_attunement

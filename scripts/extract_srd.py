@@ -161,20 +161,17 @@ def is_magic_item(block: Block) -> bool:
     return False
 
 
-# The SRD appends attunement to the rarity in parentheses --
-#   "Wondrous Item, Rare (Requires Attunement by a Spellcaster)"
-# -- while item_parser splits the type line on top-level commas and expects
-# attunement as its own part. Left alone, "Rare (Requires Attunement)" matches
-# no rarity, so both the rarity and the attunement flag are silently lost.
-_ATTUNEMENT_PAREN = re.compile(r"\s*\((Requires Attunement[^)]*)\)", re.IGNORECASE)
+# "Wondrous Item, Rare (Requires Attunement by a Spellcaster)" used to be
+# rewritten here, into a comma-separated part, because item_parser recognised
+# only that shape. It is handled in the parser now -- D&D Beyond writes the
+# parenthetical form too, so pasted items hit the same fault. Rewriting it here
+# as well would be worse than redundant: splitting on top-level commas truncated
+# "by a Druid, Sorcerer, Warlock, or Wizard" to "by a druid".
 
 
 def render_item(block: Block) -> str:
     """Render as the "Name / type line / description" text parse_item accepts."""
-    lines = list(block.lines)
-    if lines:
-        lines[0] = _ATTUNEMENT_PAREN.sub(r", \1", lines[0])
-    return "\n".join([block.title] + lines)
+    return "\n".join([block.title] + list(block.lines))
 
 
 def extract_magic_items(pdf: Path, first: int, last: int) -> tuple[dict, list[str]]:

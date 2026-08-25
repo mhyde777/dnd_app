@@ -118,6 +118,39 @@ You can also paste directly from clipboard content via stdin:
 pbpaste | python scripts/import_spells_bulk.py --base-url https://your-storage-api.example.com
 ```
 
+## Bulk item import script
+The same idea for magic items. Paste D&D Beyond item pages into text files —
+keep them in `items/`, which is gitignored — then hand the whole folder over at
+once:
+
+```bash
+pipenv run python scripts/import_items_bulk.py items/
+```
+
+It takes any number of files or directories, so there is no shell loop to write,
+and duplicates are resolved across the whole run rather than per file. A `Legacy`
+block is kept only when no non-legacy version of the same item turned up
+anywhere in the run.
+
+**Items already in your library are left alone.** That is the default because
+the library also holds the bundled SRD items and anything you have edited by
+hand; pass `--overwrite` when you actually mean to replace them.
+
+```bash
+# see what would be imported, write nothing
+pipenv run python scripts/import_items_bulk.py items/ --dry-run
+
+# replace existing entries, and drop Legacy blocks entirely
+pipenv run python scripts/import_items_bulk.py items/ --overwrite --skip-legacy
+
+# write to a local data directory instead of the API
+pipenv run python scripts/import_items_bulk.py items/ --local-dir ~/.dnd_tracker_config/data
+```
+
+It writes to the storage API you configured in Settings → Storage; `--base-url`
+overrides that. Imported items pick up `magic_item` and rarity tags, which is
+what the Shop Generator's Magic Shop and Apothecary profiles match on.
+
 ## Combatant notes and the context menu
 
 Right-click a combatant row in the initiative table (the name cell works best)

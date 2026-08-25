@@ -2,11 +2,11 @@
 from __future__ import annotations
 import json
 from typing import Optional, Any, Dict, Iterable, List
-import os
 
 import requests
 from requests import Response
 
+from app.config import get_storage_api_key
 from app.creature import CustomEncoder
 
 
@@ -26,7 +26,10 @@ class StorageAPI:
             raise ValueError("StorageAPI base_url is required")
         self.base_url = base_url.rstrip("/")
         self.session = session or requests.Session()
-        self.api_key = os.getenv("STORAGE_API_KEY", "").strip()
+        # Via config, so a key entered in Settings works. Reading the env var
+        # directly meant a settings.json key never reached the request headers
+        # and every call came back unauthorized.
+        self.api_key = get_storage_api_key().strip()
 
         # ✅ attach API key for every request made by this Session
         if self.api_key:
