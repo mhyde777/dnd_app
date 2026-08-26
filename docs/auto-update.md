@@ -110,6 +110,25 @@ to survive until its replacement has proved it can start, because it is what
 the launcher falls back to. Deleting it at install time would throw it away at
 exactly the moment it might be needed.
 
+### Proving the new build before deleting the old one
+
+After an update the new build runs a self-check once (`lib/app/self_test.py`),
+one check per timer tick so the app stays usable while it happens. It answers
+one question: is it safe to delete the version this one replaced?
+
+- **All pass** → the superseded build is removed immediately. No waiting: the
+  new one has demonstrated it works.
+- **Anything fails** → nothing is deleted, and a banner names the check that
+  failed with a button to go back to the previous version. `verified_version`
+  is left unset, so the failing build is never blessed on a later launch.
+
+A check that *cannot* run — remote storage, an unconfigured data directory —
+reports SKIPPED, never FAILED. Reverting someone because they are offline
+would be worse than not checking at all.
+
+The grace period below is the fallback for when that verdict never arrives:
+the app was closed before the checks finished, or the install has no launcher.
+
 A version that falls outside the keep window is not deleted at once. It is
 stamped with a retirement time — `version_grace_minutes`, default **60** — and
 left alone until that passes, so a build that starts cleanly and only then

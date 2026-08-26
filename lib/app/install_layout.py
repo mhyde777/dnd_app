@@ -157,11 +157,11 @@ def write_current(layout: Layout, version: str) -> None:
 
 HISTORY_KEY = "version_history"
 KEEP_VERSIONS_KEY = "keep_versions"
-# Two, not one: the launcher's fallback runs the *previous* build from disk, so
-# keeping only the running one would leave a failed update with nothing to fall
-# back to. One spare is what makes that automatic. Older ones are re-downloaded
-# on demand instead of being stored forever.
-DEFAULT_KEEP_VERSIONS = 2
+# One. The superseded build is kept anyway until the new one has passed its
+# self-check (see self_test.py) or served out its grace period -- so the spare
+# exists exactly while it is useful, rather than permanently. Older ones are
+# re-downloaded on demand instead of being stored forever.
+DEFAULT_KEEP_VERSIONS = 1
 
 
 def record_started(layout: Optional[Layout] = None) -> None:

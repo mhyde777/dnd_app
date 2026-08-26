@@ -58,6 +58,7 @@ NOT_SYNCED: tuple[tuple[str, str], ...] = (
     ("storage_mode / local_data_dir",      "where this machine keeps its files"),
     ("window_geometry / window_state",     "sized for this machine's monitor"),
     ("srd_installed",                      "state of this installation"),
+    ("verified_version",                   "which build this machine has vetted"),
     ("active_pc_group",                    "which roster this machine is running right now"),
 )
 

@@ -151,6 +151,7 @@ class InitiativeTracker(QMainWindow, Application):
         self.start_bridge_polling()
         self.check_for_updates()
         self.start_version_housekeeping()
+        self.verify_new_version()
 
     def check_for_updates(self):
         """Tell the user when a newer release exists. Never blocks, never nags.
@@ -1716,6 +1717,130 @@ class InitiativeTracker(QMainWindow, Application):
     # Checked periodically, not once: an update's probation usually expires
     # while the app is still running, and nobody restarts just to reclaim disk.
     _RETIREMENT_CHECK_MS = 5 * 60 * 1000
+
+    # One check per tick, slowly. The app has to stay usable while a build is
+    # being vetted -- someone may be mid-combat, and none of this is urgent.
+    _SELF_TEST_TICK_MS = 400
+    SELF_TEST_BANNER_KEY = "self-test-failed"
+
+    def verify_new_version(self):
+        """Run the self-test once, after an update, and act on the result.
+
+        Passing retires the version this one replaced immediately -- the point
+        of testing is to answer that question with evidence rather than by
+        waiting out a timer. Failing leaves it exactly where it is and offers
+        to go back to it.
+        """
+        from app import install_layout, self_test
+
+        layout = install_layout.detect()
+        if layout is None:
+            return                                  # nothing to fall back to
+        if app_settings.get(self.VERIFIED_KEY) == layout.version:
+            return                                  # already vetted this build
+
+        self._self_test_layout = layout
+        self._self_test_queue = list(self_test.all_checks())
+        self._self_test_results = []
+        self._log(f"[SelfTest] Checking {layout.version} after update")
+
+        self._self_test_timer = QTimer(self)
+        self._self_test_timer.timeout.connect(self._run_next_check)
+        self._self_test_timer.start(self._SELF_TEST_TICK_MS)
+
+    VERIFIED_KEY = "verified_version"
+
+    def _run_next_check(self):
+        from app import self_test
+
+        if not self._self_test_queue:
+            self._self_test_timer.stop()
+            self._finish_self_test()
+            return
+        check = self._self_test_queue.pop(0)
+        result = self_test.run_check(check)
+        self._self_test_results.append(result)
+        if result.failed:
+            self._log(f"[SelfTest] FAILED {result.label}: {result.detail}")
+
+    def _finish_self_test(self):
+        from app import install_layout, self_test
+
+        layout = self._self_test_layout
+        results = self._self_test_results
+        summary = self_test.summarise(results)
+        failure = self_test.first_failure(results)
+
+        if failure is None:
+            self._log(f"[SelfTest] {layout.version} passed ({summary})")
+            app_settings.set(self.VERIFIED_KEY, layout.version)
+            # Vetted, so the build it replaced has done its job.
+            self._retire_superseded_now(layout)
+            return
+
+        self._log(f"[SelfTest] {layout.version} failed ({summary})")
+        previous = self._previous_version(layout)
+        if previous is None:
+            self.show_banner(
+                self.SELF_TEST_BANNER_KEY,
+                f"This version failed a self-check after updating — "
+                f"{failure.label}: {failure.detail}. No earlier version is "
+                f"installed to go back to.",
+                level="error",
+            )
+            return
+
+        self.show_banner(
+            self.SELF_TEST_BANNER_KEY,
+            f"Version {layout.version} failed a self-check after updating — "
+            f"{failure.label}. Your data is untouched, and {previous} is still "
+            f"installed.",
+            level="error",
+            action_label=f"Go Back to {previous}",
+            action=lambda: self._revert_to(layout, previous),
+        )
+
+    def _previous_version(self, layout):
+        """The newest installed version that isn't the one running."""
+        from app.update_check import _parse
+
+        others = [v for v in layout.installed_versions() if v != layout.version]
+        if not others:
+            return None
+        return sorted(others, key=_parse, reverse=True)[0]
+
+    def _revert_to(self, layout, version: str):
+        from app import install_layout
+
+        try:
+            install_layout.write_current(layout, version)
+            install_layout.cancel_retirement(version)
+            # Don't let the failing build be re-vetted and re-blessed on the
+            # way past; it has already been judged.
+            app_settings.set(self.VERIFIED_KEY, "")
+        except Exception as exc:
+            report_error(self, "Could Not Switch Version",
+                         f"Could not select {version} to run next.", exc)
+            return
+        self.clear_banner(self.SELF_TEST_BANNER_KEY)
+        self.restart_app()
+
+    def _retire_superseded_now(self, layout):
+        """Drop the grace period for versions this build has superseded."""
+        from app import install_layout
+        from app.update_install import prune_versions
+
+        try:
+            keep = install_layout.keep_versions()
+            removed = prune_versions(layout, keep=keep)
+            for version in removed:
+                install_layout.cancel_retirement(version)
+            if removed:
+                self._log(
+                    f"[SelfTest] {layout.version} verified; removed {', '.join(removed)}"
+                )
+        except Exception as exc:
+            self._log(f"[WARN] Could not retire superseded versions: {exc}")
 
     def start_version_housekeeping(self):
         """Retire superseded versions once their probation is up."""

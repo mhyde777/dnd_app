@@ -276,9 +276,22 @@ def test_the_reprieve_expires(install, isolated_settings):
     for version in ("0.2.5", "0.3.0", "0.4.0"):
         os.makedirs(install.version_dir(version), exist_ok=True)
     isolated_settings.set(install_layout.GRACE_KEY, 0)   # no probation
+    # Explicit rather than relying on the default, which is what this test is
+    # about: two survive, the rest go.
+    isolated_settings.set(install_layout.KEEP_VERSIONS_KEY, 2)
     running = _start(install, "0.4.0")
 
     assert running.installed_versions() == ["0.3.0", "0.4.0"]
+
+
+def test_at_keep_one_only_the_running_version_survives(install, isolated_settings):
+    for version in ("0.2.5", "0.3.0", "0.4.0"):
+        os.makedirs(install.version_dir(version), exist_ok=True)
+    isolated_settings.set(install_layout.GRACE_KEY, 0)
+    isolated_settings.set(install_layout.KEEP_VERSIONS_KEY, 1)
+    running = _start(install, "0.4.0")
+
+    assert running.installed_versions() == ["0.4.0"]
 
 
 def test_choosing_a_version_again_cancels_its_retirement(install, isolated_settings):
@@ -312,3 +325,56 @@ def test_keep_versions_is_never_below_one(isolated_settings):
     assert install_layout.keep_versions() >= 1
     isolated_settings.set(install_layout.KEEP_VERSIONS_KEY, "nonsense")
     assert install_layout.keep_versions() == install_layout.DEFAULT_KEEP_VERSIONS
+
+
+# ---- the post-update self-check ---------------------------------------------
+
+def test_every_check_passes_against_this_build():
+    """The self-check has to pass on a build that is fine.
+
+    Otherwise it reverts people for no reason -- worse than not checking.
+    """
+    from app import self_test
+
+    results = [self_test.run_check(check) for check in self_test.all_checks()]
+    failures = [f"{r.label}: {r.detail}" for r in results if r.failed]
+    assert not failures, "the self-check failed on a healthy build: " + "; ".join(failures)
+
+
+def test_checks_that_cannot_run_are_skipped_not_failed():
+    """A check that can't tell must not be read as a failure."""
+    from app import self_test
+
+    def cannot_tell():
+        raise self_test.Skip("nothing to test here")
+
+    result = self_test.run_check(self_test.Check("x", "Example", cannot_tell))
+    assert result.status == "skipped"
+    assert not result.failed
+
+
+def test_a_raising_check_is_a_failure_with_its_reason():
+    from app import self_test
+
+    def broken():
+        raise ValueError("initiative column renders empty")
+
+    result = self_test.run_check(self_test.Check("x", "Example", broken))
+    assert result.failed
+    assert "initiative column renders empty" in result.detail
+    assert self_test.first_failure([result]) is result
+
+
+def test_summarise_counts_each_outcome():
+    from app import self_test
+
+    results = [
+        self_test.Result("a", "A", "passed"),
+        self_test.Result("b", "B", "skipped"),
+        self_test.Result("c", "C", "failed"),
+    ]
+    assert self_test.summarise(results) == "1 passed, 1 skipped, 1 failed"
+
+
+def test_keep_defaults_to_one_now_that_the_spare_is_conditional():
+    assert install_layout.DEFAULT_KEEP_VERSIONS == 1
