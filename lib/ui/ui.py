@@ -246,8 +246,30 @@ class InitiativeTracker(QMainWindow, Application):
         self.table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.installEventFilter(self)
 
+        # Column widths the user dragged, keyed by field name. Restored here so
+        # the first adjust_table_size() already honours them.
+        self._sizing_columns = False
+        self._user_column_widths = dict(
+            app_settings.get("table_column_widths") or {}
+        )
+        header = self.table.horizontalHeader()
+        header.setSectionsMovable(False)
+        header.sectionResized.connect(self._on_column_resized)
+        # Watch the container, not the table: the table's own width is capped
+        # to its columns, so it stops changing once it fits and would never
+        # notice the window or a dock giving it more room.
+        self.central_widget.installEventFilter(self)
+        # The viewport still moves on its own when a scrollbar appears.
+        self.table.viewport().installEventFilter(self)
+
         self.mainlayout.addWidget(self.label_widget)
+        # The table takes the space it needs and no more: _fit_table_height()
+        # caps it at the height of the rows it actually holds, and this spacer
+        # -- expanding, but with no stretch of its own -- absorbs whatever is
+        # left rather than the table running on as empty rows. Capping without
+        # the stretch factor would leave the table at its size hint instead.
         self.mainlayout.addWidget(self.table, stretch=1)
+        self.mainlayout.addStretch(0)
 
         # Kept as an alias: older code and saved dock state refer to table_widget.
         self.table_widget = self.central_widget
@@ -286,6 +308,9 @@ class InitiativeTracker(QMainWindow, Application):
         self.creature_list = QListWidget(self)
         self.creature_list.setSelectionMode(QListWidget.MultiSelection)
         self.creature_list.setMinimumWidth(180)
+        # Height follows the number of combatants (see _fit_creature_list_height);
+        # an empty list should not push the HP controls to the bottom of the dock.
+        self.creature_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.creature_list.setToolTip(
             "Select one or more combatants, then use the HP controls below"
         )
@@ -303,7 +328,8 @@ class InitiativeTracker(QMainWindow, Application):
         selection_row.addWidget(select_all_btn)
         selection_row.addWidget(clear_sel_btn)
         combatants_group_layout.addLayout(selection_row)
-        self.dam_layout.addWidget(combatants_group, stretch=1)
+        self.dam_layout.addWidget(combatants_group)
+        self._fit_creature_list_height()
 
         # -- HP Controls group --
         # Ordered heal / value / damage so the destructive button isn't the one
@@ -370,6 +396,9 @@ class InitiativeTracker(QMainWindow, Application):
         hp_mods_layout.addRow(hp_mods_btn_row)
 
         self.dam_layout.addWidget(hp_mods_group)
+        # Spare height collects here, under the last group, instead of being
+        # handed to the combatant list and dragging HP Controls to the bottom.
+        self.dam_layout.addStretch(1)
 
         self.dam_widget = QWidget()
         self.dam_widget.setLayout(self.dam_layout)
@@ -389,6 +418,29 @@ class InitiativeTracker(QMainWindow, Application):
         self.controls_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.controls_dock)
 
+    # The combatant list is sized to its contents, clamped so a single
+    # combatant doesn't leave a sliver and a big fight doesn't eat the dock.
+    _CREATURE_LIST_MIN_ROWS = 3
+    _CREATURE_LIST_MAX_ROWS = 14
+
+    def _fit_creature_list_height(self):
+        """Match the list's height to the number of visible combatants."""
+        listw = getattr(self, "creature_list", None)
+        if listw is None:
+            return
+
+        row_height = listw.sizeHintForRow(0) if listw.count() else 0
+        if row_height <= 0:
+            row_height = listw.fontMetrics().height() + 6
+
+        visible = sum(
+            1 for row in range(listw.count()) if not listw.item(row).isHidden()
+        )
+        rows = min(
+            max(visible, self._CREATURE_LIST_MIN_ROWS), self._CREATURE_LIST_MAX_ROWS
+        )
+        listw.setFixedHeight(rows * row_height + 2 * listw.frameWidth() + 4)
+
     def _filter_creature_list(self, text: str):
         """Hide non-matching rows; a hidden row keeps its selection state."""
         needle = (text or "").strip().lower()
@@ -400,6 +452,7 @@ class InitiativeTracker(QMainWindow, Application):
                 # Never leave a filtered-out combatant selected — otherwise
                 # damage lands on something the user can no longer see.
                 item.setSelected(False)
+        self._fit_creature_list_height()
 
     def _select_all_visible_creatures(self):
         for row in range(self.creature_list.count()):
@@ -698,6 +751,13 @@ class InitiativeTracker(QMainWindow, Application):
             config["toolbar"] = toolbar
             save_panel_layout(config)
 
+            # Dragged column widths ride along with the layout rather than
+            # hitting the disk on every pixel of a header drag.
+            app_settings.set(
+                "table_column_widths",
+                dict(getattr(self, "_user_column_widths", None) or {}),
+            )
+
             if config.get("allow_drag"):
                 app_settings.set(
                     "window_state",
@@ -741,6 +801,9 @@ class InitiativeTracker(QMainWindow, Application):
         config = deepcopy(DEFAULT_PANEL_LAYOUT)
         save_panel_layout(config)
         self.apply_panel_layout(config)
+        self._user_column_widths = {}
+        app_settings.set("table_column_widths", {})
+        self.adjust_table_size()
         toast(self, "Panel layout reset", "success")
 
     def resizeEvent(self, event):
@@ -1123,6 +1186,13 @@ class InitiativeTracker(QMainWindow, Application):
         self.view_menu.addAction(self.customize_layout_action)
         self.view_menu.addAction(self.customize_toolbar_action)
         self.view_menu.addAction(self.customize_colors_action)
+
+        self.reset_columns_action = QAction("Reset Column Widths", self)
+        self.reset_columns_action.setToolTip(
+            "Size the initiative table's columns from their contents again"
+        )
+        self.reset_columns_action.triggered.connect(self.reset_column_widths)
+        self.view_menu.addAction(self.reset_columns_action)
 
         self.reset_layout_action = QAction("Reset Panel Layout", self)
         self.reset_layout_action.setToolTip("Put every panel back to its default position")
@@ -1623,8 +1693,42 @@ class InitiativeTracker(QMainWindow, Application):
                 pass
         super().closeEvent(event)
 
+    def _on_column_resized(self, column: int, _old: int, new: int):
+        """Record a width the *user* dragged so auto-sizing stops overriding it.
+
+        Without this every update_table() would snap the column back, which is
+        what made the header feel unresizable.
+        """
+        if getattr(self, "_sizing_columns", False) or new <= 0:
+            return
+        fields = getattr(getattr(self, "table_model", None), "fields", []) or []
+        if column < 0 or column >= len(fields):
+            return
+        self._user_column_widths[fields[column]] = new
+        # Narrowing a column should take the table's right edge with it rather
+        # than leaving empty body behind.
+        self._fit_table_width()
+
+    def reset_column_widths(self):
+        """Forget dragged widths and size every column from its contents again."""
+        self._user_column_widths = {}
+        app_settings.set("table_column_widths", {})
+        self.adjust_table_size()
+        toast(self, "Column widths reset", "success")
+
     def eventFilter(self, obj, event):
         from PyQt5.QtCore import QEvent
+        if hasattr(self, "table") and obj is getattr(self, "central_widget", None):
+            if event.type() == QEvent.Resize:
+                self.refit_table()
+            return False
+
+        if hasattr(self, "table") and obj is self.table.viewport():
+            if event.type() == QEvent.Resize:
+                self._stretch_notes_column()
+                self._fit_table_width()
+            return False
+
         if hasattr(self, "value_input") and obj is self.value_input:
             if event.type() == QEvent.KeyPress and event.key() in (Qt.Key_Return, Qt.Key_Enter):
                 if event.modifiers() & Qt.ShiftModifier:

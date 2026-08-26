@@ -1814,44 +1814,185 @@ class Application:
     def init_tracking_mode(self, by_name):
         self.tracking_by_name = by_name
 
-    def adjust_table_size(self):
-        _COL_MAX_WIDTHS = {
-            "_name":       200,
-            "_notes":      180,
-            "_conditions": 160,
-        }
+    # Caps for automatic, content-based sizing only. Dragging a header past
+    # one of these is honoured and remembered — they bound what the app
+    # chooses on its own, not what the user chooses.
+    _COL_MAX_WIDTHS = {
+        "_name":       200,
+        "_notes":      180,
+        "_conditions": 160,
+    }
+    _NOTES_MIN_WIDTH = 180
 
+    def adjust_table_size(self):
         screen_geometry = QApplication.primaryScreen().availableGeometry()
         screen_height = screen_geometry.height()
 
         font_size = max(int(screen_height * 0.012), 10) if screen_height < 1440 else 18
         self.table.setFont(QFont('Arial', font_size))
 
-        self.table.resizeColumnsToContents()
         self.table.resizeRowsToContents()
 
         model = self.table.model()
         source_fields = getattr(self, "table_model", None)
         source_fields = getattr(source_fields, "fields", []) if source_fields else []
-        if model:
-            for column in range(model.columnCount()):
-                self.table.resizeColumnToContents(column)
-                if not self.table.isColumnHidden(column):
+        header = self.table.horizontalHeader()
+        # Nothing is Stretch: a stretched section cannot be dragged, and Qt
+        # dumps every spare pixel into it. Widths are set explicitly instead.
+        header.setStretchLastSection(False)
+
+        saved = getattr(self, "_user_column_widths", None) or {}
+        # Suppress the sectionResized bookkeeping while we are the one resizing,
+        # or the app's own sizing would be recorded as the user's choice.
+        self._sizing_columns = True
+        try:
+            if model:
+                for column in range(model.columnCount()):
+                    if self.table.isColumnHidden(column):
+                        continue
+                    header.setSectionResizeMode(column, QHeaderView.Interactive)
                     field = source_fields[column] if column < len(source_fields) else ""
-                    cap = _COL_MAX_WIDTHS.get(field)
+                    width = saved.get(field)
+                    if width:
+                        self.table.setColumnWidth(column, width)
+                        continue
+                    self.table.resizeColumnToContents(column)
+                    cap = self._COL_MAX_WIDTHS.get(field)
                     if cap is not None and self.table.columnWidth(column) > cap:
                         self.table.setColumnWidth(column, cap)
+            self._stretch_notes_column()
+        finally:
+            self._sizing_columns = False
 
         self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.table.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        # Any leftover horizontal space goes to the name column rather than
-        # leaving a dead grey strip on the right.
-        header = self.table.horizontalHeader()
-        header.setStretchLastSection(False)
-        if "_name" in source_fields:
-            header.setSectionResizeMode(
-                source_fields.index("_name"), QHeaderView.Stretch
-            )
+        self._fit_table_width()
+        self._fit_table_height()
+
+    def _fit_table_height(self):
+        """Stop the table at its last row instead of at the bottom of the window.
+
+        A table with room to spare used to paint a tall block of empty rows
+        under the initiative order. Capping its height to the rows it actually
+        holds ends it at the last combatant, and it grows as more are added.
+        This is a maximum, never a minimum -- the window stays free to shrink
+        below it, and the table scrolls once it runs out of room, as before.
+        """
+        table = getattr(self, "table", None)
+        model = table.model() if table is not None else None
+        if model is None:
+            return
+
+        rows = model.rowCount()
+        used = sum(self.table.rowHeight(r) for r in range(rows))
+        # An empty table still shows one row's worth, so it reads as a table
+        # waiting for combatants rather than a stray header strip.
+        if rows == 0:
+            used = self.table.verticalHeader().defaultSectionSize()
+
+        height = used + self.table.horizontalHeader().height() + 2 * self.table.frameWidth()
+        scrollbar = self.table.horizontalScrollBar()
+        if scrollbar is not None and scrollbar.isVisible():
+            height += scrollbar.height()
+        self.table.setMaximumHeight(height)
+
+    def _stretch_notes_column(self):
+        """Fit Notes to whatever width the other columns leave over.
+
+        Name used to be the stretch section, which made it both enormous and
+        undraggable. Notes takes the slack instead -- growing when there is
+        room, giving it back when the window shrinks, and never dropping below
+        a readable minimum. Once the user drags Notes themselves, their width
+        stands and this steps aside.
+        """
+        table = getattr(self, "table", None)
+        model = table.model() if table is not None else None
+        source_fields = getattr(self, "table_model", None)
+        source_fields = getattr(source_fields, "fields", []) if source_fields else []
+        if model is None or "_notes" not in source_fields:
+            return
+        if "_notes" in (getattr(self, "_user_column_widths", None) or {}):
+            return
+
+        column = source_fields.index("_notes")
+        if column >= model.columnCount() or self.table.isColumnHidden(column):
+            return
+
+        others = sum(
+            self.table.columnWidth(c)
+            for c in range(model.columnCount())
+            if c != column and not self.table.isColumnHidden(c)
+        )
+        target = max(self._NOTES_MIN_WIDTH, self._available_table_width() - others)
+        if target == self.table.columnWidth(column):
+            return
+
+        was_sizing = getattr(self, "_sizing_columns", False)
+        self._sizing_columns = True
+        try:
+            self.table.setColumnWidth(column, target)
+        finally:
+            self._sizing_columns = was_sizing
+
+    def _available_table_width(self) -> int:
+        """Column width the central layout can offer, chrome already deducted.
+
+        Measured from the container rather than from the table's own viewport:
+        the table's width is capped to its columns (_fit_table_width), so asking
+        the viewport how much room there is would only ever echo back the width
+        the columns already have, and a widened window would never be filled.
+        """
+        table = getattr(self, "table", None)
+        layout = getattr(self, "mainlayout", None)
+        central = getattr(self, "central_widget", None)
+        if table is None or layout is None or central is None:
+            return 0
+
+        margins = layout.contentsMargins()
+        available = central.width() - margins.left() - margins.right()
+        return available - self._table_chrome_width()
+
+    def _table_chrome_width(self) -> int:
+        """Everything inside the table's frame that isn't a column."""
+        width = 2 * self.table.frameWidth()
+        header = self.table.verticalHeader()
+        if header is not None and header.isVisible():
+            width += header.width()
+        scrollbar = self.table.verticalScrollBar()
+        if scrollbar is not None and scrollbar.isVisible():
+            width += scrollbar.width()
+        return width
+
+    def _fit_table_width(self):
+        """End the table at its last column, the way it ends at its last row.
+
+        Dragging a column narrower used to leave a strip of empty table body on
+        the right. Capping the widget's width to the columns it holds turns
+        that strip back into window background. A maximum only, so the window
+        is still free to be narrower and scroll.
+        """
+        table = getattr(self, "table", None)
+        model = table.model() if table is not None else None
+        if model is None:
+            return
+
+        columns = sum(
+            self.table.columnWidth(c)
+            for c in range(model.columnCount())
+            if not self.table.isColumnHidden(c)
+        )
+        width = columns + self._table_chrome_width()
+        if self.table.maximumWidth() == width:
+            return
+        self.table.setMaximumWidth(width)
+
+    def refit_table(self):
+        """Re-fit the table to its contents in both directions."""
+        if getattr(self, "table", None) is None:
+            return
+        self._stretch_notes_column()
+        self._fit_table_width()
+        self._fit_table_height()
 
     # ============== Populate Lists ====================
     def pop_lists(self):
@@ -1864,10 +2005,12 @@ class Application:
             creature_name = self.table_model.creature_names[row]
             self.creature_list.addItem(creature_name)
 
-        # The list lives in a resizable dock now, so it stretches with the panel
-        # instead of being pinned to its content height.
+        # Sized to the combatants actually in the fight, so the HP controls stay
+        # directly under the list instead of at the bottom of the window.
         if hasattr(self, "_filter_creature_list"):
             self._filter_creature_list(self.creature_filter.text())
+        elif hasattr(self, "_fit_creature_list_height"):
+            self._fit_creature_list_height()
 
     def populate_monster_list(self):
         prev_selection = (
