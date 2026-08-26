@@ -103,6 +103,19 @@ PyInstaller cannot cross-compile, so each platform builds on that platform.
 ./package.sh --publish        # also upload to the GitHub release for this version
 ```
 
+Or do the whole thing — bump, changelog, commit, tag, push, build, publish —
+in one step:
+
+```bash
+./release.sh patch --dry-run   # say what it would do
+./release.sh patch             # 0.4.1 -> 0.4.2
+./release.sh minor             # 0.4.1 -> 0.5.0
+```
+
+It refuses to start from a dirty tree, the wrong branch, a tag that already
+exists, an empty changelog, or failing tests — everything after that point is
+public, and stopping is cheapest before any of it has happened.
+
 `--publish` needs the [GitHub CLI](https://cli.github.com/) (`gh auth login`)
 and the tag pushed. It uploads the artifacts and then asks the API what is
 actually attached, because a release published with no files on it looks
