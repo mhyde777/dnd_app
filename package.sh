@@ -4,6 +4,8 @@
 #
 #   ./package.sh                 build a release tarball in dist/
 #   ./package.sh --dev-install   also install to ~/.local/opt for daily use
+#   ./package.sh --publish       also upload to the GitHub release for this
+#                                version (needs gh, and the tag pushed)
 #
 # The release path deliberately touches nothing outside the repo. Installing a
 # desktop entry and copying the developer's .env into ~/.dnd_tracker_config is a
@@ -24,9 +26,11 @@ CONFIG_DIR="${HOME}/.dnd_tracker_config"
 CONFIG_ENV="${CONFIG_DIR}/.env"
 
 DEV_INSTALL=0
+PUBLISH=0
 for arg in "$@"; do
   case "$arg" in
     --dev-install) DEV_INSTALL=1 ;;
+    --publish)     PUBLISH=1 ;;
     -h|--help)
       sed -n '3,9p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0
@@ -155,6 +159,16 @@ echo "Release artifact: $TARBALL"
 if command -v sha256sum >/dev/null 2>&1; then
   (cd "$ROOT_DIR/dist" && sha256sum "${STAGE_NAME}.tar.gz" >> SHA256SUMS)
   echo "Checksums:        $ROOT_DIR/dist/SHA256SUMS"
+fi
+
+# ------------------------------------------------------------
+# Publish (opt-in)
+# ------------------------------------------------------------
+if [[ "$PUBLISH" -eq 1 ]]; then
+  # Uploading both files together, and checking afterwards that they are
+  # really on the release. A release published with no assets looks finished
+  # but leaves the in-app updater reporting "no build for this system".
+  "$ROOT_DIR/publish.sh" "$TARBALL" "$ROOT_DIR/dist/SHA256SUMS"
 fi
 
 # ------------------------------------------------------------

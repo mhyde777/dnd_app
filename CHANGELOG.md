@@ -13,6 +13,15 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ## [Unreleased]
 
+### Added
+
+- `./package.sh --publish` (and `--publish` on the Windows script) builds and
+  uploads the artifacts to the GitHub release in one step, then asks the API
+  what is actually attached. Publishing a release with no files on it looks
+  finished but leaves the in-app updater reporting "no build for this system",
+  which reads like a bug in the app rather than a missing upload.
+
+
 ## [0.2.1] — 2026-08-26
 
 ### Added

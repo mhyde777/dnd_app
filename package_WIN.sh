@@ -5,6 +5,8 @@
 #
 #   ./package_WIN.sh                 build a release zip in dist/
 #   ./package_WIN.sh --dev-install   also copy .env into %USERPROFILE%\.dnd_tracker_config
+#   ./package_WIN.sh --publish       also upload to the GitHub release for this
+#                                    version (needs gh, and the tag pushed)
 #
 # As on Linux, the release path writes nothing outside the repo: a build that
 # ships someone else's credentials would be a serious mistake, so the .env copy
@@ -19,9 +21,11 @@ CONFIG_DIR="${HOME}/.dnd_tracker_config"
 CONFIG_ENV="${CONFIG_DIR}/.env"
 
 DEV_INSTALL=0
+PUBLISH=0
 for arg in "$@"; do
   case "$arg" in
     --dev-install) DEV_INSTALL=1 ;;
+    --publish)     PUBLISH=1 ;;
     -h|--help)
       sed -n '3,11p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0
@@ -139,6 +143,16 @@ echo "Release artifact: $ZIP_PATH"
 if command -v sha256sum >/dev/null 2>&1; then
     (cd "$ROOT_DIR/dist" && sha256sum "${STAGE_NAME}.zip" >> SHA256SUMS)
     echo "Checksums:        $ROOT_DIR/dist/SHA256SUMS"
+fi
+
+# ------------------------------------------------------------
+# Publish (opt-in)
+# ------------------------------------------------------------
+if [[ "$PUBLISH" -eq 1 ]]; then
+    # Uploads the zip and the checksums together, then checks the release
+    # really has them -- a release with no assets looks finished but leaves
+    # the in-app updater reporting "no build for this system".
+    "$ROOT_DIR/publish.sh" "$ZIP_PATH" "$ROOT_DIR/dist/SHA256SUMS"
 fi
 
 # ------------------------------------------------------------
