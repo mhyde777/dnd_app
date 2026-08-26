@@ -8,6 +8,7 @@ from requests import Response
 
 from app.config import get_storage_api_key
 from app.creature import CustomEncoder
+from app import settings_sync
 
 
 class StorageAPI:
@@ -152,7 +153,13 @@ class StorageAPI:
             self._encounters_items_url(),  # .../v1/encounters/items
             self._encounters_url(),        # .../v1/encounters (often used for listing)
         ]
-        return self._list_from_candidates(candidates)
+        # The synced-settings blob shares this namespace; filtered here rather
+        # than in each of the four callers that would otherwise offer it as an
+        # encounter to load or delete.
+        return [
+            key for key in self._list_from_candidates(candidates)
+            if key != settings_sync.REMOTE_KEY
+        ]
 
     def get(self, key: str) -> Optional[dict]:
         """

@@ -22,6 +22,7 @@ import os
 from typing import Any, List, Optional
 
 from app.creature import CustomEncoder
+from app import settings_sync
 
 
 class LocalStorage:
@@ -77,7 +78,13 @@ class LocalStorage:
     # ---- Encounters (flat in data_dir) ----
 
     def list(self) -> List[str]:
-        return self._list_json(self.data_dir)
+        # The synced-settings blob lives in the same namespace as encounters,
+        # so it is filtered here rather than in each of the four callers that
+        # would otherwise offer it as an encounter to load or delete.
+        return [
+            key for key in self._list_json(self.data_dir)
+            if key != settings_sync.REMOTE_KEY
+        ]
 
     def get(self, key: str) -> Optional[dict]:
         return self._read_json(self._enc_path(key))

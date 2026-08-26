@@ -29,7 +29,7 @@ from PyQt5.QtWidgets import (
 )
 
 import app.settings as settings
-from app import paths, srd_content
+from app import paths, settings_sync, srd_content
 
 _DEFAULT_DATA_DIR = paths.config_path("data")
 
@@ -133,6 +133,14 @@ class SetupWizard(QDialog):
         updates.addStretch()
         self.tabs.addTab(updates_page, "Updates")
 
+        # --- Sync ---
+        sync_page = QWidget()
+        sync = QVBoxLayout(sync_page)
+        sync.setSpacing(12)
+        self._build_sync_box(sync)
+        sync.addStretch()
+        self.tabs.addTab(sync_page, "Sync")
+
         # --- Foundry VTT ---
         # Last, deliberately: it is the only optional integration here, and
         # most people do not run Foundry. Leading with it would put a bridge
@@ -157,6 +165,7 @@ class SetupWizard(QDialog):
         self._prefill()
         self._prefill_bridge()
         self._prefill_updates()
+        self._refresh_sync_status()
 
     def _build_bridge_box(self, root) -> None:
         """Foundry sync, collapsed behind a single switch.
@@ -248,6 +257,130 @@ class SetupWizard(QDialog):
             "bridge_stream_enabled": self.bridge_stream_check.isChecked(),
         })
         return changes
+
+    def _build_sync_box(self, root) -> None:
+        """Push/pull the portable half of settings.json through storage."""
+        group = QGroupBox("Settings on other machines")
+        layout = QVBoxLayout(group)
+        layout.setSpacing(8)
+
+        blurb = QLabel(
+            "Your layout, colours, shortcuts and toolbar can travel with you. "
+            "They are stored wherever your encounters are — the API if you use "
+            "one, otherwise your data folder, which works if that folder is "
+            "itself synced."
+        )
+        blurb.setWordWrap(True)
+        layout.addWidget(blurb)
+
+        self.sync_status = QLabel()
+        self.sync_status.setWordWrap(True)
+        layout.addWidget(self.sync_status)
+
+        row = QHBoxLayout()
+        self.sync_push_btn = QPushButton("Push From This Machine")
+        self.sync_push_btn.setToolTip(
+            "Overwrite the stored settings with this machine's"
+        )
+        self.sync_push_btn.clicked.connect(self._on_sync_push)
+        self.sync_pull_btn = QPushButton("Pull To This Machine")
+        self.sync_pull_btn.setToolTip(
+            "Replace this machine's preferences with the stored ones"
+        )
+        self.sync_pull_btn.clicked.connect(self._on_sync_pull)
+        row.addWidget(self.sync_push_btn)
+        row.addWidget(self.sync_pull_btn)
+        row.addStretch()
+        layout.addLayout(row)
+
+        excluded = QLabel(
+            "Stays on this machine:\n"
+            + "\n".join(f"  • {what} — {why}" for what, why in settings_sync.NOT_SYNCED)
+        )
+        excluded.setWordWrap(True)
+        excluded.setStyleSheet("color: #888;")
+        layout.addWidget(excluded)
+
+        root.addWidget(group)
+
+    def _sync_storage(self):
+        """The backend to sync through, or None with the reason shown."""
+        tracker = self.parent()
+        storage = getattr(tracker, "storage_api", None)
+        if storage is None:
+            mode = settings.get("storage_mode") or "local"
+            storage, _target = self._storage_for(
+                mode,
+                settings.get("local_data_dir") or "",
+                settings.get("storage_api_base") or "",
+            )
+        return storage
+
+    def _refresh_sync_status(self) -> None:
+        storage = self._sync_storage()
+        if storage is None:
+            self.sync_status.setText("Storage is not configured yet.")
+            self.sync_push_btn.setEnabled(False)
+            self.sync_pull_btn.setEnabled(False)
+            return
+
+        payload = settings_sync.fetch(storage)
+        text = settings_sync.describe(payload)
+        changed = settings_sync.differences(payload)
+        if payload is not None:
+            text += (
+                f"\n{len(changed)} would change here: {', '.join(sorted(changed))}"
+                if changed
+                else "\nIdentical to this machine."
+            )
+        self.sync_status.setText(text)
+        self.sync_push_btn.setEnabled(True)
+        self.sync_pull_btn.setEnabled(payload is not None)
+
+    def _on_sync_push(self) -> None:
+        storage = self._sync_storage()
+        if storage is None:
+            return
+        try:
+            settings_sync.push(storage)
+        except Exception as exc:
+            QMessageBox.warning(self, "Sync", f"Could not push settings:\n{exc}")
+            return
+        self._refresh_sync_status()
+        QMessageBox.information(
+            self, "Sync", "This machine's preferences are now the stored ones."
+        )
+
+    def _on_sync_pull(self) -> None:
+        storage = self._sync_storage()
+        if storage is None:
+            return
+
+        changed = settings_sync.differences(settings_sync.fetch(storage))
+        if changed and QMessageBox.question(
+            self,
+            "Pull Settings",
+            "Replace this machine's "
+            + ", ".join(sorted(changed))
+            + " with the stored ones?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        ) != QMessageBox.Yes:
+            return
+
+        try:
+            payload = settings_sync.pull(storage)
+        except Exception as exc:
+            QMessageBox.warning(self, "Sync", f"Could not pull settings:\n{exc}")
+            return
+        if payload is None:
+            QMessageBox.information(self, "Sync", "There is nothing stored to pull.")
+            return
+
+        self._refresh_sync_status()
+        tracker = self.parent()
+        if tracker is not None and hasattr(tracker, "apply_synced_settings"):
+            tracker.apply_synced_settings()
 
     def _build_updates_box(self, root) -> None:
         box = QGroupBox("Updates")

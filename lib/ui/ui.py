@@ -1178,9 +1178,12 @@ class InitiativeTracker(QMainWindow, Application):
         self.setMenuBar(self.menu_bar)
 
         self.file_menu = self.menu_bar.addMenu("&File")
-        self.characters_menu = self.file_menu.addMenu("Characters")
 
         self.edit_menu = self.menu_bar.addMenu("&Edit")
+        # The player characters and the rosters they belong to are one subject,
+        # and neither is a File operation. Sits next to Edit and Encounters,
+        # with the rest of what happens at the table.
+        self.characters_menu = self.menu_bar.addMenu("&Characters")
         self.encounter_menu = self.menu_bar.addMenu("&Encounters")
         self.monsters_menu = self.menu_bar.addMenu("&Parsers")
         self.tools_menu = self.menu_bar.addMenu("&Tools")
@@ -1207,32 +1210,31 @@ class InitiativeTracker(QMainWindow, Application):
         self.settings_action.triggered.connect(self.open_settings)
         self.file_menu.addAction(self.settings_action)
 
+        # Built here, but added to View only (_setup_view_menu). They used to
+        # sit in both menus; View is where the other customizers are, and where
+        # anyone looks for them.
         self.customize_layout_action = QAction("Customize Layout…", self)
         self.customize_layout_action.setToolTip(
             "Choose where each panel sits, how wide it is, and where the toolbar goes"
         )
         self.customize_layout_action.triggered.connect(self.open_layout_settings)
-        self.file_menu.addAction(self.customize_layout_action)
 
         self.customize_toolbar_action = QAction("Customize Toolbar…", self)
         self.customize_toolbar_action.triggered.connect(self.open_customize_toolbar)
-        self.file_menu.addAction(self.customize_toolbar_action)
 
         self.customize_colors_action = QAction("Customize Colors…", self)
         self.customize_colors_action.setToolTip(
             "Change the turn, bloodied, down and dead row colours, and the theme"
         )
         self.customize_colors_action.triggered.connect(self.open_color_settings)
-        self.file_menu.addAction(self.customize_colors_action)
 
-        # PC Groups: quick-switch saved player rosters. The submenu is rebuilt
-        # each time it opens so newly saved groups appear without a restart.
-        self.groups_menu = self.file_menu.addMenu("PC Groups")
-        self.groups_menu.aboutToShow.connect(self._populate_groups_menu)
-
-        self.initialize_players_action = QAction("Initialize", self)
+        # "Initialize" puts the active PC group into the initiative order, so it
+        # belongs with the characters rather than with the turn/combatant edits.
+        self.initialize_players_action = QAction("Initialize Players", self)
+        self.initialize_players_action.setToolTip(
+            "Put the active PC group into the initiative order"
+        )
         self.initialize_players_action.triggered.connect(self.init_players)
-        self.edit_menu.addAction(self.initialize_players_action)
 
         self.load_enc_button = QAction("Load Encounter", self)
         self.load_enc_button.triggered.connect(self.load_encounter)
@@ -1270,9 +1272,18 @@ class InitiativeTracker(QMainWindow, Application):
         self.delete_encounters_button.triggered.connect(self.delete_encounters)
         self.encounter_menu.addAction(self.delete_encounters_button)
 
-        self.update_characters_action = QAction("Create/Update Characters", self)
+        self.update_characters_action = QAction("Create/Update Characters…", self)
         self.update_characters_action.triggered.connect(self.create_or_update_characters)
         self.characters_menu.addAction(self.update_characters_action)
+        self.characters_menu.addAction(self.initialize_players_action)
+
+        self.characters_menu.addSeparator()
+
+        # PC Groups: quick-switch saved player rosters. The submenu is rebuilt
+        # each time it opens so newly saved groups appear without a restart.
+        # Added here, after the editor, so the menu reads editor-then-rosters.
+        self.groups_menu = self.characters_menu.addMenu("PC Groups")
+        self.groups_menu.aboutToShow.connect(self._populate_groups_menu)
 
         self.import_statblock_action = QAction("Import Statblock...", self)
         self.import_statblock_action.triggered.connect(self.open_import_statblock_dialog)
@@ -1518,6 +1529,32 @@ class InitiativeTracker(QMainWindow, Application):
 
     def open_shortcut_settings(self):
         ShortcutSettingsDialog(self).exec_()
+
+    def apply_synced_settings(self):
+        """Re-read everything a pull may have changed, without a restart.
+
+        Window geometry is deliberately not synced, so nothing here has to
+        touch the window itself.
+        """
+        try:
+            colors.apply(colors.load())
+            self.refresh_theme()
+            self.apply_shortcuts()
+            self.apply_control_sections()
+            self._apply_toolbar_config()
+            self.apply_panel_layout(load_panel_layout())
+            self._user_column_widths = dict(
+                app_settings.get("table_column_widths") or {}
+            )
+            self.adjust_table_size()
+            toast(self, "Settings pulled from your other machine", "success")
+        except Exception as exc:
+            report_error(
+                self, "Could Not Apply Settings",
+                "The settings were pulled, but applying them live failed. "
+                "Restarting the app will pick them up.",
+                exc,
+            )
 
     def open_control_sections(self):
         ControlSectionsDialog(self).exec_()
