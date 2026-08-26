@@ -36,4 +36,13 @@ if __name__ == "__main__":
     # Restored geometry is kept as the un-maximized size, but the app always
     # opens maximized.
     mainWin.showMaximized()
+
+    # Tell the launcher this version started. It writes a marker before running
+    # us and treats one it finds still there as "that build is broken", falling
+    # back to the previous version -- so clearing it has to happen only once a
+    # window is actually up, not at import time.
+    from PyQt5.QtCore import QTimer
+    from app.install_layout import clear_launching
+    QTimer.singleShot(0, clear_launching)
+
     sys.exit(app.exec_())

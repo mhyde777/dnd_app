@@ -29,6 +29,8 @@ RELEASES_PAGE = "https://github.com/mhyde777/dnd_app/releases/latest"
 
 _TIMEOUT_SECONDS = 6
 _CHUNK_BYTES = 64 * 1024
+# A checksum list is a few hundred bytes; the cap is just a sanity bound.
+_MAX_TEXT_BYTES = 256 * 1024
 
 
 _VERSION_RE = re.compile(r"^(\d+(?:\.\d+)*)(?:[-+](.+))?$")
@@ -201,6 +203,20 @@ def _discard(path: str) -> None:
         os.remove(path)
     except OSError:
         pass
+
+
+def fetch_text(url: str) -> str:
+    """Fetch a small text asset (a SHA256SUMS file). Empty string on failure."""
+    if not url:
+        return ""
+    request = urllib.request.Request(
+        url, headers={"User-Agent": f"dnd-combat-tracker/{__version__}"}
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=_TIMEOUT_SECONDS) as response:
+            return response.read(_MAX_TEXT_BYTES).decode("utf-8", "replace")
+    except (urllib.error.URLError, OSError, ValueError):
+        return ""
 
 
 def downloads_dir() -> str:

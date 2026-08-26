@@ -29,7 +29,11 @@ MANIFEST
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
-pyinstaller.spec
+# Ours are hand-written build inputs, not PyInstaller's generated output, so
+# they are tracked. pyinstaller.spec was force-added; negate instead, or the
+# next spec added quietly stays out of the repo.
+!pyinstaller.spec
+!launcher.spec
 
 # Installer logs
 pip-log.txt

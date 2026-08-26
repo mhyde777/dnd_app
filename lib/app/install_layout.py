@@ -1,0 +1,191 @@
+# lib/app/install_layout.py
+"""
+Where the app is installed, and whether it can update itself in place.
+
+The layout that makes one-click updating possible:
+
+    <root>/
+        combat-tracker[.exe]     the launcher -- stable, rarely changes
+        versions/
+            0.2.0/               a whole PyInstaller one-folder build
+                combat_tracker[.exe]
+                _internal/
+            0.3.0/
+        current                  text file naming the version to run
+        launching                written before a start, cleared once the UI is up
+
+A new version is unpacked into `versions/<new>/` and `current` is repointed at
+it. The running build is never written to, which is the entire trick: on
+Windows a running .exe and its loaded DLLs are held open and cannot be
+replaced, and on every platform a PyInstaller folder loads files lazily, so
+overwriting one underneath a live process is a crash waiting to happen. Adding
+a directory beside it sidesteps all of that.
+
+`launching` is the rollback. The launcher writes it, the app clears it once it
+has a window up; finding a stale one means that version failed to start, so the
+launcher falls back to the previous one instead of relaunching a broken build
+forever.
+"""
+from __future__ import annotations
+
+import os
+import re
+import sys
+from dataclasses import dataclass
+from typing import List, Optional
+
+APP_BINARY = "combat_tracker"
+LAUNCHER_BINARY = "combat-tracker"
+VERSIONS_DIRNAME = "versions"
+CURRENT_FILE = "current"
+LAUNCHING_FILE = "launching"
+
+_VERSION_DIR_RE = re.compile(r"^\d+(?:\.\d+)*(?:[-+].+)?$")
+
+
+def _exe_suffix() -> str:
+    return ".exe" if sys.platform == "win32" else ""
+
+
+def app_binary_name() -> str:
+    return APP_BINARY + _exe_suffix()
+
+
+def launcher_binary_name() -> str:
+    return LAUNCHER_BINARY + _exe_suffix()
+
+
+def running_frozen() -> bool:
+    """True in a PyInstaller build, false under `python main.py`."""
+    return bool(getattr(sys, "frozen", False))
+
+
+def running_dir() -> str:
+    """The directory holding the running executable (or main.py in source)."""
+    if running_frozen():
+        return os.path.dirname(os.path.abspath(sys.executable))
+    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+@dataclass
+class Layout:
+    """A versioned installation the app can update itself within."""
+
+    root: str
+    version: str
+
+    @property
+    def versions_dir(self) -> str:
+        return os.path.join(self.root, VERSIONS_DIRNAME)
+
+    @property
+    def current_file(self) -> str:
+        return os.path.join(self.root, CURRENT_FILE)
+
+    @property
+    def launching_file(self) -> str:
+        return os.path.join(self.root, LAUNCHING_FILE)
+
+    @property
+    def launcher(self) -> str:
+        return os.path.join(self.root, launcher_binary_name())
+
+    def version_dir(self, version: str) -> str:
+        return os.path.join(self.versions_dir, version)
+
+    def installed_versions(self) -> List[str]:
+        try:
+            names = os.listdir(self.versions_dir)
+        except OSError:
+            return []
+        return sorted(
+            name for name in names
+            if _VERSION_DIR_RE.match(name)
+            and os.path.isdir(os.path.join(self.versions_dir, name))
+        )
+
+    def has_launcher(self) -> bool:
+        return os.path.isfile(self.launcher)
+
+
+def detect(start: Optional[str] = None) -> Optional[Layout]:
+    """The versioned layout we are running inside, or None.
+
+    None means a flat install from before this scheme, or a source checkout.
+    Neither can be updated in place, and both should say so rather than
+    offering a button that would do something surprising.
+    """
+    # The frozen check applies to "where am I running from?", not to a path the
+    # caller named: an installed tree can be inspected from anywhere, and
+    # tying the two together made this untestable outside a packaged build.
+    if start is None and not running_frozen():
+        return None
+
+    here = os.path.abspath(start or running_dir())
+    parent = os.path.dirname(here)
+    if os.path.basename(parent) != VERSIONS_DIRNAME:
+        return None
+
+    root = os.path.dirname(parent)
+    version = os.path.basename(here)
+    if not _VERSION_DIR_RE.match(version):
+        return None
+    return Layout(root=root, version=version)
+
+
+def read_current(layout: Layout) -> Optional[str]:
+    try:
+        with open(layout.current_file, "r", encoding="utf-8") as handle:
+            value = handle.read().strip()
+    except OSError:
+        return None
+    return value or None
+
+
+def write_current(layout: Layout, version: str) -> None:
+    """Point the launcher at `version`, atomically.
+
+    Written to a temp file and renamed: a half-written `current` would leave
+    the launcher unable to decide what to run.
+    """
+    temp = layout.current_file + ".tmp"
+    with open(temp, "w", encoding="utf-8") as handle:
+        handle.write(version.strip() + "\n")
+    os.replace(temp, layout.current_file)
+
+
+def clear_launching(layout: Optional[Layout] = None) -> None:
+    """Mark this version as having started successfully."""
+    layout = layout or detect()
+    if layout is None:
+        return
+    try:
+        os.remove(layout.launching_file)
+    except OSError:
+        pass
+
+
+def can_self_update() -> tuple:
+    """(possible, reason). `reason` is user-facing when possible is False."""
+    if not running_frozen():
+        return False, (
+            "This is a source checkout, not an installed build — update it with git."
+        )
+    layout = detect()
+    if layout is None:
+        return False, (
+            "This copy was installed before one-click updates existed. Download "
+            "this release and unpack it once; updates after that are a single "
+            "button."
+        )
+    if not layout.has_launcher():
+        return False, (
+            "The launcher is missing from this installation, so a new version "
+            "could be installed but not started."
+        )
+    if not os.access(layout.root, os.W_OK):
+        return False, (
+            f"No permission to write to {layout.root}. Install somewhere you own, "
+            "such as your home directory."
+        )
+    return True, ""
