@@ -108,21 +108,17 @@ and the tag pushed. It uploads the artifacts and then asks the API what is
 actually attached, because a release published with no files on it looks
 exactly like a finished one.
 
-Repository layout, architecture notes and the invariants worth knowing before
-changing things are in [CLAUDE.md](CLAUDE.md).
+Repository layout, how the pieces fit together, and the invariants worth
+knowing before changing things are in
+[docs/architecture.md](docs/architecture.md).
 
 ---
 
 ## How this was built
 
-This app was built with substantial help from AI coding assistants —
-principally Anthropic's Claude, which wrote or reworked a large share of the
-code across many sessions.
+This app was built with substantial help from AI coding assistants, which wrote or reworked a large share of the code. This work was directed, reviewed and tested by Mason Hyde, and the decisions about what this should be and how it should behave at the table are mine. But it would be misleading to present the result as though I had typed it all, and I would rather say so plainly than let anyone assume otherwise.
 
-That work was directed, reviewed and tested by me, and the decisions about what
-this should be and how it should behave at the table are mine. But it would be
-misleading to present the result as though I had typed it all, and I would
-rather say so plainly than let anyone assume otherwise.
+Early versions of the app and the code foundations were implemented by Mason and Mikhail Hyde. 
 
 The same notice is in Help → About, because someone running the packaged app
 has no reason to read this file.

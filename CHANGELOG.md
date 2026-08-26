@@ -34,6 +34,9 @@ a MAJOR bump is the only kind that can require you to change how you work.
   the two are interchangeable. Not required: local mode remains the default.
 - **A disclosure that AI tools did much of the work on this app**, in the README
   and in Help → About.
+- **[docs/architecture.md](docs/architecture.md)** — how the pieces fit
+  together and the invariants worth knowing before changing things, written for
+  contributors. The README points here now.
 
 - **Help → Installed Versions** switches between the versions installed side by
   side and removes ones you no longer want. Updating keeps the previous build

@@ -2,6 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**`docs/architecture.md` is the human-facing version of most of what follows,
+and is what the README and the rest of the documentation link to.** The two
+overlap deliberately: this file is loaded automatically and so has to carry its
+content inline, rather than pointing elsewhere. When an architectural decision
+or an invariant changes, update both — a stale architecture doc is worse than
+none, and it is the one contributors read.
+
 ## Project Overview
 
 D&D 5e Combat Tracker — a PyQt5 desktop application for managing initiative, HP, conditions, and combat state during tabletop sessions. Integrates with Foundry VTT via a Flask-based bridge service for two-way sync.
@@ -103,6 +110,8 @@ tests/
   Uncaught exceptions reach a dialog via the excepthook installed in `main.py`. `self._log(...)` infers severity from an `[ERROR]`/`[WARN]`/`[DBG]` prefix.
 - **Customizable toolbar**: add a new action by putting it in `TOOLBAR_REGISTRY` (`lib/ui/toolbar_customize_dialog.py`) *and* in `_toolbar_action_map` (`lib/ui/ui.py`) — the ids must match. Give it an icon by adding the id to `ACTION_GLYPHS` in `lib/ui/icons.py`; an action with no entry stays text-only **on purpose** — a misleading icon is worse than none. Icons are drawn with `QPainter`, not `QStyle.standardIcon` (which renders differently per platform/theme) and not bundled image files.
 - **Keyboard shortcuts are user-rebindable**: `SHORTCUT_SCHEMA` in `lib/ui/shortcut_settings_dialog.py` holds the ids, labels and defaults; `settings.json` stores only what the user changed, so a new default still reaches anyone who never touched that binding. A new shortcut needs an entry there *and* in `_shortcut_targets()` (`lib/ui/ui.py`) — matching ids, same contract as the toolbar registry. Never call `setShortcut()`/`QShortcut(key, ...)` at construction: `apply_shortcuts()` is the only place sequences are bound, and it runs again whenever the customizer saves. Anything that quotes a sequence in a tooltip belongs in `_refresh_shortcut_hints()`, or it goes stale after a rebind.
+- **Cross-thread hand-offs must be Qt signals, not `QTimer.singleShot()`.** A timer created on a thread with no event loop never fires and whatever it scheduled is silently dropped — this ate every streamed bridge snapshot once already. `bridge_snapshot_received` / `bridge_status_changed` / `update_check_finished` exist for this reason.
+- **Read the version from `lib/app/version.py` as text, never by importing it** (`sed -n 's/^__version__ = "\(.*\)"/\1/p'`). An import can be served from a stale `__pycache__` entry: Python validates bytecode on the source's mtime *in whole seconds* and its size, so changing the version to another string of the same length within the same second is invisible to it. This produced release artifacts named after a version that did not exist.
 - **Colours are user-overridable**: `lib/ui/colors.py` holds `PALETTE_SCHEMA` (the shipped values are the defaults) and rebinds its module globals in `apply()`. **Consumers must use attribute access** — `colors.HP_LOW_ACTIVE`, never `from ui.colors import HP_LOW_ACTIVE`, which binds once at import and would never see a user change. Adding a colour to `PALETTE_SCHEMA` is all that's needed for it to appear in the colour dialog. `InitiativeTracker.refresh_theme()` re-applies the stylesheet, redraws icons and repaints the table; it caches the underlying qdarktheme QSS as `app._base_stylesheet` so repeated refreshes don't stack copies.
 - **Active-turn row highlight**: `CreatureTableModel._row_background()` is the single authority on a row's colour. It resolves the whole row *before* any per-cell tint, always returns a colour for the active creature (even when HP is untracked), and falls back to the zebra stripe last. Action/bonus/reaction cell tinting is opt-in (`colors.tint_action_cells()`, off by default) since the ✔/✘ glyph already carries that state.
   - **Never call `QTableView.setAlternatingRowColors(True)` here.** Qt paints the alternate row background *over* the model's `BackgroundRole`, which silently hides the active-turn highlight on every second row — the highlight appears to flicker on and off as turns advance. Zebra striping was tried and deliberately removed; the table has no row banding by design.
