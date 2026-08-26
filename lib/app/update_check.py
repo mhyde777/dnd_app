@@ -24,7 +24,8 @@ from typing import Callable, Optional
 
 from app.version import __version__
 
-RELEASES_API = "https://api.github.com/repos/mhyde777/dnd_app/releases/latest"
+_REPO_API = "https://api.github.com/repos/mhyde777/dnd_app"
+RELEASES_API = f"{_REPO_API}/releases/latest"
 RELEASES_PAGE = "https://github.com/mhyde777/dnd_app/releases/latest"
 
 _TIMEOUT_SECONDS = 6
@@ -80,6 +81,19 @@ def fetch_latest_release(url: str = RELEASES_API) -> Optional[dict]:
     except (urllib.error.URLError, OSError, json.JSONDecodeError, ValueError):
         return None
     return payload if isinstance(payload, dict) else None
+
+
+def release_by_tag_url(tag: str) -> str:
+    return f"{_REPO_API}/releases/tags/{tag}"
+
+
+def fetch_release_by_tag(tag: str) -> Optional[dict]:
+    """One specific release, for reinstalling a version no longer on disk."""
+    if not tag:
+        return None
+    if not tag.startswith("v"):
+        tag = f"v{tag}"
+    return fetch_latest_release(release_by_tag_url(tag))
 
 
 def fetch_latest_version(url: str = RELEASES_API) -> Optional[str]:

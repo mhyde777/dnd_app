@@ -20,6 +20,12 @@ a MAJOR bump is the only kind that can require you to change how you work.
   rather than replacing it, so going back is the same operation as going
   forward. The running version and the one queued to start next can't be
   deleted.
+- Versions that are no longer on disk are still listed, from a history kept in
+  settings, and can be downloaded again from their release — so going back
+  isn't limited to what is stored locally.
+- Old versions are removed when a new one **starts successfully**, rather than
+  when it is installed, so a failed update still has the previous build to fall
+  back to. `keep_versions` (default 2) sets how many are kept.
 
 ### Fixed
 

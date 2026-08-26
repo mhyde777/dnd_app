@@ -31,6 +31,7 @@ from __future__ import annotations
 import os
 import re
 import sys
+from datetime import datetime, timezone
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -154,14 +155,94 @@ def write_current(layout: Layout, version: str) -> None:
     os.replace(temp, layout.current_file)
 
 
+HISTORY_KEY = "version_history"
+KEEP_VERSIONS_KEY = "keep_versions"
+# Two, not one: the launcher's fallback runs the *previous* build from disk, so
+# keeping only the running one would leave a failed update with nothing to fall
+# back to. One spare is what makes that automatic. Older ones are re-downloaded
+# on demand instead of being stored forever.
+DEFAULT_KEEP_VERSIONS = 2
+
+
+def record_started(layout: Optional[Layout] = None) -> None:
+    """Note in settings that this version ran, and when.
+
+    The history outlives the build itself, which is the point: a version can be
+    pruned off disk and still be offered as somewhere to go back to, because
+    the release it came from is still downloadable.
+    """
+    from app import settings
+
+    layout = layout or detect()
+    version = layout.version if layout is not None else None
+    if not version:
+        return
+
+    now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    history = [
+        entry for entry in (settings.get(HISTORY_KEY) or [])
+        if isinstance(entry, dict) and entry.get("version") != version
+    ]
+    previous = next(
+        (e for e in (settings.get(HISTORY_KEY) or [])
+         if isinstance(e, dict) and e.get("version") == version),
+        {},
+    )
+    history.insert(0, {
+        "version": version,
+        "first_run": previous.get("first_run") or now,
+        "last_run": now,
+    })
+    settings.set(HISTORY_KEY, history[:20])
+
+
+def version_history() -> list:
+    from app import settings
+
+    return [
+        entry for entry in (settings.get(HISTORY_KEY) or [])
+        if isinstance(entry, dict) and entry.get("version")
+    ]
+
+
+def keep_versions() -> int:
+    from app import settings
+
+    try:
+        value = int(settings.get(KEEP_VERSIONS_KEY, DEFAULT_KEEP_VERSIONS))
+    except (TypeError, ValueError):
+        return DEFAULT_KEEP_VERSIONS
+    return max(1, value)
+
+
 def clear_launching(layout: Optional[Layout] = None) -> None:
-    """Mark this version as having started successfully."""
+    """Mark this version as having started, and tidy up behind it.
+
+    Pruning happens here rather than at install time so the build being
+    replaced survives until its replacement has actually proved it can start.
+    Deleting it any earlier would throw away the thing the launcher falls back
+    to at exactly the moment it might be needed.
+    """
     layout = layout or detect()
     if layout is None:
         return
     try:
         os.remove(layout.launching_file)
     except OSError:
+        pass
+
+    record_started(layout)
+
+    try:
+        from app.update_install import prune_versions
+
+        removed = prune_versions(layout, keep=keep_versions())
+        if removed:
+            from app.app_log import get_logger
+
+            get_logger().info("[Update] Removed old versions: %s", ", ".join(removed))
+    except Exception:
+        # Housekeeping must never stop the app from finishing startup.
         pass
 
 

@@ -219,3 +219,56 @@ def test_prune_keeps_whatever_current_points_at(install, tmp_path):
     left = running.installed_versions()
     assert "0.1.0" in left, "the version `current` names must survive pruning"
     assert "0.5.0" in left, "the running version must survive pruning"
+
+
+# ---- history and deferred pruning -------------------------------------------
+
+@pytest.fixture
+def isolated_settings(tmp_path, monkeypatch):
+    """Point app.settings at a scratch file for tests that write to it."""
+    from app import settings
+
+    monkeypatch.setattr(settings, "_cache", None, raising=False)
+    monkeypatch.setattr(settings, "settings_path", lambda: str(tmp_path / "settings.json"))
+    monkeypatch.setattr(settings, "config_dir", lambda: str(tmp_path), raising=False)
+    yield settings
+    settings._cache = None
+
+
+def test_a_successful_start_records_history_and_prunes(install, isolated_settings):
+    for version in ("0.3.0", "0.4.0"):
+        os.makedirs(install.version_dir(version), exist_ok=True)
+    running = install_layout.Layout(root=install.root, version="0.4.0")
+    install_layout.write_current(running, "0.4.0")
+    open(running.launching_file, "w").write("0.4.0\n")
+
+    install_layout.clear_launching(running)
+
+    assert not os.path.exists(running.launching_file)
+    assert [e["version"] for e in install_layout.version_history()] == ["0.4.0"]
+    # keep defaults to 2, so the oldest goes and the previous build stays.
+    assert running.installed_versions() == ["0.3.0", "0.4.0"]
+
+
+def test_history_survives_the_version_being_pruned(install, isolated_settings):
+    """The point of the history: a version can leave disk and still be offered."""
+    for version in ("0.3.0", "0.4.0", "0.5.0"):
+        os.makedirs(install.version_dir(version), exist_ok=True)
+
+    for version in ("0.3.0", "0.4.0", "0.5.0"):
+        layout = install_layout.Layout(root=install.root, version=version)
+        install_layout.write_current(layout, version)
+        install_layout.clear_launching(layout)
+
+    remembered = [e["version"] for e in install_layout.version_history()]
+    on_disk = install_layout.Layout(root=install.root, version="0.5.0").installed_versions()
+
+    assert "0.3.0" in remembered
+    assert "0.3.0" not in on_disk
+
+
+def test_keep_versions_is_never_below_one(isolated_settings):
+    isolated_settings.set(install_layout.KEEP_VERSIONS_KEY, 0)
+    assert install_layout.keep_versions() >= 1
+    isolated_settings.set(install_layout.KEEP_VERSIONS_KEY, "nonsense")
+    assert install_layout.keep_versions() == install_layout.DEFAULT_KEEP_VERSIONS

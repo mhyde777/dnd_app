@@ -26,8 +26,11 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
 )
 
-from app import install_layout, update_install
+from app import install_layout, update_check, update_install
 from app.version import __version__
+
+
+_ON_DISK = Qt.UserRole + 1
 
 
 def _directory_size(path: str) -> int:
@@ -127,15 +130,34 @@ class VersionsDialog(QDialog):
             suffix = f"  —  {', '.join(marks)}" if marks else ""
             item = QListWidgetItem(f"{version}   ({_human(size)}){suffix}")
             item.setData(Qt.UserRole, version)
+            item.setData(_ON_DISK, True)
             self._list.addItem(item)
             if version == selected:
                 self._list.setCurrentItem(item)
 
+        # Versions that have been pruned off disk but that this machine has
+        # run before. The release is still downloadable, so they are still
+        # somewhere to go back to -- just not instantly.
+        for entry in install_layout.version_history():
+            version = entry.get("version")
+            if not version or version in versions:
+                continue
+            when = (entry.get("last_run") or "")[:10]
+            label = f"{version}   (not installed"
+            label += f", last used {when})" if when else ")"
+            item = QListWidgetItem(label)
+            item.setData(Qt.UserRole, version)
+            item.setData(_ON_DISK, False)
+            item.setForeground(Qt.gray)
+            self._list.addItem(item)
+
+        keep = install_layout.keep_versions()
         self._intro.setText(
-            f"Updating installs alongside the previous version instead of "
-            f"replacing it, so you can go back. {len(versions)} installed, "
-            f"{_human(total)} in total. Older ones are removed automatically "
-            f"once there are more than three."
+            f"{len(versions)} version{'s' if len(versions) != 1 else ''} on disk, "
+            f"{_human(total)} in total. Updating keeps the one it replaces until "
+            f"the new one has started, so a failed update can fall back to it; "
+            f"after that only the newest {keep} are kept. Anything greyed out has "
+            f"been removed but can be downloaded again."
         )
         self._sync_buttons()
 
@@ -143,18 +165,28 @@ class VersionsDialog(QDialog):
         item = self._list.currentItem()
         return item.data(Qt.UserRole) if item else None
 
+    def _selected_on_disk(self) -> bool:
+        item = self._list.currentItem()
+        return bool(item and item.data(_ON_DISK))
+
     def _sync_buttons(self) -> None:
         if self._layout_info is None:
             return
         version = self._selected_version()
+        on_disk = self._selected_on_disk()
         running = self._layout_info.version
         selected = install_layout.read_current(self._layout_info) or running
 
-        self._switch.setEnabled(bool(version) and version != selected)
+        if version and not on_disk:
+            self._switch.setText("Download and Switch")
+            self._switch.setEnabled(True)
+        else:
+            self._switch.setText("Switch and Restart")
+            self._switch.setEnabled(bool(version) and version != selected)
         # Never offer to delete the build that is running, or the one queued to
         # run next -- either would leave the install unable to start.
         self._delete.setEnabled(
-            bool(version) and version != running and version != selected
+            bool(version) and on_disk and version != running and version != selected
         )
 
     # ---- actions ------------------------------------------------------------
@@ -162,6 +194,9 @@ class VersionsDialog(QDialog):
     def _on_switch(self) -> None:
         version = self._selected_version()
         if not version or self._layout_info is None:
+            return
+        if not self._selected_on_disk():
+            self._download_and_switch(version)
             return
 
         direction = "Reverting to" if version < self._layout_info.version else "Switching to"
@@ -191,6 +226,41 @@ class VersionsDialog(QDialog):
             tracker.restart_app()
         else:
             self._reload()
+
+    def _download_and_switch(self, version: str) -> None:
+        """Reinstall a version that was pruned, from its release.
+
+        The whole reason old builds can be deleted at all: the release they
+        came from is still there, so "gone from disk" is not "gone".
+        """
+        answer = QMessageBox.question(
+            self,
+            "Download Version",
+            f"{version} is not installed. Download it from its release and "
+            "switch to it?\n\nYour combat is saved first.",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.Yes,
+        )
+        if answer != QMessageBox.Yes:
+            return
+
+        release = update_check.fetch_release_by_tag(version)
+        if release is None:
+            QMessageBox.warning(
+                self, "Not Available",
+                f"There is no published release for {version} any more, so it "
+                "cannot be downloaded. Only versions still on disk can be used.",
+            )
+            return
+
+        from ui.update_dialog import UpdateDialog
+
+        # The update dialog already does download, verify, install and restart.
+        # Reinstalling an older version is the same work in the other
+        # direction, so it runs through the same code rather than a second copy
+        # of it that would drift.
+        self.accept()
+        UpdateDialog(self._tracker, version=version, release=release).exec_()
 
     def _on_delete(self) -> None:
         version = self._selected_version()

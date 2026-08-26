@@ -222,7 +222,9 @@ class UpdateDialog(QDialog):
                     path, self._version, layout, install_layout.app_binary_name()
                 )
                 install_layout.write_current(layout, self._version)
-                update_install.prune_versions(layout, keep=3)
+                # Not pruned here: the version being replaced has to survive
+                # until the new one has proved it starts. clear_launching()
+                # does it on the next successful launch.
                 try:
                     os.remove(path)
                 except OSError:

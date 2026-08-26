@@ -100,9 +100,26 @@ the other direction, because updating never removed anything.
 The running version and the one `current` names can't be deleted from that
 dialog — either would leave the install unable to start.
 
-Disk: every version is a full build, ~140MB. `prune_versions(keep=3)` runs
-after each update, so an install settles at three of them rather than growing,
-and the dialog can remove others by hand.
+### Disk, and why the default is two
+
+Every version is a full build, ~140MB, so keeping them all is not an option.
+
+Pruning runs when a version **starts successfully** (`clear_launching`), not
+when one is installed. That ordering is the point: the build being replaced has
+to survive until its replacement has proved it can start, because it is what
+the launcher falls back to. Deleting it at install time would throw it away at
+exactly the moment it might be needed.
+
+`keep_versions` defaults to **2** — the running one and one spare. One spare is
+what makes the automatic fallback possible at all; at `keep_versions: 1` a
+failed update has nothing on disk to fall back to and has to be recovered by
+downloading. Whatever `current` names is protected regardless of the count,
+since that is the build queued to start next.
+
+Versions that have been pruned are still listed, greyed out, from the history
+kept in settings (`version_history`). Their release is still downloadable, so
+"gone from disk" is not "gone" — picking one downloads and installs it through
+the same path an update uses.
 
 ## Testing it
 
