@@ -28,6 +28,15 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ### Fixed
 
+- **The round counter no longer rewinds to 1 while Foundry is closed.** The
+  bridge keeps serving its last snapshot — combat inactive, `round: 0` — and
+  the app took that as gospel on every poll. Foundry is only authoritative
+  about the round while it actually has a combat running.
+- **Polling the bridge no longer freezes the window.** The poll timer ran the
+  HTTP request inline on the UI thread, so the app locked up for a round trip
+  every five seconds (~420ms against a remote bridge). It runs on a worker now
+  and arrives through the same queued signal the streaming path uses; a bridge
+  slower than the interval is skipped rather than stacking up threads.
 - **Advancing a turn is no longer sluggish.** Every command sent to the Foundry
   bridge was POSTed on the UI thread, so pressing Next waited on a round trip
   before the table repainted — ~460ms against a remote bridge, which was the

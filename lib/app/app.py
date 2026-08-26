@@ -210,19 +210,51 @@ class Application:
         self._log("[Bridge] Using SSE stream for snapshots.")
 
     def refresh_bridge_state(self) -> None:
-        try:
-            self._log(f"[Bridge][DBG] polling base_url={getattr(self.bridge_client, 'base_url', None)!r}")
-            snapshot = self.bridge_client.fetch_state()
-        except Exception as exc:
-            self._log(f"[Bridge] Failed to fetch state: {exc}")
-            if hasattr(self, "set_bridge_status"):
-                self.set_bridge_status("error")
+        """Fetch a snapshot without blocking the UI.
+
+        This ran inline on the QTimer, i.e. on the Qt GUI thread, so every
+        poll froze the window for the length of a round trip to the bridge --
+        ~420ms every 5 seconds against a remote one. The fetch goes to a worker
+        and comes back through the same queued signal the SSE path already
+        uses.
+        """
+        if getattr(self, "_bridge_poll_in_flight", False):
+            # A bridge slower than the poll interval would otherwise stack up a
+            # thread per tick, and the answers would arrive out of order.
             return
+        self._bridge_poll_in_flight = True
+
+        def run() -> None:
+            try:
+                snapshot = self.bridge_client.fetch_state()
+            except Exception as exc:
+                self._log(f"[Bridge] Failed to fetch state: {exc}")
+                snapshot = None
+            finally:
+                self._bridge_poll_in_flight = False
+            self._deliver_bridge_snapshot(snapshot)
+
+        threading.Thread(target=run, name="bridge-poll", daemon=True).start()
+
+    def _deliver_bridge_snapshot(self, snapshot: Optional[Dict[str, Any]]) -> None:
+        """Hand a snapshot from a worker thread to the GUI thread.
+
+        Signals, not a direct call: everything downstream touches widgets.
+        Falls back to calling straight through when there is no UI attached,
+        which is how the headless tests drive this.
+        """
+        signal = getattr(self, "bridge_snapshot_received", None)
+        status = getattr(self, "bridge_status_changed", None)
         if snapshot is None:
-            if hasattr(self, "set_bridge_status"):
+            if status is not None:
+                status.emit("error")
+            elif hasattr(self, "set_bridge_status"):
                 self.set_bridge_status("error")
             return
-        self._set_bridge_snapshot(snapshot)
+        if signal is not None:
+            signal.emit(snapshot)
+        else:
+            self._set_bridge_snapshot(snapshot)
 
     def _set_bridge_snapshot(self, snapshot: Optional[Dict[str, Any]]) -> None:
         if snapshot is None or not isinstance(snapshot, dict):
@@ -441,8 +473,16 @@ class Application:
         combat = snapshot.get("combat", {})
         if isinstance(combat, dict):
             round_value = combat.get("round")
-            if isinstance(round_value, int):
-                self.round_counter = max(1, round_value)
+            # Foundry is only authoritative about the round while it actually
+            # has a combat running. With Foundry closed the bridge keeps
+            # serving its last snapshot -- active:false, round:0 -- and
+            # max(1, 0) silently rewound the tracker to round 1 on every poll.
+            if (
+                isinstance(round_value, int)
+                and round_value >= 1
+                and combat.get("active")
+            ):
+                self.round_counter = round_value
 
             active = combat.get("activeCombatant")
             active_name = None
