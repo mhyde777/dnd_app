@@ -13,6 +13,22 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ## [Unreleased]
 
+### Added
+
+- **Help → Installed Versions** switches between the versions installed side by
+  side and removes ones you no longer want. Updating keeps the previous build
+  rather than replacing it, so going back is the same operation as going
+  forward. The running version and the one queued to start next can't be
+  deleted.
+
+### Fixed
+
+- Pruning old versions could delete the one `current` pointed at — its
+  docstring said it protected that, but it only protected the *running*
+  version. Those differ exactly when you have reverted to an older build, which
+  is when losing it would matter most.
+
+
 ## [0.3.0] — 2026-08-26
 
 ### Added

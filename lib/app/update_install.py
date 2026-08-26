@@ -227,10 +227,17 @@ def prune_versions(layout, keep: int = 2, protect: Optional[list] = None) -> lis
     Never removes the running version or whatever `current` points at, however
     old they are -- disk is cheaper than deleting the build someone is using.
     """
+    from app.install_layout import read_current
     from app.update_check import _parse  # the one version-ordering rule
 
     protected = set(protect or [])
     protected.add(layout.version)
+    # And whatever `current` names, which is not always the running version:
+    # after switching back to an older build, the one about to run next is
+    # older than the one running now, and pruning would delete it.
+    selected = read_current(layout)
+    if selected:
+        protected.add(selected)
     versions = sorted(layout.installed_versions(), key=_parse, reverse=True)
 
     removed = []

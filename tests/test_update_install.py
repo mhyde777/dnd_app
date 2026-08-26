@@ -205,3 +205,17 @@ def test_can_self_update_refuses_a_source_checkout():
     possible, reason = install_layout.can_self_update()
     assert possible is False
     assert "source checkout" in reason
+
+
+def test_prune_keeps_whatever_current_points_at(install, tmp_path):
+    """Reverting sets `current` to an older build; pruning must not delete it."""
+    for version in ("0.1.0", "0.3.0", "0.4.0", "0.5.0"):
+        os.makedirs(install.version_dir(version), exist_ok=True)
+    # Running 0.5.0, but reverted: the next launch is meant to be 0.1.0.
+    running = install_layout.Layout(root=install.root, version="0.5.0")
+    install_layout.write_current(running, "0.1.0")
+
+    update_install.prune_versions(running, keep=2)
+    left = running.installed_versions()
+    assert "0.1.0" in left, "the version `current` names must survive pruning"
+    assert "0.5.0" in left, "the running version must survive pruning"

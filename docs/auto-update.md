@@ -86,13 +86,23 @@ In the first three the button still downloads the build to Downloads.
   every one. An updater that fetches and runs new code makes that matter more
   than it did when a user consciously downloaded a file. A certificate is
   roughly $100–400/year.
-- **Reverting from inside the app.** The previous version is on disk and the
-  launcher will fall back to it automatically if the new one fails to start,
-  but there is no "go back to 0.2.0" menu item for a version that starts and is
-  merely worse. Editing `current` does it.
 - **Delta updates.** Every update is the whole ~60MB build.
 - **macOS.** The layout is platform-neutral and the code paths are there, but
   nothing builds a macOS artifact yet (see packaging-macos.md).
+
+## Going back
+
+Help → Installed Versions lists what is on disk, which one is running and
+which starts next, and switches between them: it points `current` at the
+chosen version and restarts. Reverting is the same operation as updating, in
+the other direction, because updating never removed anything.
+
+The running version and the one `current` names can't be deleted from that
+dialog — either would leave the install unable to start.
+
+Disk: every version is a full build, ~140MB. `prune_versions(keep=3)` runs
+after each update, so an install settles at three of them rather than growing,
+and the dialog can remove others by hand.
 
 ## Testing it
 

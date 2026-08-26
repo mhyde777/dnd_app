@@ -1510,6 +1510,13 @@ class InitiativeTracker(QMainWindow, Application):
         self.release_notes_action.triggered.connect(self.show_release_notes)
         self.help_menu.addAction(self.release_notes_action)
 
+        self.versions_action = QAction("Installed Versions…", self)
+        self.versions_action.setToolTip(
+            "Switch between the versions installed side by side, or remove one"
+        )
+        self.versions_action.triggered.connect(self.open_versions_dialog)
+        self.help_menu.addAction(self.versions_action)
+
         self.check_updates_action = QAction("Check for Updates…", self)
         self.check_updates_action.setToolTip(
             "Ask GitHub whether a newer version has been released"
@@ -1704,6 +1711,10 @@ class InitiativeTracker(QMainWindow, Application):
                 "Restarting the app will pick them up.",
                 exc,
             )
+
+    def open_versions_dialog(self):
+        from ui.versions_dialog import VersionsDialog
+        VersionsDialog(self).exec_()
 
     def open_control_sections(self):
         ControlSectionsDialog(self).exec_()
