@@ -16,7 +16,9 @@ from PyQt5.QtCore import (
 )
 from PyQt5.QtGui import QFont, QIntValidator, QKeySequence
 from app.app import Application
+from app import update_check
 from app.config import update_check_enabled
+from app.version import __version__
 from app.creature import CreatureType
 from app.manager import CreatureManager
 from app import settings as app_settings
@@ -99,6 +101,9 @@ class InitiativeTracker(QMainWindow, Application):
     bridge_snapshot_received = pyqtSignal(object)
     bridge_status_changed = pyqtSignal(str)
 
+    # Result of a user-requested update check, marshalled off the worker thread.
+    update_check_finished = pyqtSignal(object)
+
     def __init__(self):
         super().__init__()
         self.center()
@@ -137,6 +142,9 @@ class InitiativeTracker(QMainWindow, Application):
         self.bridge_status_changed.connect(
             self.set_bridge_status, Qt.QueuedConnection
         )
+        self.update_check_finished.connect(
+            self._on_manual_update_check, Qt.QueuedConnection
+        )
         self.start_bridge_polling()
         self.check_for_updates()
 
@@ -161,22 +169,50 @@ class InitiativeTracker(QMainWindow, Application):
             self._log(f"[DBG] Update check could not start: {exc}")
 
     def _show_update_banner(self, version: str):
-        from app.update_check import RELEASES_PAGE
         from app.version import __version__
-
-        def open_releases():
-            from PyQt5.QtGui import QDesktopServices
-            from PyQt5.QtCore import QUrl
-            QDesktopServices.openUrl(QUrl(RELEASES_PAGE))
 
         self.show_banner(
             "update-available",
             f"Version {version} is available — you're on {__version__}. "
             "Nothing installs unless you choose to.",
             level="info",
-            action_label="What's New?",
-            action=lambda: self.show_release_notes(version),
+            action_label=f"Get {version}",
+            action=lambda: self.open_update_dialog(version),
         )
+
+    def open_update_dialog(self, version: str, release: dict = None):
+        """What changed, and the download for this platform if there is one.
+
+        The release payload is re-fetched when it wasn't passed in: the startup
+        check only carries the version string across the thread boundary, and
+        the asset list is what decides whether a download is even offered.
+        """
+        from ui.update_dialog import UpdateDialog
+
+        if release is None:
+            release = update_check.fetch_latest_release()
+        UpdateDialog(self, version=version, release=release).exec_()
+
+    def check_for_updates_now(self):
+        """Help → Check for Updates. Answers either way, unlike the startup check."""
+        self.show_status_message("Checking for updates…")
+        update_check.latest_in_background(self.update_check_finished.emit)
+
+    def _on_manual_update_check(self, release):
+        """Result of a check the user asked for, back on the GUI thread."""
+        if not release:
+            self.notify(
+                "Could not reach GitHub, or there are no published releases yet",
+                "warning",
+            )
+            return
+
+        tag = release.get("tag_name") or release.get("name") or ""
+        if tag and update_check.is_newer(tag):
+            self._show_update_banner(tag)
+            self.open_update_dialog(tag, release)
+        else:
+            self.notify(f"You are on the latest version ({__version__})", "success")
 
     def initUI(self):
         # Layout model: the initiative table is the fixed centre of the window;
@@ -1442,6 +1478,13 @@ class InitiativeTracker(QMainWindow, Application):
         self.release_notes_action.setToolTip("What changed in each version")
         self.release_notes_action.triggered.connect(self.show_release_notes)
         self.help_menu.addAction(self.release_notes_action)
+
+        self.check_updates_action = QAction("Check for Updates…", self)
+        self.check_updates_action.setToolTip(
+            "Ask GitHub whether a newer version has been released"
+        )
+        self.check_updates_action.triggered.connect(self.check_for_updates_now)
+        self.help_menu.addAction(self.check_updates_action)
 
         self.help_menu.addSeparator()
 

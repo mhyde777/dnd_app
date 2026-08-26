@@ -13,6 +13,24 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ## [Unreleased]
 
+### Added
+
+- **The update banner now downloads the build for you.** "Get <version>" opens
+  a dialog with the release notes and a download button that fetches the right
+  artifact for your platform to your Downloads folder, with progress and a
+  cancel. It downloads only — nothing is installed or replaced, and your
+  settings and data are untouched. See `docs/auto-update.md` for what a real
+  one-click update would take.
+- **Help → Check for Updates** asks on demand, instead of the check only
+  running once at startup. It answers either way, including "you are on the
+  latest version".
+
+### Fixed
+
+- The update banner's only button was "What's New?"; the helper that would have
+  opened the releases page was written but never connected to anything, so
+  there was no way to get to the download from inside the app.
+
 ## [0.2.0] — 2026-08-26
 
 ### Added
