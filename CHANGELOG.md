@@ -13,8 +13,32 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-08-26
+
 ### Added
 
+- **Damage and heal from the initiative table.** Selecting rows in the table
+  picks the same targets as the combatant list — the two mirror each other — so
+  you no longer have to find a creature a second time in a different widget to
+  apply damage to it.
+- **Clicking an HP cell opens a damage/heal box** for that one creature, with
+  the amount field already focused: Enter damages, Shift+Enter heals. Temp HP
+  and Max HP Bonus are still there, below a separator.
+- **Shift+click takes a run of combatants** in the list. Plain clicks still add
+  and remove one at a time, which is what picking scattered creatures needs.
+- **Keyboard shortcuts are rebindable** — View → Customize Shortcuts. Only the
+  keys you change are stored, so later defaults still reach you, and two
+  commands cannot be given the same key (Qt would fire neither). Help →
+  Keyboard Shortcuts lists whatever is currently bound.
+- **The Combat Controls panel can be rearranged** — View → Customize Combat
+  Controls hides and reorders its sections. Nothing becomes unreachable: HP
+  mods are on each creature's HP cell, and the table selects the same targets
+  as the combatant list.
+- **Settings can travel between machines** — Settings → Sync pushes and pulls
+  your layout, colours, shortcuts and toolbar through whichever storage you
+  already use. Credentials, the Foundry secret, your data directory and window
+  geometry deliberately stay on the machine they were set on, and a pull merges
+  rather than replaces, so it can never cost you your API key.
 - **258 SRD magic items** join the bundled library, with rarity, type,
   attunement and full descriptions. Install them from Settings → Content
   alongside the monsters and spells. This is what the Magic Shop and Apothecary
@@ -22,6 +46,18 @@ a MAJOR bump is the only kind that can require you to change how you work.
   previously matched zero items, because the library held only mundane gear.
 
 ### Fixed
+
+- **Statblock zoom resizes the text.** It scaled the document's base font, but
+  every size in a statblock is an explicit pixel size in the HTML, which wins —
+  so the line spacing grew and not one letter changed size.
+- **No more blank strip under the last row.** After removing a combatant the
+  table kept a horizontal scrollbar's worth of height it no longer needed,
+  because Qt reports scrollbar visibility a layout pass behind.
+- **The combatant selection survives applying damage.** Rebuilding the list
+  dropped it, and that rebuild runs after every HP change — so hitting the same
+  group twice meant picking it again first.
+- **The monster picker fits the monsters in the fight** instead of sitting at a
+  fixed height with empty space below, taking room from the statblock.
 
 - **The Shop Generator's "Send to Foundry" button works.** It called a method
   that does not exist on the bridge client, so it failed with an
@@ -44,6 +80,11 @@ a MAJOR bump is the only kind that can require you to change how you work.
   short timeout; the read uses `BRIDGE_STREAM_READ_TIMEOUT` (65s).
 
 ### Changed
+
+- **Characters and PC Groups have their own menu**, with Initialize Players,
+  rather than sitting under File — none of the three is a file operation. The
+  Customize entries that appeared in both File and View are now only in View,
+  alongside the other customizers.
 
 - **Switching Foundry transport no longer needs a restart.** Saving settings
   swaps between streaming and polling live, turns sync off, and picks up a
@@ -155,5 +196,6 @@ versions while editing the same encounter can quietly lose whatever the newer
 one added. If you are testing a new release, point it at a throwaway profile
 with `DND_TRACKER_CONFIG_DIR` and your real data cannot be touched at all.
 
-[Unreleased]: https://github.com/mhyde777/dnd_app/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/mhyde777/dnd_app/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/mhyde777/dnd_app/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/mhyde777/dnd_app/releases/tag/v0.1.0
