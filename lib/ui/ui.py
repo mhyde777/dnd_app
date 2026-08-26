@@ -460,6 +460,27 @@ class InitiativeTracker(QMainWindow, Application):
             if not item.isHidden():
                 item.setSelected(True)
 
+
+    # Kept shorter than the combatant list: this is a picker, and every row it
+    # takes is a row the statblock above it loses.
+    _MONSTER_LIST_MIN_ROWS = 2
+    _MONSTER_LIST_MAX_ROWS = 6
+
+    def _fit_monster_list_height(self):
+        """Match the monster picker's height to the monsters in the fight."""
+        listw = getattr(self, "monster_list", None)
+        if listw is None:
+            return
+
+        row_height = listw.sizeHintForRow(0) if listw.count() else 0
+        if row_height <= 0:
+            row_height = listw.fontMetrics().height() + 6
+
+        rows = min(
+            max(listw.count(), self._MONSTER_LIST_MIN_ROWS),
+            self._MONSTER_LIST_MAX_ROWS,
+        )
+        listw.setFixedHeight(rows * row_height + 2 * listw.frameWidth() + 4)
     def focus_creature_filter(self):
         self.controls_dock.show()
         self.creature_filter.setFocus(Qt.ShortcutFocusReason)
@@ -476,8 +497,10 @@ class InitiativeTracker(QMainWindow, Application):
         self.monster_list = QListWidget(self)
         self.monster_list.setSelectionMode(QListWidget.SingleSelection)
         self.monster_list.itemSelectionChanged.connect(self.update_statblock_image)
-        self.monster_list.setMinimumHeight(80)
-        self.monster_list.setMaximumHeight(140)
+        # Height follows the number of monsters (see _fit_monster_list_height).
+        # A flat 80–140px box left a picker mostly empty in a one-monster fight
+        # and stole that space from the statblock.
+        self.monster_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.monster_list.setToolTip("Pick a monster to show its statblock")
         self.monster_list.setContextMenuPolicy(Qt.CustomContextMenu)
         self.monster_list.customContextMenuRequested.connect(self._monster_list_context_menu)
@@ -485,6 +508,7 @@ class InitiativeTracker(QMainWindow, Application):
         # Statblock fills available space; the picker is pinned underneath it.
         self.stat_layout.addWidget(self.statblock_widget, stretch=1)
         self.stat_layout.addWidget(self.monster_list)
+        self._fit_monster_list_height()
 
         self.stat_widget = QWidget()
         self.stat_widget.setLayout(self.stat_layout)
@@ -1705,9 +1729,10 @@ class InitiativeTracker(QMainWindow, Application):
         if column < 0 or column >= len(fields):
             return
         self._user_column_widths[fields[column]] = new
-        # Narrowing a column should take the table's right edge with it rather
-        # than leaving empty body behind.
-        self._fit_table_width()
+        # Narrowing a column takes the table's right edge with it rather than
+        # leaving empty body behind -- and can retire the horizontal scrollbar,
+        # which is part of the height, so re-fit both directions.
+        self.refit_table()
 
     def reset_column_widths(self):
         """Forget dragged widths and size every column from its contents again."""
@@ -1725,8 +1750,7 @@ class InitiativeTracker(QMainWindow, Application):
 
         if hasattr(self, "table") and obj is self.table.viewport():
             if event.type() == QEvent.Resize:
-                self._stretch_notes_column()
-                self._fit_table_width()
+                self.refit_table()
             return False
 
         if hasattr(self, "value_input") and obj is self.value_input:

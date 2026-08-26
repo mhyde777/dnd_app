@@ -1891,10 +1891,33 @@ class Application:
             used = self.table.verticalHeader().defaultSectionSize()
 
         height = used + self.table.horizontalHeader().height() + 2 * self.table.frameWidth()
-        scrollbar = self.table.horizontalScrollBar()
-        if scrollbar is not None and scrollbar.isVisible():
-            height += scrollbar.height()
+        if self._needs_horizontal_scroll():
+            height += self.table.horizontalScrollBar().sizeHint().height()
+
+        if self.table.maximumHeight() == height:
+            return
         self.table.setMaximumHeight(height)
+
+    def _needs_horizontal_scroll(self) -> bool:
+        """Whether the columns overflow the width the layout can give them.
+
+        Derived from the widths rather than from horizontalScrollBar().
+        isVisible(): Qt updates that only on the next layout pass, so just
+        after a column resize or a row removal it still reports the *previous*
+        state -- which left the table holding a scrollbar's worth of height it
+        no longer needed, as a blank strip under the last row.
+        """
+        model = self.table.model()
+        if model is None:
+            return False
+
+        columns = sum(
+            self.table.columnWidth(c)
+            for c in range(model.columnCount())
+            if not self.table.isColumnHidden(c)
+        )
+        available = self._available_table_width()
+        return available > 0 and columns > available
 
     def _stretch_notes_column(self):
         """Fit Notes to whatever width the other columns leave over.
@@ -2043,12 +2066,11 @@ class Application:
         finally:
             self.monster_list.blockSignals(False)
 
-        # Grow with content up to the widget's own maximum, then scroll.
+        # Fitted to the monsters present, then scrolls. Raising the *minimum*
+        # here (as this used to) never shrank it: the widget's own size hint
+        # kept it at its maximum whatever the content was.
         if self.monster_list.count():
-            row_height = self.monster_list.sizeHintForRow(0)
-            list_height = self.monster_list.count() * row_height
-            list_height += self.monster_list.frameWidth() * 2
-            self.monster_list.setMinimumHeight(min(list_height, 140))
+            self._fit_monster_list_height()
             self.monster_list.show()
         else:
             self.monster_list.hide()
