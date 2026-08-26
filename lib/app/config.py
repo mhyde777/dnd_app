@@ -104,3 +104,65 @@ def update_check_enabled() -> bool:
 
 def bridge_stream_enabled() -> bool:
     return bridge_flag("BRIDGE_STREAM_ENABLED", True)
+
+
+# ---- Local bridge ----
+#
+# The in-process bridge is the whole Foundry story for someone running both
+# programs on one PC. It has to work with no terminal, no .env and no reverse
+# proxy, so everything it needs is derived here and written back to
+# settings.json -- the GUI shows what was chosen rather than asking for it.
+
+
+LOCAL_BRIDGE_DEFAULT_PORT = 8787
+
+
+def local_bridge_lan() -> bool:
+    """Whether the local bridge should accept connections from the network.
+
+    Off by default: bound to loopback the bridge is reachable only by programs
+    on this machine, which is what "Foundry is on this PC" needs. Someone whose
+    Foundry runs on a different box ticks this and gets 0.0.0.0 instead.
+    """
+    return bridge_flag("LOCAL_BRIDGE_LAN", False)
+
+
+def local_bridge_host() -> str:
+    """The address the in-process bridge binds.
+
+    An explicitly configured host always wins; otherwise the LAN switch picks
+    between loopback and every interface.
+    """
+    configured = bridge_value("LOCAL_BRIDGE_HOST") or bridge_value("BRIDGE_HOST")
+    if configured:
+        return configured
+    return "0.0.0.0" if local_bridge_lan() else "127.0.0.1"
+
+
+def local_bridge_port() -> int:
+    raw = bridge_value("LOCAL_BRIDGE_PORT") or bridge_value("BRIDGE_PORT")
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return LOCAL_BRIDGE_DEFAULT_PORT
+
+
+def ensure_bridge_secret() -> str:
+    """The shared secret, minting and persisting one the first time.
+
+    A secret nobody chose is still a secret worth having: the bridge listens on
+    a port that any program on this machine -- and any web page the user
+    visits, since a browser will happily POST to 127.0.0.1 -- can reach. The
+    generated value costs the user one paste into Foundry and closes that off.
+
+    Returns the existing secret untouched if there is one, so this is safe to
+    call on every startup.
+    """
+    existing = bridge_value("BRIDGE_TOKEN")
+    if existing:
+        return existing
+    import secrets as _secrets
+
+    token = _secrets.token_hex(16)
+    _settings.update({"bridge_token": token, "bridge_ingest_secret": token})
+    return token

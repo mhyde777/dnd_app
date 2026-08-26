@@ -85,18 +85,26 @@ class Application:
             # '_object_interaction': 'set_creature_object_interaction'
         }
         
+        # The in-process bridge, for people running Foundry on this same PC.
+        # It has to come up before the client is built: the port it actually
+        # reached is where the client must point, which is not necessarily the
+        # port that was asked for.
         self.local_bridge: Optional[LocalBridgeServer] = None
+        self.local_bridge_error: Optional[str] = None
         if local_bridge_enabled():
-            if not os.getenv("BRIDGE_TOKEN"):
-                os.environ["BRIDGE_TOKEN"] = "local-dev"
-                self._log("[Bridge] BRIDGE_TOKEN not set; defaulting to 'local-dev'.")
-            if not os.getenv("BRIDGE_INGEST_SECRET"):
-                os.environ["BRIDGE_INGEST_SECRET"] = os.environ["BRIDGE_TOKEN"]
-                self._log("[Bridge] BRIDGE_INGEST_SECRET not set; using BRIDGE_TOKEN for local bridge.")
             self.local_bridge = LocalBridgeServer.from_env()
-            self.local_bridge.start()
+            if not self.local_bridge.start():
+                self.local_bridge_error = self.local_bridge.error
+                self._log(f"[ERROR] {self.local_bridge.error}")
+                self.local_bridge = None
 
         self.bridge_client = BridgeClient.from_env()
+        if self.local_bridge is not None:
+            # Whatever BRIDGE_URL says, the bridge we just started is the one
+            # this app should talk to. A stale URL left over from a hosted
+            # bridge would otherwise send every request to a dead domain.
+            self.bridge_client.base_url = self.local_bridge.base_url
+            self.bridge_client.token = self.local_bridge.token
         self.bridge_snapshot: Optional[Dict[str, Any]] = None
         self.bridge_timer: Optional[QTimer] = None
         self.bridge_stream_thread: Optional[threading.Thread] = None
@@ -148,16 +156,44 @@ class Application:
         bridge address in the UI would appear to do nothing until relaunch.
         """
         self.stop_bridge_sync()
+        self._restart_local_bridge()
         try:
             self.bridge_client = BridgeClient.from_env()
         except Exception as exc:
             self._log(f"[WARN] Could not rebuild bridge client: {exc}")
+        if self.local_bridge is not None:
+            self.bridge_client.base_url = self.local_bridge.base_url
+            self.bridge_client.token = self.local_bridge.token
         self.bridge_snapshot = None
         self.start_bridge_polling()
         self._log(
             "[Bridge] Sync restarted "
             f"({'stream' if bridge_stream_enabled() else 'polling'})."
         )
+
+    def _restart_local_bridge(self) -> None:
+        """Bring the in-process bridge in line with the settings just saved.
+
+        Toggling the local bridge, the LAN switch or the port all change what
+        needs to be listening, and the old server holds the port until it is
+        told to stop -- so tear down unconditionally and start again only if
+        it is still wanted.
+        """
+        if self.local_bridge is not None:
+            try:
+                self.local_bridge.stop()
+            except Exception as exc:
+                self._log(f"[WARN] Could not stop the local bridge: {exc}")
+            self.local_bridge = None
+        self.local_bridge_error = None
+        if not local_bridge_enabled():
+            return
+        server = LocalBridgeServer.from_env()
+        if server.start():
+            self.local_bridge = server
+        else:
+            self.local_bridge_error = server.error
+            self._log(f"[ERROR] {server.error}")
 
     def start_bridge_polling(self) -> None:
         if not foundry_bridge_enabled():

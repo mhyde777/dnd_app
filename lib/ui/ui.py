@@ -149,6 +149,7 @@ class InitiativeTracker(QMainWindow, Application):
             self._on_manual_update_check, Qt.QueuedConnection
         )
         self.start_bridge_polling()
+        self.report_local_bridge_failure()
         self.check_for_updates()
         self.start_version_housekeeping()
         self.verify_new_version()
@@ -925,6 +926,9 @@ class InitiativeTracker(QMainWindow, Application):
             self.restart_bridge_sync()
         except Exception as exc:
             self._log(f"[WARN] Could not restart bridge sync: {exc}")
+        # The local bridge is torn down and restarted in there, so whether it
+        # came up is only known now -- and may have just changed.
+        self.report_local_bridge_failure()
 
     def open_layout_settings(self):
         from ui.layout_settings_dialog import LayoutSettingsDialog
@@ -1225,6 +1229,29 @@ class InitiativeTracker(QMainWindow, Application):
             self.bridge_status_label.setText("● Bridge: Disabled")
             self.bridge_status_label.setStyleSheet("padding: 0 8px; color: #888;")
             self.clear_banner(self.BRIDGE_BANNER_KEY)
+
+    LOCAL_BRIDGE_BANNER_KEY = "local_bridge_failed"
+
+    def report_local_bridge_failure(self) -> None:
+        """Say so when the in-process bridge could not start.
+
+        It used to take the whole app down (werkzeug exits the process on a
+        busy port), so anything at all is an improvement -- but a bridge that
+        silently is not there looks exactly like Foundry not being open, and
+        the user would have no way to tell the difference.
+        """
+        error = getattr(self, "local_bridge_error", None)
+        if not error:
+            self.clear_banner(self.LOCAL_BRIDGE_BANNER_KEY)
+            return
+        self.show_banner(
+            self.LOCAL_BRIDGE_BANNER_KEY,
+            f"{error} Close whatever is using the port, or change it in "
+            f"File → Settings.",
+            "error",
+            action_label="Show Log",
+            action=self.show_log,
+        )
 
     def _monster_list_context_menu(self, pos):
         menu = QMenu(self)

@@ -132,8 +132,30 @@ module** (`foundryvtt-bridge/`). Neither end talks to the other directly.
 Foundry's conditions are the source of truth; the app derives conditions from
 snapshot effects without normalising them.
 
-A **local bridge server** starts in-process by default
-(`LOCAL_BRIDGE_ENABLED=1`), so a single-machine setup needs nothing running.
+A **local bridge server** can run in-process, which is what makes a
+single-machine setup need nothing installed or hosted. It is opt-in — *Run the
+bridge on this computer* in the settings dialog — because binding a port is
+wrong on the machine of someone who does not use Foundry at all.
+
+`LocalBridgeServer` owns three things that are easy to get wrong:
+
+- **It is the single point where configuration becomes the server's
+  environment.** `bridge_service.create_app()` reads its credentials from
+  `os.getenv`, while the app and Foundry read theirs from `settings.json`.
+  Nothing kept those in step, so a secret typed into the dialog produced 401 on
+  every request from both directions. `_export_env()` now publishes the
+  resolved values before the app is created, and `Application` points its
+  client at `local_bridge.base_url` rather than at a possibly stale
+  `BRIDGE_URL`.
+- **A busy port must not be fatal.** werkzeug's `make_server()` answers
+  EADDRINUSE by calling `sys.exit(1)`; raised inside `Application.__init__`
+  that meant no window at all, and in the `console=False` build, no message
+  either. Ports are probed first and scanned forward, and a total failure
+  becomes `local_bridge_error` for the UI to put in a banner.
+- **The secret is generated, not demanded.** `config.ensure_bridge_secret()`
+  mints one on first use and persists it, so the user's only job is to copy it
+  into Foundry. It is never regenerated — that would silently break Foundry's
+  saved copy.
 
 See [foundry-setup.md](foundry-setup.md) for the user-facing side.
 

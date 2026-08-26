@@ -9,6 +9,54 @@ this page — the bridge is off by default and nothing prompts you about it.
 
 ---
 
+## Two ways to do this
+
+**Foundry runs on the same computer as the tracker.** This is the common case
+and there is nothing to install or host — the app runs the bridge itself. Skip
+to *Quick setup* below.
+
+**Foundry runs somewhere else** — another machine on your network, or a hosted
+service like The Forge. Then the bridge has to be somewhere both can reach; see
+*Running the bridge yourself* near the bottom.
+
+---
+
+## Quick setup (Foundry on this machine)
+
+### 1. Turn on the bridge in the tracker
+
+**File → Settings → Foundry VTT**:
+
+1. Tick **Sync with Foundry VTT**.
+2. Tick **Run the bridge on this computer**.
+
+That is the whole configuration. The app fills in the URL, generates a shared
+secret and starts the bridge immediately — no restart, no terminal, no `.env`.
+
+The secret is shown in that dialog with a **Copy** button, because Foundry
+needs the same value. It is generated once and then left alone, so it stays
+the same on every launch.
+
+> **If Foundry is on a different computer on your network**, tick **Reachable
+> from other machines on my network** as well. The dialog then shows the
+> network address to give Foundry instead of `127.0.0.1`.
+
+### 2. Install the module in Foundry
+
+See *Install the Foundry module* below, then come back.
+
+### 3. Tell Foundry where the bridge is
+
+In Foundry: **Game Settings → Configure Settings → D&D Combat Tracker Bridge**
+
+- **Bridge URL** — `http://127.0.0.1:8787` (the dialog shows the exact value)
+- **Bridge shared secret** — paste what you copied in step 1
+
+Start a combat. The combatants should appear in the tracker within a few
+seconds.
+
+---
+
 ## What the pieces are
 
 There are three, and the confusing part is that the middle one is separate from
@@ -32,40 +80,12 @@ Foundry  ──push snapshot──►  Bridge  ◄──read snapshot──  Tra
    └──────────────  poll commands  ◄──── send commands ─────┘
 ```
 
----
-
-## 1. Run the bridge
-
-The bridge is in this repository under `bridge_service/`. It needs a shared
-secret, which is just a string both ends must agree on — anyone who knows it
-can read and change your combat, so treat it like a password.
-
-```bash
-BRIDGE_TOKEN=pick-a-long-random-string \
-BRIDGE_HOST=0.0.0.0 \
-BRIDGE_PORT=8787 \
-python -m bridge_service.app
-```
-
-`BRIDGE_HOST=127.0.0.1` restricts it to the machine it runs on, which is right
-if Foundry and the tracker are both on that machine. Use `0.0.0.0` only when
-something else needs to reach it, and put it on a private network — a VPN, a
-LAN, or Tailscale — rather than exposing it to the internet.
-
-**Single machine?** You can skip this step. The app starts its own bridge
-in-process by default (`LOCAL_BRIDGE_ENABLED=1`), so there is nothing to run.
-
-**Keeping it running:** `deploy/bridge.service` is a systemd unit for running
-it as a service on Linux. Edit the paths and the token in it, then:
-
-```bash
-sudo cp deploy/bridge.service /etc/systemd/system/
-sudo systemctl enable --now bridge
-```
+When you tick **Run the bridge on this computer**, the middle box is the app
+itself — same service, started in-process on a background thread.
 
 ---
 
-## 2. Install the Foundry module
+## Install the Foundry module
 
 In Foundry: **Add-on Modules → Install Module**, and paste this into the
 *Manifest URL* box at the bottom:
@@ -99,10 +119,7 @@ restart Foundry. Installing from the manifest URL is easier and gets updates.
 
 ---
 
-## 3. Point the app at the bridge
-
-In the tracker: **File → Settings → Foundry VTT**, turn on **Sync with Foundry
-VTT**, and enter the same bridge URL and shared secret.
+## The bridge status indicator
 
 The status indicator in the bottom-right corner tells you where you stand:
 
@@ -139,14 +156,58 @@ curl -H "Authorization: Bearer YOUR_SECRET" http://YOUR_BRIDGE:8787/state
 ```
 
 - **Connection refused** — the bridge is not running, or not reachable from
-  here. Check the host and port, and anything between you and it.
-- **401 / 403** — the secret does not match. It has to be identical in three
-  places: the bridge's `BRIDGE_TOKEN`, the Foundry module setting, and the app.
+  here. Check the host and port, and anything between you and it. If the app
+  runs the bridge, a red banner across the top of the tracker will say so when
+  it could not start (usually something else already on port 8787).
+- **401 / 403** — the secret does not match. Running the bridge locally, the
+  app and the bridge always agree, so the odd one out is Foundry: re-copy the
+  secret from **File → Settings → Foundry VTT**. Running it yourself, it has to
+  be identical in three places: the bridge's `BRIDGE_TOKEN`, the Foundry module
+  setting, and the app.
 - **`{"combatants": []}` with an old `timestamp`** — the bridge is fine and the
   app is fine; Foundry is not pushing. Either the module is not enabled in
   *this* world, or its settings are empty (see the per-world note above).
 
 Help → Show Log has the app's side of the story, including every bridge error.
+
+---
+
+## Running the bridge yourself
+
+Only needed when Foundry cannot reach a bridge on your machine — a hosted
+Foundry (The Forge, Molten Hosting) is the usual reason.
+
+The bridge is in this repository under `bridge_service/`. It needs a shared
+secret, which is just a string all three pieces must agree on — anyone who
+knows it can read and change your combat, so treat it like a password.
+
+```bash
+BRIDGE_TOKEN=pick-a-long-random-string \
+BRIDGE_INGEST_SECRET=the-same-string \
+BRIDGE_HOST=0.0.0.0 \
+BRIDGE_PORT=8787 \
+python -m bridge_service.app
+```
+
+Use `0.0.0.0` only when something else needs to reach it, and put it on a
+private network — a VPN, a LAN, or Tailscale — rather than exposing it to the
+internet. A bridge on the public internet with a guessable secret is someone
+else's control over your game.
+
+Then in the tracker, **File → Settings → Foundry VTT**: leave *Run the bridge
+on this computer* **off**, and enter that URL and secret by hand.
+
+**Keeping it running:** `deploy/bridge.service` is a systemd unit for running
+it as a service on Linux. Edit the paths and the token in it, then:
+
+```bash
+sudo cp deploy/bridge.service /etc/systemd/system/
+sudo systemctl enable --now bridge
+```
+
+**CORS:** the bridge accepts browser requests from `localhost`, from private
+network addresses, and from anything in `BRIDGE_ALLOWED_ORIGINS`. A Foundry
+served from a public domain needs its origin adding there.
 
 ---
 

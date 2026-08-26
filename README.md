@@ -100,6 +100,7 @@ PyInstaller cannot cross-compile, so each platform builds on that platform.
 ./package_WIN.sh              # Windows (Git Bash) -> dist/*.zip
 ./package_module.sh           # the Foundry module -> dist/foundryvtt-bridge.zip
 ./package.sh --dev-install    # also install to ~/.local/opt for daily use
+./package_WIN.sh --dev-install  # same, to %LOCALAPPDATA%\Programs + a Start Menu shortcut
 ./package.sh --publish        # also upload to the GitHub release for this version
 ```
 

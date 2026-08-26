@@ -27,7 +27,18 @@ if _srd_content.is_dir():
         if (_srd_content / _sub).is_dir():
             datas.append((_srd_content / _sub, f"srd_content/{_sub}"))
 binaries = []
-hiddenimports = []
+# The in-process Foundry bridge. It is imported inside LocalBridgeServer.start()
+# rather than at module level, so that a user who never enables Foundry sync
+# does not pay for Flask at startup -- but that puts it out of easy reach of
+# PyInstaller's static analysis, and a packaged build with no bridge_service is
+# a build where "run the bridge on this computer" fails at the moment it is
+# ticked. Naming it here does not depend on that analysis working.
+hiddenimports = [
+    "bridge_service",
+    "bridge_service.app",
+    "bridge_service.command_queue",
+    "werkzeug.serving",
+]
 
 qdark_datas, qdark_binaries, qdark_hidden = collect_all("qdarktheme")
 datas += qdark_datas

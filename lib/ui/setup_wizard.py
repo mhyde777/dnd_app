@@ -174,6 +174,11 @@ class SetupWizard(QDialog):
         run Foundry -- a bridge URL and a shared secret invite exactly the
         "what is this and do I need it?" that keeps people from finishing
         setup. So the switch is the only thing visible until it is on.
+
+        Inside, the local case is the one that has to be effortless: running
+        the bridge here means the URL is not a question and the secret is
+        generated, so the two fields stop being things to fill in and become
+        things to copy across to Foundry.
         """
         box = QGroupBox("Foundry VTT")
         outer = QVBoxLayout(box)
@@ -187,6 +192,24 @@ class SetupWizard(QDialog):
         self.bridge_details = QWidget()
         details = QVBoxLayout(self.bridge_details)
         details.setContentsMargins(18, 4, 0, 0)
+
+        self.local_bridge_check = QCheckBox(
+            "Run the bridge on this computer (Foundry is on this machine)"
+        )
+        self.local_bridge_check.setToolTip(
+            "Starts the bridge inside this app, so there is nothing to install or host"
+        )
+        details.addWidget(self.local_bridge_check)
+
+        self.bridge_lan_check = QCheckBox("Reachable from other machines on my network")
+        self.bridge_lan_check.setToolTip(
+            "Tick if Foundry runs on a different computer on your LAN.\n"
+            "Leave off to keep the bridge private to this machine."
+        )
+        lan_row = QHBoxLayout()
+        lan_row.setContentsMargins(18, 0, 0, 0)
+        lan_row.addWidget(self.bridge_lan_check)
+        details.addLayout(lan_row)
 
         row_url = QHBoxLayout()
         lbl_url = QLabel("Bridge URL:")
@@ -203,28 +226,99 @@ class SetupWizard(QDialog):
         self.bridge_token_edit = QLineEdit()
         self.bridge_token_edit.setEchoMode(QLineEdit.Password)
         self.bridge_token_edit.setPlaceholderText("must match the Foundry module setting")
+        self.bridge_copy_btn = QPushButton("Copy")
+        self.bridge_copy_btn.setFixedWidth(60)
+        self.bridge_copy_btn.setToolTip("Copy the secret, to paste into Foundry")
+        self.bridge_copy_btn.clicked.connect(self._copy_bridge_secret)
         row_secret.addWidget(lbl_secret)
         row_secret.addWidget(self.bridge_token_edit)
+        row_secret.addWidget(self.bridge_copy_btn)
         details.addLayout(row_secret)
 
-        self.local_bridge_check = QCheckBox(
-            "Run the bridge on this computer (Foundry is on this machine)"
-        )
-        details.addWidget(self.local_bridge_check)
+        self.bridge_hint = QLabel()
+        self.bridge_hint.setWordWrap(True)
+        self.bridge_hint.setStyleSheet("color: #888; font-size: 11px;")
+        details.addWidget(self.bridge_hint)
 
         self.bridge_stream_check = QCheckBox("Use live streaming instead of polling")
         details.addWidget(self.bridge_stream_check)
 
-        hint = QLabel("See docs/foundry-setup.md for the Foundry-side setup.")
-        hint.setWordWrap(True)
-        hint.setStyleSheet("color: #888; font-size: 11px;")
-        details.addWidget(hint)
-
         outer.addWidget(self.bridge_details)
         self.bridge_enabled_check.toggled.connect(self.bridge_details.setVisible)
+        self.local_bridge_check.toggled.connect(self._sync_bridge_mode)
+        self.bridge_lan_check.toggled.connect(self._sync_bridge_mode)
         self.bridge_details.setVisible(False)
 
         root.addWidget(box)
+
+    def _sync_bridge_mode(self) -> None:
+        """Reshape the bridge fields around who is hosting it.
+
+        Local: the URL is ours to state rather than the user's to supply, and
+        the secret is something they need to read and copy -- so it is shown,
+        not masked. Remote: both are credentials for someone else's service,
+        typed in and hidden again.
+        """
+        local = self.local_bridge_check.isChecked()
+        self.bridge_lan_check.setVisible(local)
+
+        if local:
+            from app.config import ensure_bridge_secret, local_bridge_port
+
+            # Generating on tick rather than on save is what makes the Copy
+            # button meaningful now, while the Foundry instructions are on
+            # screen, instead of only after a save-and-reopen.
+            if not self.bridge_token_edit.text().strip():
+                self.bridge_token_edit.setText(ensure_bridge_secret())
+            self.bridge_url_edit.setText(f"http://127.0.0.1:{local_bridge_port()}")
+            self.bridge_url_edit.setReadOnly(True)
+            self.bridge_url_edit.setEnabled(False)
+            self.bridge_token_edit.setEchoMode(QLineEdit.Normal)
+            self.bridge_token_edit.setReadOnly(True)
+            self.bridge_copy_btn.setVisible(True)
+            port = local_bridge_port()
+            extra = ""
+            if self.bridge_lan_check.isChecked():
+                # Foundry on another machine cannot reach our loopback, so the
+                # address it needs is this machine's on the LAN. Look it up
+                # rather than asking the user to go and find it.
+                from app.local_bridge_server import lan_address
+
+                found = lan_address()
+                where = f"http://{found or 'this-computer'}:{port}"
+                if not found:
+                    extra = (
+                        "  Replace <i>this-computer</i> with this machine's "
+                        "network address.<br>"
+                    )
+            else:
+                where = f"http://127.0.0.1:{port}"
+            self.bridge_hint.setText(
+                "In Foundry: <b>Game Settings → Configure Settings → "
+                "D&amp;D Combat Tracker Bridge</b>, and enter:<br>"
+                f"&nbsp;&nbsp;<b>Bridge URL:</b> {where}<br>"
+                f"&nbsp;&nbsp;<b>Bridge shared secret:</b> the value above "
+                "(<i>Copy</i>)<br>" + extra
+            )
+        else:
+            self.bridge_url_edit.setReadOnly(False)
+            self.bridge_url_edit.setEnabled(True)
+            self.bridge_token_edit.setEchoMode(QLineEdit.Password)
+            self.bridge_token_edit.setReadOnly(False)
+            self.bridge_copy_btn.setVisible(False)
+            self.bridge_hint.setText(
+                "The bridge runs elsewhere; enter its address and secret. "
+                "See docs/foundry-setup.md."
+            )
+
+    def _copy_bridge_secret(self) -> None:
+        from PyQt5.QtWidgets import QApplication
+
+        QApplication.clipboard().setText(self.bridge_token_edit.text())
+        self.bridge_copy_btn.setText("Copied")
+        from PyQt5.QtCore import QTimer
+
+        QTimer.singleShot(1200, lambda: self.bridge_copy_btn.setText("Copy"))
 
     def _prefill_bridge(self) -> None:
         from app.config import (
@@ -239,7 +333,9 @@ class SetupWizard(QDialog):
         self.bridge_url_edit.setText(bridge_value("BRIDGE_URL", ""))
         self.bridge_token_edit.setText(bridge_value("BRIDGE_TOKEN", ""))
         self.local_bridge_check.setChecked(bridge_flag("LOCAL_BRIDGE_ENABLED", False))
+        self.bridge_lan_check.setChecked(bridge_flag("LOCAL_BRIDGE_LAN", False))
         self.bridge_stream_check.setChecked(bridge_stream_enabled())
+        self._sync_bridge_mode()
 
     def _bridge_changes(self) -> dict:
         enabled = self.bridge_enabled_check.isChecked()
@@ -247,13 +343,22 @@ class SetupWizard(QDialog):
         if not enabled:
             return changes
         token = self.bridge_token_edit.text().strip()
+        local = self.local_bridge_check.isChecked()
+        if local and not token:
+            # Belt and braces: the box is filled in on tick, but a settings
+            # file hand-edited to local-with-no-secret would otherwise start a
+            # bridge the app itself could not authenticate against.
+            from app.config import ensure_bridge_secret
+
+            token = ensure_bridge_secret()
         changes.update({
             "bridge_url": self.bridge_url_edit.text().strip(),
             "bridge_token": token,
             # The ingest secret has always defaulted to the token; keeping them
             # in step means one field to fill in instead of two identical ones.
             "bridge_ingest_secret": token,
-            "local_bridge_enabled": self.local_bridge_check.isChecked(),
+            "local_bridge_enabled": local,
+            "local_bridge_lan": local and self.bridge_lan_check.isChecked(),
             "bridge_stream_enabled": self.bridge_stream_check.isChecked(),
         })
         return changes
