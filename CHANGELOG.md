@@ -15,15 +15,29 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ### Added
 
-- **The update banner now downloads the build for you.** "Get <version>" opens
-  a dialog with the release notes and a download button that fetches the right
-  artifact for your platform to your Downloads folder, with progress and a
-  cancel. It downloads only — nothing is installed or replaced, and your
-  settings and data are untouched. See `docs/auto-update.md` for what a real
-  one-click update would take.
+- **Update from inside the app.** The banner's "Get <version>" button opens a
+  dialog with the release notes and one button that downloads the build, checks
+  it against its published checksum, installs it and restarts into it.
 - **Help → Check for Updates** asks on demand, instead of the check only
   running once at startup. It answers either way, including "you are on the
   latest version".
+- Updates install *alongside* the running version rather than over it, so the
+  previous version stays on disk and remains runnable. If a new version fails
+  to start, the launcher notices and falls back to it automatically. See
+  `docs/auto-update.md`.
+
+### Changed
+
+- **The install layout has changed**, which is what makes updating possible: a
+  `combat-tracker` launcher at the top, the build under `versions/<version>/`,
+  and a `current` file naming which to run. Shortcuts point at the launcher.
+
+  **Existing installs need to be replaced once.** Unpack this release
+  somewhere and run `install.sh` (Linux) or make a shortcut to
+  `combat-tracker.exe` (Windows); updates after that are a single button. The
+  app detects an older-style install and says so instead of offering a button
+  that cannot work. Nothing in `~/.dnd_tracker_config` is affected.
+- Release builds now publish a `SHA256SUMS` file alongside the artifact.
 
 ### Fixed
 

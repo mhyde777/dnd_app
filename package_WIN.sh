@@ -14,6 +14,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_NAME="combat_tracker"
 DIST_NAME="combat-tracker"
+LAUNCHER_NAME="combat-tracker"
 CONFIG_DIR="${HOME}/.dnd_tracker_config"
 CONFIG_ENV="${CONFIG_DIR}/.env"
 
@@ -62,18 +63,32 @@ rm -rf "$ROOT_DIR/build" "$ROOT_DIR/dist" "$ROOT_DIR/package_win"
 
 "${RUN[@]}" python -m PyInstaller --noconfirm --clean "$ROOT_DIR/pyinstaller.spec"
 
+# The launcher is a separate, tiny binary. It is what the shortcut points at,
+# and the one thing an update cannot replace while it is running.
+"${RUN[@]}" python -m PyInstaller --noconfirm --clean "$ROOT_DIR/launcher.spec"
+
 # ------------------------------------------------------------
 # Stage the release tree
 # ------------------------------------------------------------
+# Layout (see lib/app/install_layout.py):
+#   <root>\combat-tracker.exe   launcher, what the shortcut points at
+#   <root>\versions\<ver>\      the build itself
+#   <root>\current              which version to run
+# An update adds a directory under versions\ and repoints current. It never
+# writes to the running build -- which on Windows it could not do anyway, since
+# a running .exe and its loaded DLLs are held open.
 STAGE_DIR="$ROOT_DIR/package_win/$STAGE_NAME"
-mkdir -p "$STAGE_DIR"
+PAYLOAD_DIR="$STAGE_DIR/versions/$VERSION"
+mkdir -p "$PAYLOAD_DIR"
 
 if [[ -d "$ROOT_DIR/dist/$APP_NAME" ]]; then
-    cp -r "$ROOT_DIR/dist/$APP_NAME" "$STAGE_DIR/"
+    cp -r "$ROOT_DIR/dist/$APP_NAME/." "$PAYLOAD_DIR/"
 else
-    mkdir -p "$STAGE_DIR/$APP_NAME"
-    cp "$ROOT_DIR/dist/$APP_NAME.exe" "$STAGE_DIR/$APP_NAME/$APP_NAME.exe"
+    cp "$ROOT_DIR/dist/$APP_NAME.exe" "$PAYLOAD_DIR/$APP_NAME.exe"
 fi
+
+cp "$ROOT_DIR/dist/${LAUNCHER_NAME}.exe" "$STAGE_DIR/${LAUNCHER_NAME}.exe"
+printf '%s\n' "$VERSION" > "$STAGE_DIR/current"
 
 for doc in LICENSE-SRD.md; do
   [[ -f "$ROOT_DIR/$doc" ]] && cp "$ROOT_DIR/$doc" "$STAGE_DIR/"
@@ -82,7 +97,12 @@ done
 cat > "$STAGE_DIR/README.txt" <<EOF
 D&D Combat Tracker ${VERSION} (Windows x64)
 
-Run: combat_tracker\\combat_tracker.exe
+Run: combat-tracker.exe
+
+Run combat-tracker.exe, not the .exe under versions\\. The launcher picks which
+installed version to start, and it is what lets Help -> Check for Updates
+install a new version and restart into it. Starting the inner .exe directly
+works, but that copy cannot update itself.
 
 This build is not code-signed, so Windows SmartScreen will warn that it is from
 an unrecognized publisher. Click "More info" then "Run anyway" to start it.
@@ -113,6 +133,13 @@ else
 fi
 
 echo "Release artifact: $ZIP_PATH"
+
+# Published alongside the build so the in-app updater can check what it
+# downloaded. Upload both to the GitHub release.
+if command -v sha256sum >/dev/null 2>&1; then
+    (cd "$ROOT_DIR/dist" && sha256sum "${STAGE_NAME}.zip" >> SHA256SUMS)
+    echo "Checksums:        $ROOT_DIR/dist/SHA256SUMS"
+fi
 
 # ------------------------------------------------------------
 # Dev install (opt-in, this machine only)
