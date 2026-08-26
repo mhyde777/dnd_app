@@ -21,6 +21,15 @@ a MAJOR bump is the only kind that can require you to change how you work.
   finished but leaves the in-app updater reporting "no build for this system",
   which reads like a bug in the app rather than a missing upload.
 
+### Fixed
+
+- The packaging scripts could stamp a build with the wrong version. They read
+  `__version__` by importing it, and an import can be served from a stale
+  `__pycache__` entry — Python validates bytecode against the source's
+  mtime-in-whole-seconds and size, so editing the version to another string of
+  the same length within the same second is invisible to it. They read the file
+  as text now.
+
 
 ## [0.2.1] — 2026-08-26
 

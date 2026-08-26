@@ -54,7 +54,13 @@ if ! python -m PyInstaller --version >/dev/null 2>&1; then
     exit 1
 fi
 
-VERSION="$(PYTHONPATH="$ROOT_DIR/lib" python -c 'from app.version import __version__; print(__version__)')"
+# Read straight out of the file rather than by importing it. An import can be
+# served from a stale __pycache__ entry -- Python validates bytecode on the
+# source's mtime-in-whole-seconds and size, so an edit that keeps the length
+# the same within the same second is invisible to it, and the build silently
+# takes the wrong version number.
+VERSION="$(sed -n 's/^__version__ = "\(.*\)"/\1/p' "$ROOT_DIR/lib/app/version.py" | tr -d '\r')"
+[[ -n "$VERSION" ]] || { echo "could not read __version__ from lib/app/version.py" >&2; exit 1; }
 ARCH="$(uname -m)"
 STAGE_NAME="${DIST_NAME}-${VERSION}-linux-${ARCH}"
 
