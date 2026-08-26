@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 
 from PyQt5.QtWidgets import (
     QDialog, QMessageBox, QApplication, QInputDialog, QLineEdit, QHeaderView,
+    QListWidgetItem,
 )
 from PyQt5.QtGui import (
         QPixmap, QFont
@@ -2023,10 +2024,21 @@ class Application:
         self.populate_monster_list()
 
     def populate_creature_list(self):
-        self.creature_list.clear()
-        for row in range(self.table_model.rowCount()):
-            creature_name = self.table_model.creature_names[row]
-            self.creature_list.addItem(creature_name)
+        # Rebuilding the list used to drop the selection, and update_table()
+        # runs after every HP change -- so damaging a group meant re-picking it
+        # before you could touch it again. Carry the names across the rebuild.
+        previously_selected = set(self.selected_creature_names())
+
+        self._syncing_selection = True
+        try:
+            self.creature_list.clear()
+            for row in range(self.table_model.rowCount()):
+                creature_name = self.table_model.creature_names[row]
+                item = QListWidgetItem(creature_name)
+                self.creature_list.addItem(item)
+                item.setSelected(creature_name in previously_selected)
+        finally:
+            self._syncing_selection = False
 
         # Sized to the combatants actually in the fight, so the HP controls stay
         # directly under the list instead of at the bottom of the window.
@@ -2034,6 +2046,10 @@ class Application:
             self._filter_creature_list(self.creature_filter.text())
         elif hasattr(self, "_fit_creature_list_height"):
             self._fit_creature_list_height()
+
+        # The rows moved if initiative changed; put the highlight back on them.
+        if hasattr(self, "_mirror_list_selection_to_table"):
+            self._mirror_list_selection_to_table()
 
     def populate_monster_list(self):
         prev_selection = (
@@ -2626,6 +2642,46 @@ class Application:
         conds = getattr(creature, "conditions", []) or []
         return any(str(c).strip().lower() == "concentrating" for c in conds)
 
+    def apply_hp_delta(self, creature_name: str, value: int, positive: bool) -> bool:
+        """Damage or heal one creature. Returns False if the name is unknown.
+
+        The single place HP actually changes, so the dock's bulk controls and
+        the per-creature popup on the HP cell can't drift apart on
+        concentration checks or bridge sync.
+        """
+        creature = self.manager.creatures.get(creature_name)
+        if not creature:
+            return False
+
+        # Snapshot pre-change HP for bridge sync and concentration checks
+        pre_hp = int(getattr(creature, "curr_hp", 0) or 0)
+
+        if positive:
+            if hasattr(creature, "apply_healing"):
+                creature.apply_healing(value)
+            else:
+                creature.curr_hp += value
+        else:
+            if hasattr(creature, "apply_damage"):
+                damage_taken = creature.apply_damage(value)
+            else:
+                creature.curr_hp -= value
+                if creature.curr_hp < 0:
+                    creature.curr_hp = 0
+                damage_taken = max(0, pre_hp - creature.curr_hp)
+
+            if damage_taken > 0 and self._is_concentrating(creature):
+                if creature.curr_hp <= 0:
+                    self._break_concentration(creature)
+                else:
+                    succeeded = self._prompt_concentration(creature_name, damage_taken)
+                    if not succeeded:
+                        self._break_concentration(creature)
+
+        if creature.curr_hp != pre_hp:
+            self._enqueue_bridge_set_hp(creature_name, creature.curr_hp)
+        return True
+
     def apply_to_selected_creatures(self, positive: bool):
         try:
             value = int(self.value_input.text())
@@ -2633,42 +2689,13 @@ class Application:
             QMessageBox.warning(self, 'Invalid Input', 'Please enter a valid number')
             return
 
-        selected_items = self.creature_list.selectedItems()
-        selected_names = [item.text() for item in selected_items if item and item.text()]
+        selected_names = self.selected_creature_names()
         if not selected_names:
+            self.notify("Select a combatant first", "warning")
             return
 
         for creature_name in selected_names:
-            creature = self.manager.creatures.get(creature_name)
-            if not creature:
-                continue
-
-            # Snapshot pre-change HP for bridge sync and concentration checks
-            pre_hp = int(getattr(creature, "curr_hp", 0) or 0)
-
-            if positive:
-                if hasattr(creature, "apply_healing"):
-                    creature.apply_healing(value)
-                else:
-                    creature.curr_hp += value
-            else:
-                if hasattr(creature, "apply_damage"):
-                    damage_taken = creature.apply_damage(value)
-                else:
-                    creature.curr_hp -= value
-                    if creature.curr_hp < 0:
-                        creature.curr_hp = 0
-                    damage_taken = max(0, pre_hp - creature.curr_hp)
-
-                if damage_taken > 0 and self._is_concentrating(creature):
-                    if creature.curr_hp <= 0:
-                        self._break_concentration(creature)
-                    else:
-                        succeeded = self._prompt_concentration(creature_name, damage_taken)
-                        if not succeeded:
-                            self._break_concentration(creature)
-            if creature.curr_hp != pre_hp:
-                self._enqueue_bridge_set_hp(creature_name, creature.curr_hp)
+            self.apply_hp_delta(creature_name, value, positive)
 
         self.value_input.clear()
         self.update_table()
@@ -2678,10 +2705,19 @@ class Application:
             action = "Healed" if positive else "Damaged"
             self.show_status_message(f"{action} {names} by {value}")
 
+    def selected_creature_names(self) -> list:
+        """The combatants the HP controls act on.
+
+        The list is the authority: the table mirrors its selection into it, so
+        rows picked in either place end up here.
+        """
+        items = self.creature_list.selectedItems()
+        return [item.text() for item in items if item and item.text()]
+
     def apply_hp_mods_to_selected(self, clear: bool = False) -> None:
-        selected_items = self.creature_list.selectedItems()
-        selected_names = [item.text() for item in selected_items if item and item.text()]
+        selected_names = self.selected_creature_names()
         if not selected_names:
+            self.notify("Select a combatant first", "warning")
             return
 
         temp_hp = 0 if clear else int(getattr(self, "temp_hp_spin", None) and self.temp_hp_spin.value() or 0)

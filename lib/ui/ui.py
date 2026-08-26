@@ -11,8 +11,10 @@ from PyQt5.QtWidgets import (
     QDockWidget, QScrollArea, QTabWidget,
 )
 from ui.statblock_widget import StatblockWidget
-from PyQt5.QtCore import Qt, QByteArray, QEvent, QObject, QTimer, pyqtSignal
-from PyQt5.QtGui import QKeySequence
+from PyQt5.QtCore import (
+    Qt, QByteArray, QEvent, QItemSelectionModel, QObject, QTimer, pyqtSignal,
+)
+from PyQt5.QtGui import QFont, QIntValidator, QKeySequence
 from app.app import Application
 from app.config import update_check_enabled
 from app.creature import CreatureType
@@ -236,6 +238,9 @@ class InitiativeTracker(QMainWindow, Application):
         # while editing so in-progress notes aren't clobbered by layoutChanged.
         self.table_delegate.closeEditor.connect(self._flush_pending_bridge_snapshot)
         self.table.clicked.connect(self.handle_cell_clicked)
+        # Targeting is per combatant, so a click anywhere in the row selects
+        # the whole row -- the row *is* the creature.
+        self.table.setSelectionBehavior(QTableView.SelectRows)
         self.table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self.show_table_context_menu)
         self.table.setMouseTracking(True)
@@ -261,6 +266,14 @@ class InitiativeTracker(QMainWindow, Application):
         self.central_widget.installEventFilter(self)
         # The viewport still moves on its own when a scrollbar appears.
         self.table.viewport().installEventFilter(self)
+
+        # Rows picked in the table are the same targets as names ticked in the
+        # combatant list; keep the two views showing one selection.
+        self._syncing_selection = False
+        self._clearing_table_selection = False
+        self.table.selectionModel().selectionChanged.connect(
+            self._mirror_table_selection_to_list
+        )
 
         self.mainlayout.addWidget(self.label_widget)
         # The table takes the space it needs and no more: _fit_table_height()
@@ -312,8 +325,18 @@ class InitiativeTracker(QMainWindow, Application):
         # an empty list should not push the HP controls to the bottom of the dock.
         self.creature_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.creature_list.setToolTip(
-            "Select one or more combatants, then use the HP controls below"
+            "Select one or more combatants, then use the HP controls below.\n"
+            "Click to add or remove one, Shift+click to take a whole run.\n"
+            "Selecting rows in the initiative table does the same thing."
         )
+        self.creature_list.itemSelectionChanged.connect(
+            self._mirror_list_selection_to_table
+        )
+        # MultiSelection has no range gesture of its own; _list_shift_click
+        # supplies one, anchored on the last plainly-clicked row.
+        self._list_anchor_row = None
+        self._list_range_rows = set()
+        self.creature_list.viewport().installEventFilter(self)
         combatants_group_layout.addWidget(self.creature_list)
 
         selection_row = QHBoxLayout()
@@ -460,6 +483,59 @@ class InitiativeTracker(QMainWindow, Application):
             if not item.isHidden():
                 item.setSelected(True)
 
+    def _list_shift_click(self, event) -> bool:
+        """Shift+click the combatant list to take the run between two names.
+
+        Plain clicks keep MultiSelection's add-and-remove behaviour, which is
+        what you want for picking scattered combatants -- but Qt offers no
+        range gesture in that mode, so this adds one. The range *adds* to the
+        selection rather than replacing it, so extending a pick can never wipe
+        one you built up click by click.
+
+        Returns True when the click was handled and Qt should not also toggle
+        the item under the cursor.
+        """
+        item = self.creature_list.itemAt(event.pos())
+        if item is None:
+            return False
+
+        row = self.creature_list.row(item)
+        anchor = self._list_anchor_row
+        if not (event.modifiers() & Qt.ShiftModifier) or anchor is None:
+            # Every ordinary click becomes the anchor for the next Shift+click,
+            # and ends whatever run the last one drew.
+            self._list_anchor_row = row
+            self._list_range_rows = set()
+            return False
+
+        first, last = sorted((anchor, row))
+        wanted = {
+            index
+            for index in range(first, last + 1)
+            # A combatant filtered out of view is not a valid target.
+            if self.creature_list.item(index) is not None
+            and not self.creature_list.item(index).isHidden()
+        }
+        # Only the previous run's own rows are given back, so a shorter
+        # Shift+click shrinks the run without disturbing picks made by hand.
+        stale = self._list_range_rows - wanted
+
+        # One mirror pass for the whole range instead of one per item.
+        self._syncing_selection = True
+        try:
+            for index in wanted:
+                self.creature_list.item(index).setSelected(True)
+            for index in stale:
+                candidate = self.creature_list.item(index)
+                if candidate is not None:
+                    candidate.setSelected(False)
+        finally:
+            self._syncing_selection = False
+
+        self._list_range_rows = wanted
+        self._mirror_list_selection_to_table()
+        # The anchor stays put, so repeated Shift+clicks re-extend from it.
+        return True
 
     # Kept shorter than the combatant list: this is a picker, and every row it
     # takes is a row the statblock above it loses.
@@ -481,6 +557,59 @@ class InitiativeTracker(QMainWindow, Application):
             self._MONSTER_LIST_MAX_ROWS,
         )
         listw.setFixedHeight(rows * row_height + 2 * listw.frameWidth() + 4)
+
+    def _mirror_table_selection_to_list(self, *_):
+        """Rows picked in the table become the HP controls' targets."""
+        if self._syncing_selection or self._clearing_table_selection:
+            return
+
+        names = {
+            self.table_model.creature_names[index.row()]
+            for index in self.table.selectionModel().selectedRows()
+            if 0 <= index.row() < len(self.table_model.creature_names)
+        }
+        self._syncing_selection = True
+        try:
+            for row in range(self.creature_list.count()):
+                item = self.creature_list.item(row)
+                # A combatant filtered out of the list is not a valid target,
+                # so never select one back into view.
+                item.setSelected(not item.isHidden() and item.text() in names)
+        finally:
+            self._syncing_selection = False
+
+    def _mirror_list_selection_to_table(self):
+        """Names ticked in the list light up their rows in the table."""
+        if self._syncing_selection:
+            return
+
+        names = {
+            self.creature_list.item(row).text()
+            for row in range(self.creature_list.count())
+            if self.creature_list.item(row).isSelected()
+        }
+        model = self.table.model()
+        selection = self.table.selectionModel()
+        if model is None or selection is None:
+            return
+
+        self._syncing_selection = True
+        try:
+            selection.clearSelection()
+            flags = QItemSelectionModel.Select | QItemSelectionModel.Rows
+            for row, name in enumerate(self.table_model.creature_names):
+                if name in names and row < model.rowCount():
+                    selection.select(model.index(row, 0), flags)
+        finally:
+            self._syncing_selection = False
+
+    def _press_is_in_controls(self, global_pos) -> bool:
+        """True while the click is inside the Combat Controls dock."""
+        dock = getattr(self, "controls_dock", None)
+        if dock is None or not dock.isVisible():
+            return False
+        return dock.rect().contains(dock.mapFromGlobal(global_pos))
+
     def focus_creature_filter(self):
         self.controls_dock.show()
         self.creature_filter.setFocus(Qt.ShortcutFocusReason)
@@ -1454,8 +1583,81 @@ class InitiativeTracker(QMainWindow, Application):
         action.setDefaultWidget(container)
         return action
 
+    def _make_hp_delta_widget_action(self, menu: QMenu, creature) -> QWidgetAction:
+        """Damage/heal entry for one creature, embedded in a QMenu."""
+        name = getattr(creature, "name", "")
+
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(8, 6, 8, 6)
+        layout.setSpacing(5)
+
+        current = int(getattr(creature, "curr_hp", 0) or 0)
+        maximum = int(getattr(creature, "effective_max_hp", 0) or 0)
+        heading = QLabel(f"{name} — {current}/{maximum}" if maximum > 0 else name)
+        heading.setObjectName("combatInfoLabel")
+        layout.addWidget(heading)
+
+        value = QLineEdit()
+        value.setValidator(QIntValidator(0, 9999, value))
+        value.setPlaceholderText("Amount…")
+        value.setFixedWidth(150)
+        layout.addWidget(value)
+
+        # Heal first, so the destructive button isn't the one under the cursor
+        # after typing -- same ordering as the dock's HP controls.
+        buttons = QHBoxLayout()
+        buttons.setSpacing(6)
+        heal_btn = QPushButton("Heal")
+        heal_btn.setObjectName("healButton")
+        damage_btn = QPushButton("Damage")
+        damage_btn.setObjectName("damageButton")
+        buttons.addWidget(heal_btn)
+        buttons.addWidget(damage_btn)
+        layout.addLayout(buttons)
+
+        hint = QLabel("Enter to damage · Shift+Enter to heal")
+        # Attribute access, so a user's palette change is picked up (colors.py).
+        hint.setStyleSheet(f"color: {colors.TEXT_SECONDARY}; font-size: 10px;")
+        layout.addWidget(hint)
+
+        def _apply(positive: bool):
+            text = value.text().strip()
+            try:
+                amount = int(text)
+            except ValueError:
+                # The validator keeps this out of reach; belt and braces, since
+                # an exception here would surface as a traceback dialog.
+                return
+            menu.close()
+            self.apply_hp_delta(name, amount, positive)
+            self.update_table()
+            verb = "Healed" if positive else "Damaged"
+            self.show_status_message(f"{verb} {name} by {text}")
+
+        heal_btn.clicked.connect(lambda: _apply(True))
+        damage_btn.clicked.connect(lambda: _apply(False))
+        # returnPressed doesn't report modifiers, so the shift state is read
+        # from the keyboard at the moment the key lands.
+        value.returnPressed.connect(
+            lambda: _apply(bool(QApplication.keyboardModifiers() & Qt.ShiftModifier))
+        )
+
+        QTimer.singleShot(0, value.setFocus)
+
+        action = QWidgetAction(menu)
+        action.setDefaultWidget(container)
+        return action
+
     def show_hp_dropdown(self, creature, index):
+        """Clicking an HP cell asks for damage first -- the common case.
+
+        Temp HP and Max HP Bonus are still here, below the separator, but they
+        are the rare edit and no longer the only thing this popup offered.
+        """
         menu = QMenu(self)
+        menu.addAction(self._make_hp_delta_widget_action(menu, creature))
+        menu.addSeparator()
         menu.addAction(self._make_hp_editor_widget_action(menu, creature))
         pos = self.table.viewport().mapToGlobal(self.table.visualRect(index).bottomLeft())
         menu.exec_(pos)
@@ -1743,6 +1945,13 @@ class InitiativeTracker(QMainWindow, Application):
 
     def eventFilter(self, obj, event):
         from PyQt5.QtCore import QEvent
+        if (
+            hasattr(self, "creature_list")
+            and obj is self.creature_list.viewport()
+            and event.type() == QEvent.MouseButtonPress
+        ):
+            return self._list_shift_click(event)
+
         if hasattr(self, "table") and obj is getattr(self, "central_widget", None):
             if event.type() == QEvent.Resize:
                 self.refit_table()
@@ -1762,13 +1971,23 @@ class InitiativeTracker(QMainWindow, Application):
                 return True
 
         if event.type() == event.MouseButtonPress:
-            # If the click target is NOT inside the table, clear selection
+            # If the click target is NOT inside the table, clear selection --
+            # but not when it lands in the Combat Controls, which are what the
+            # selection is *for*: clicking Damage must not drop the targets.
             if hasattr(self, "table"):
                 table_rect = self.table.rect()
                 table_pos = self.table.mapFromGlobal(event.globalPos())
 
-                if not table_rect.contains(table_pos):
-                    self.table.clearSelection()
-                    self.table.setCurrentIndex(self.table.model().index(-1, -1))
+                if not table_rect.contains(table_pos) and not self._press_is_in_controls(
+                    event.globalPos()
+                ):
+                    # Flagged so the mirror knows this clear wasn't the user
+                    # deselecting rows, and leaves the combatant list alone.
+                    self._clearing_table_selection = True
+                    try:
+                        self.table.clearSelection()
+                        self.table.setCurrentIndex(self.table.model().index(-1, -1))
+                    finally:
+                        self._clearing_table_selection = False
 
         return super().eventFilter(obj, event)
