@@ -41,6 +41,7 @@ SYNCABLE_KEYS: tuple[str, ...] = (
     "statblock_zoom",
     "status_messages_enabled",
     "keep_versions",
+    "version_grace_minutes",
     "update_check_enabled",
     "foundry_ignore",       # tokens to keep out of initiative
 )

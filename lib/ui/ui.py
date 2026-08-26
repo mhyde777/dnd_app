@@ -150,6 +150,7 @@ class InitiativeTracker(QMainWindow, Application):
         )
         self.start_bridge_polling()
         self.check_for_updates()
+        self.start_version_housekeeping()
 
     def check_for_updates(self):
         """Tell the user when a newer release exists. Never blocks, never nags.
@@ -1711,6 +1712,31 @@ class InitiativeTracker(QMainWindow, Application):
                 "Restarting the app will pick them up.",
                 exc,
             )
+
+    # Checked periodically, not once: an update's probation usually expires
+    # while the app is still running, and nobody restarts just to reclaim disk.
+    _RETIREMENT_CHECK_MS = 5 * 60 * 1000
+
+    def start_version_housekeeping(self):
+        """Retire superseded versions once their probation is up."""
+        from app.install_layout import detect
+
+        if detect() is None:
+            return          # source checkout or a flat install: nothing to prune
+        self._retirement_timer = QTimer(self)
+        self._retirement_timer.timeout.connect(self._retire_old_versions)
+        self._retirement_timer.start(self._RETIREMENT_CHECK_MS)
+
+    def _retire_old_versions(self):
+        from app.install_layout import prune_with_grace
+
+        try:
+            removed, _waiting = prune_with_grace()
+        except Exception as exc:
+            self._log(f"[WARN] Could not retire old versions: {exc}")
+            return
+        if removed:
+            self._log(f"[Update] Removed old versions: {', '.join(removed)}")
 
     def open_versions_dialog(self):
         from ui.versions_dialog import VersionsDialog

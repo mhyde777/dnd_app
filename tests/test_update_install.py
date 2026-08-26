@@ -6,6 +6,7 @@ with two real packaged builds is manual — see docs/auto-update.md.
 """
 import hashlib
 import os
+from datetime import datetime, timezone
 import subprocess
 import sys
 import tarfile
@@ -235,30 +236,69 @@ def isolated_settings(tmp_path, monkeypatch):
     settings._cache = None
 
 
-def test_a_successful_start_records_history_and_prunes(install, isolated_settings):
+def _start(install, version):
+    """Simulate `version` starting successfully."""
+    layout = install_layout.Layout(root=install.root, version=version)
+    install_layout.write_current(layout, version)
+    open(layout.launching_file, "w").write(version + "\n")
+    install_layout.clear_launching(layout)
+    return layout
+
+
+def test_a_successful_start_records_history(install, isolated_settings):
     for version in ("0.3.0", "0.4.0"):
         os.makedirs(install.version_dir(version), exist_ok=True)
-    running = install_layout.Layout(root=install.root, version="0.4.0")
-    install_layout.write_current(running, "0.4.0")
-    open(running.launching_file, "w").write("0.4.0\n")
-
-    install_layout.clear_launching(running)
+    running = _start(install, "0.4.0")
 
     assert not os.path.exists(running.launching_file)
     assert [e["version"] for e in install_layout.version_history()] == ["0.4.0"]
-    # keep defaults to 2, so the oldest goes and the previous build stays.
+
+
+def test_a_superseded_version_gets_a_reprieve_before_deletion(install, isolated_settings):
+    """The build being replaced is not deleted the moment the new one starts.
+
+    A version that starts cleanly and only then turns out to be wrong still has
+    somewhere to go back to.
+    """
+    for version in ("0.2.5", "0.3.0", "0.4.0"):
+        os.makedirs(install.version_dir(version), exist_ok=True)
+    running = _start(install, "0.4.0")
+
+    # keep=2 puts 0.2.5 outside the window, but it is on probation, not gone.
+    assert "0.2.5" in running.installed_versions()
+    due = install_layout.retire_at("0.2.5")
+    assert due is not None, "it should have been given a retirement time"
+    remaining = (due - datetime.now(timezone.utc)).total_seconds() / 60
+    assert 0 < remaining <= install_layout.DEFAULT_GRACE_MINUTES
+
+
+def test_the_reprieve_expires(install, isolated_settings):
+    for version in ("0.2.5", "0.3.0", "0.4.0"):
+        os.makedirs(install.version_dir(version), exist_ok=True)
+    isolated_settings.set(install_layout.GRACE_KEY, 0)   # no probation
+    running = _start(install, "0.4.0")
+
     assert running.installed_versions() == ["0.3.0", "0.4.0"]
+
+
+def test_choosing_a_version_again_cancels_its_retirement(install, isolated_settings):
+    for version in ("0.2.5", "0.3.0", "0.4.0"):
+        os.makedirs(install.version_dir(version), exist_ok=True)
+    _start(install, "0.4.0")
+    assert install_layout.retire_at("0.2.5") is not None
+
+    install_layout.cancel_retirement("0.2.5")
+    assert install_layout.retire_at("0.2.5") is None
 
 
 def test_history_survives_the_version_being_pruned(install, isolated_settings):
     """The point of the history: a version can leave disk and still be offered."""
+    isolated_settings.set(install_layout.GRACE_KEY, 0)
     for version in ("0.3.0", "0.4.0", "0.5.0"):
         os.makedirs(install.version_dir(version), exist_ok=True)
 
     for version in ("0.3.0", "0.4.0", "0.5.0"):
-        layout = install_layout.Layout(root=install.root, version=version)
-        install_layout.write_current(layout, version)
-        install_layout.clear_launching(layout)
+        _start(install, version)
 
     remembered = [e["version"] for e in install_layout.version_history()]
     on_disk = install_layout.Layout(root=install.root, version="0.5.0").installed_versions()

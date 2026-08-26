@@ -31,7 +31,7 @@ from __future__ import annotations
 import os
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -205,6 +205,129 @@ def version_history() -> list:
     ]
 
 
+GRACE_KEY = "version_grace_minutes"
+RETIRE_KEY = "version_retire_at"
+# Long enough to notice the new build is wrong in normal use -- a session, a
+# fight, an evening -- without holding 140MB indefinitely.
+DEFAULT_GRACE_MINUTES = 60
+
+
+def grace_minutes() -> int:
+    from app import settings
+
+    try:
+        value = int(settings.get(GRACE_KEY, DEFAULT_GRACE_MINUTES))
+    except (TypeError, ValueError):
+        return DEFAULT_GRACE_MINUTES
+    return max(0, value)
+
+
+def _retirements() -> dict:
+    from app import settings
+
+    stored = settings.get(RETIRE_KEY) or {}
+    return dict(stored) if isinstance(stored, dict) else {}
+
+
+def _save_retirements(mapping: dict) -> None:
+    from app import settings
+
+    settings.set(RETIRE_KEY, mapping)
+
+
+def retire_at(version: str) -> Optional[datetime]:
+    """When `version` becomes eligible for deletion, if it is on probation."""
+    raw = _retirements().get(version)
+    if not raw:
+        return None
+    try:
+        return datetime.fromisoformat(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def cancel_retirement(version: str) -> None:
+    """Take a version off probation -- it has been chosen to run again."""
+    mapping = _retirements()
+    if mapping.pop(version, None) is not None:
+        _save_retirements(mapping)
+
+
+def prune_with_grace(layout: Optional[Layout] = None) -> tuple:
+    """Delete versions whose probation has expired. Returns (removed, waiting).
+
+    A build that falls outside the keep window is not deleted straight away.
+    It is stamped with a retirement time and left alone until that passes, so
+    a version that starts cleanly and only then turns out to be wrong is still
+    there to go back to instantly.
+
+    The stamp lives in settings rather than in memory: the probation has to
+    survive the restart that an update performs, which is the only reason the
+    old build is interesting in the first place.
+    """
+    from app.update_check import _parse
+    from app.update_install import prune_versions
+
+    layout = layout or detect()
+    if layout is None:
+        return [], {}
+
+    keep = keep_versions()
+    grace = grace_minutes()
+    protected = {layout.version}
+    selected = read_current(layout)
+    if selected:
+        protected.add(selected)
+
+    versions = sorted(layout.installed_versions(), key=_parse, reverse=True)
+    candidates = [v for v in versions[keep:] if v not in protected]
+
+    now = datetime.now(timezone.utc)
+    mapping = _retirements()
+    changed = False
+    waiting = {}
+    expired = []
+
+    for version in candidates:
+        stamp = mapping.get(version)
+        due = None
+        if stamp:
+            try:
+                due = datetime.fromisoformat(stamp)
+            except (TypeError, ValueError):
+                due = None
+        if due is None:
+            due = now + timedelta(minutes=grace)
+            mapping[version] = due.isoformat()
+            changed = True
+        if due <= now:
+            expired.append(version)
+        else:
+            waiting[version] = due
+
+    # Anything no longer a candidate (reinstalled, or now inside the keep
+    # window) should not carry a stale retirement date.
+    for version in list(mapping):
+        if version not in candidates:
+            mapping.pop(version)
+            changed = True
+
+    removed = []
+    if expired:
+        removed = prune_versions(
+            layout,
+            keep=keep,
+            protect=[v for v in versions if v not in expired],
+        )
+        for version in removed:
+            mapping.pop(version, None)
+            changed = True
+
+    if changed:
+        _save_retirements(mapping)
+    return removed, waiting
+
+
 def keep_versions() -> int:
     from app import settings
 
@@ -234,13 +357,16 @@ def clear_launching(layout: Optional[Layout] = None) -> None:
     record_started(layout)
 
     try:
-        from app.update_install import prune_versions
+        from app.app_log import get_logger
 
-        removed = prune_versions(layout, keep=keep_versions())
+        removed, waiting = prune_with_grace(layout)
         if removed:
-            from app.app_log import get_logger
-
             get_logger().info("[Update] Removed old versions: %s", ", ".join(removed))
+        for version, due in waiting.items():
+            get_logger().info(
+                "[Update] Keeping %s until %s in case this build misbehaves",
+                version, due.isoformat(timespec="minutes"),
+            )
     except Exception:
         # Housekeeping must never stop the app from finishing startup.
         pass

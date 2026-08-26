@@ -110,6 +110,15 @@ to survive until its replacement has proved it can start, because it is what
 the launcher falls back to. Deleting it at install time would throw it away at
 exactly the moment it might be needed.
 
+A version that falls outside the keep window is not deleted at once. It is
+stamped with a retirement time — `version_grace_minutes`, default **60** — and
+left alone until that passes, so a build that starts cleanly and only then
+turns out to be wrong is still there to go back to instantly. The stamp is kept
+in settings, because the probation has to survive the restart the update
+performs. Choosing a version to run again cancels its retirement, and the app
+re-checks every five minutes so a probation that expires mid-session is
+honoured without waiting for a restart.
+
 `keep_versions` defaults to **2** — the running one and one spare. One spare is
 what makes the automatic fallback possible at all; at `keep_versions: 1` a
 failed update has nothing on disk to fall back to and has to be recovered by

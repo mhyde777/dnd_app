@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import os
 import shutil
+from datetime import datetime, timezone
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
@@ -127,6 +128,14 @@ class VersionsDialog(QDialog):
                 marks.append("running now")
             if version == selected and version != running:
                 marks.append("starts next")
+            due = install_layout.retire_at(version)
+            if due is not None:
+                remaining = due - datetime.now(timezone.utc)
+                minutes = max(0, int(remaining.total_seconds() // 60))
+                marks.append(
+                    f"kept {minutes} more min in case {running} misbehaves"
+                    if minutes else "due to be removed"
+                )
             suffix = f"  —  {', '.join(marks)}" if marks else ""
             item = QListWidgetItem(f"{version}   ({_human(size)}){suffix}")
             item.setData(Qt.UserRole, version)
@@ -214,6 +223,8 @@ class VersionsDialog(QDialog):
 
         try:
             install_layout.write_current(self._layout_info, version)
+            # Chosen to run again, so it is no longer on its way out.
+            install_layout.cancel_retirement(version)
         except OSError as exc:
             QMessageBox.warning(
                 self, "Switch Failed", f"Could not select {version}:\n{exc}"
