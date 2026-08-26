@@ -21,6 +21,11 @@ a MAJOR bump is the only kind that can require you to change how you work.
   finished but leaves the in-app updater reporting "no build for this system",
   which reads like a bug in the app rather than a missing upload.
 
+- **View → Status Bar Messages** turns the bottom-left text on and off, and is
+  off by default. The turn announcement fired on every turn change and repeated
+  what the "Active:" label and the highlighted row already say. Toasts are
+  unaffected — anything worth interrupting for still raises one.
+
 ### Fixed
 
 - The packaging scripts could stamp a build with the wrong version. They read

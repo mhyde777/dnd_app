@@ -39,6 +39,7 @@ SYNCABLE_KEYS: tuple[str, ...] = (
     "tint_action_cells",
     "table_column_widths",
     "statblock_zoom",
+    "status_messages_enabled",
     "update_check_enabled",
     "foundry_ignore",       # tokens to keep out of initiative
 )

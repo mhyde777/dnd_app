@@ -1073,7 +1073,8 @@ class InitiativeTracker(QMainWindow, Application):
             QTimer.singleShot(0, self._apply_dock_widths)
 
     def notify(self, message: str, level: str = "info"):
-        """Transient, in-window feedback that also lands in the status bar."""
+        """Transient, in-window feedback. The toast is the part that always
+        happens; the status bar echo is opt-in (View -> Status Bar Messages)."""
         self.show_status_message(message)
         toast(self, message, level)
 
@@ -1099,9 +1100,27 @@ class InitiativeTracker(QMainWindow, Application):
     def clear_banner(self, key: str):
         self.banner_area.clear_banner(key)
 
+    STATUS_MESSAGES_SETTING = "status_messages_enabled"
+
+    def status_messages_enabled(self) -> bool:
+        """Off by default: the turn announcement fires on every turn change,
+        and what it says is already on screen -- the "Active:" label and the
+        highlighted row. Anything genuinely worth interrupting for goes through
+        notify(), which raises a toast as well."""
+        return bool(app_settings.get(self.STATUS_MESSAGES_SETTING, False))
+
     def show_status_message(self, msg: str, timeout_ms: int = 4000):
+        if not self.status_messages_enabled():
+            return
         if hasattr(self, "status_bar"):
             self.status_bar.showMessage(msg, timeout_ms)
+
+    def toggle_status_messages(self, enabled: bool):
+        app_settings.set(self.STATUS_MESSAGES_SETTING, bool(enabled))
+        if not enabled and hasattr(self, "status_bar"):
+            # Clear whatever is on screen now; showMessage's own timeout would
+            # otherwise leave the last one sitting there after switching off.
+            self.status_bar.clearMessage()
 
     def _populate_groups_menu(self):
         """Rebuild the PC Groups submenu: manager entry + one-click loaders."""
@@ -1431,6 +1450,15 @@ class InitiativeTracker(QMainWindow, Application):
         self.toggle_toolbar_action = self.filetool_bar.toggleViewAction()
         self.toggle_toolbar_action.setText("Toolbar")
         self.view_menu.addAction(self.toggle_toolbar_action)
+
+        self.status_messages_action = QAction("Status Bar Messages", self)
+        self.status_messages_action.setCheckable(True)
+        self.status_messages_action.setChecked(self.status_messages_enabled())
+        self.status_messages_action.setToolTip(
+            "Echo actions as text in the bottom-left corner"
+        )
+        self.status_messages_action.toggled.connect(self.toggle_status_messages)
+        self.view_menu.addAction(self.status_messages_action)
 
         self.view_menu.addSeparator()
 
