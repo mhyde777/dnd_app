@@ -6,6 +6,19 @@ from typing import Any, Callable, Dict, Optional
 
 import requests
 
+from app.app_log import get_logger
+
+
+def _log(message: str) -> None:
+    """Bridge chatter goes to the app log, not stdout.
+
+    The packaged build runs console=False, so _log() is discarded -- which
+    matters more now that commands are delivered on a worker thread, where a
+    failure has no other way to surface.
+    """
+    level = 30 if ("failed" in message or "error" in message.lower()) else 20
+    get_logger().log(level, "%s", message)
+
 
 def _get_env(name: str, default: str = "") -> str:
     """Bridge config, from settings.json first and the environment second.
@@ -59,18 +72,26 @@ class BridgeClient:
         timeout_s = float(_get_env("BRIDGE_TIMEOUT", "3"))
         return cls(base_url=base_url, token=token, timeout_s=timeout_s)
 
+    def __post_init__(self) -> None:
+        import queue
+        import threading
+
+        self._command_queue: "queue.Queue" = queue.Queue()
+        self._worker_lock = threading.Lock()
+        self._command_worker = None
+
     @property
     def enabled(self) -> bool:
         return bool(self.token)
 
     def fetch_state(self) -> Optional[Dict[str, Any]]:
         if not self.enabled:
-            print("[Bridge] BRIDGE_TOKEN is not set; skipping sync.")
+            _log("[Bridge] BRIDGE_TOKEN is not set; skipping sync.")
             return None
         url = f"{self.base_url}/state"
         response = requests.get(url, headers=_build_headers(self.token), timeout=self.timeout_s)
         if response.status_code != 200:
-            print(f"[Bridge] GET /state failed: {response.status_code} {response.text}")
+            _log(f"[Bridge] GET /state failed: {response.status_code} {response.text}")
             return None
         return response.json()
 
@@ -82,7 +103,7 @@ class BridgeClient:
         on_disconnect: Optional[Callable[[], None]] = None,
     ) -> None:
         if not self.enabled:
-            print("[Bridge] BRIDGE_TOKEN is not set; skipping stream.")
+            _log("[Bridge] BRIDGE_TOKEN is not set; skipping stream.")
             return
         import threading
         import time
@@ -107,7 +128,7 @@ class BridgeClient:
                     stream=True,
                 ) as response:
                     if response.status_code != 200:
-                        print(
+                        _log(
                             f"[Bridge] GET /state/stream failed: {response.status_code} {response.text}"
                         )
                         if on_disconnect:
@@ -134,7 +155,7 @@ class BridgeClient:
                             if isinstance(payload, dict):
                                 on_snapshot(payload)
             except requests.RequestException as exc:
-                print(f"[Bridge] Stream error: {exc}")
+                _log(f"[Bridge] Stream error: {exc}")
                 if on_disconnect:
                     on_disconnect()
                 time.sleep(retry_delay)
@@ -309,8 +330,80 @@ class BridgeClient:
         log_label: str,
         redact_fields: tuple[str, ...] = (),
     ) -> bool:
+        """Queue a command for delivery and return immediately.
+
+        This used to POST inline. Every caller is on the Qt GUI thread, so a
+        turn change waited on a round trip to the bridge before the table could
+        repaint -- measured at ~460ms against a remote bridge, which is the
+        whole of the delay between pressing Next and seeing anything happen.
+        Nothing reads the result: every command here is fire-and-forget.
+
+        A single worker with a FIFO queue, not a thread per command, because
+        order matters -- two next_turns must arrive in the order they were
+        pressed.
+        """
         if not self.enabled:
-            print("[Bridge] BRIDGE_TOKEN is not set; skipping command enqueue.")
+            _log("[Bridge] BRIDGE_TOKEN is not set; skipping command enqueue.")
+            return False
+
+        self._ensure_command_worker()
+        self._command_queue.put(
+            (command_type, payload, command_id, log_label, redact_fields)
+        )
+        return True
+
+    # ---- delivery worker ----------------------------------------------------
+
+    def _ensure_command_worker(self) -> None:
+        import threading
+
+        with self._worker_lock:
+            worker = getattr(self, "_command_worker", None)
+            if worker is not None and worker.is_alive():
+                return
+            self._command_worker = threading.Thread(
+                target=self._drain_commands, name="bridge-commands", daemon=True
+            )
+            self._command_worker.start()
+
+    def _drain_commands(self) -> None:
+        while True:
+            item = self._command_queue.get()
+            try:
+                if item is None:            # shutdown sentinel
+                    return
+                self._post_command_now(*item)
+            except Exception as exc:        # never let one bad command kill the worker
+                _log(f"[Bridge] command delivery failed: {exc}")
+            finally:
+                self._command_queue.task_done()
+
+    def flush_commands(self, timeout: float = 2.0) -> None:
+        """Give queued commands a moment to go out, on the way to quitting.
+
+        Best effort and time-boxed: a slow bridge must not hold the app open.
+        """
+        import threading
+
+        finished = threading.Event()
+
+        def waiter():
+            self._command_queue.join()
+            finished.set()
+
+        threading.Thread(target=waiter, daemon=True).start()
+        finished.wait(timeout)
+
+    def _post_command_now(
+        self,
+        command_type: str,
+        payload: Dict[str, Any],
+        command_id: Optional[str],
+        log_label: str,
+        redact_fields: tuple[str, ...] = (),
+    ) -> bool:
+        if not self.enabled:
+            _log("[Bridge] BRIDGE_TOKEN is not set; skipping command enqueue.")
             return False
         url = f"{self.base_url}/commands"
         cmd = _build_command_payload(command_type, payload, command_id=command_id)
@@ -318,24 +411,24 @@ class BridgeClient:
         headers["Content-Type"] = "application/json"
         try:
             if command_type == "set_initiative":
-                print(f"[Bridge][DBG] POST {url} type=set_initiative json={payload}")
+                _log(f"[Bridge][DBG] POST {url} type=set_initiative json={payload}")
             response = requests.post(
                 url, json=cmd, headers=headers, timeout=self.timeout_s
             )
             if command_type == "set_initiative":
-                print(
+                _log(
                     f"[Bridge][DBG] POST /commands status={response.status_code} body={response.text[:200]}"
                 )
         except requests.RequestException as exc:
-            print(f"[Bridge] POST /commands failed: {exc}")
+            _log(f"[Bridge] POST /commands failed: {exc}")
             return False
         if 200 <= response.status_code < 300:
             redacted = " ".join(f"{field}=<redacted>" for field in redact_fields)
-            print(
+            _log(
                 f"[Bridge] Enqueued {log_label} command {redacted} status={response.status_code}"
             )
             return True
-        print(
+        _log(
             f"[Bridge] POST /commands failed: {response.status_code} {response.text}"
         )
         return False

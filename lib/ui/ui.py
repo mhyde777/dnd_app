@@ -2162,6 +2162,15 @@ class InitiativeTracker(QMainWindow, Application):
     
     def closeEvent(self, event):
         self.save_layout()
+        # Commands are delivered on a worker thread now, so a turn change or a
+        # damage roll made just before quitting may still be in flight. Time-
+        # boxed: a slow bridge must not hold the window open.
+        bridge_client = getattr(self, "bridge_client", None)
+        if bridge_client is not None and hasattr(bridge_client, "flush_commands"):
+            try:
+                bridge_client.flush_commands(timeout=2.0)
+            except Exception:
+                pass
         local_bridge = getattr(self, "local_bridge", None)
         if local_bridge is not None:
             try:

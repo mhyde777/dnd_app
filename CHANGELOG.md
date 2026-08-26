@@ -28,6 +28,16 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ### Fixed
 
+- **Advancing a turn is no longer sluggish.** Every command sent to the Foundry
+  bridge was POSTed on the UI thread, so pressing Next waited on a round trip
+  before the table repainted — ~460ms against a remote bridge, which was the
+  whole of the delay. Commands are queued and delivered on a worker thread now,
+  in the order they were sent: 383ms down to 3ms. Anything still in flight is
+  given a moment to go out when the app closes.
+- Bridge logging went to `print()`, which the packaged build discards entirely
+  (`console=False`). It goes to the app log now — which matters more with
+  delivery on a worker thread, where a failure has no other way to surface.
+
 - The packaging scripts could stamp a build with the wrong version. They read
   `__version__` by importing it, and an import can be served from a stale
   `__pycache__` entry — Python validates bytecode against the source's
