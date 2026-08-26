@@ -3149,14 +3149,14 @@ class Application:
             pass
     
     def open_settings(self):
+        """Settings. The dialog offers a restart itself if one is needed.
+
+        This used to end in an unconditional "restart for storage changes to
+        take effect" box -- shown even when nothing had changed, and offering
+        nothing but an OK button and a manual relaunch.
+        """
         from ui.setup_wizard import SetupWizard
-        dlg = SetupWizard(self)
-        if dlg.exec_() == QDialog.Accepted:
-            QMessageBox.information(
-                self,
-                "Settings Saved",
-                "Settings saved. Restart the app for storage changes to take effect."
-            )
+        SetupWizard(self).exec_()
 
     def open_customize_toolbar(self):
         from ui.toolbar_customize_dialog import ToolbarCustomizeDialog

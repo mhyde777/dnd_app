@@ -26,7 +26,16 @@ a MAJOR bump is the only kind that can require you to change how you work.
   what the "Active:" label and the highlighted row already say. Toasts are
   unaffected — anything worth interrupting for still raises one.
 
+- **Changes that need a restart now offer one.** Saving a storage change asks
+  "Restart now?" and does it — saving your combat first — instead of telling
+  you to close the dialog, close the app and start it again yourself. Declining
+  leaves a banner with the same button, so the offer stays one click away.
+
 ### Fixed
+
+- Settings showed "restart the app for storage changes to take effect" every
+  time it was saved, whether or not anything had changed and whether or not a
+  restart was needed.
 
 - **The round counter no longer rewinds to 1 while Foundry is closed.** The
   bridge keeps serving its last snapshot — combat inactive, `round: 0` — and

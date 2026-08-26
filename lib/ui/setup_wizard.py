@@ -577,11 +577,10 @@ class SetupWizard(QDialog):
         if parent is not None and hasattr(parent, "apply_settings_changes"):
             parent.apply_settings_changes()
 
-        if before_storage != (changes["storage_mode"], local_dir, url):
-            if parent is not None and hasattr(parent, "show_banner"):
-                parent.show_banner(
-                    "storage-restart",
-                    "Storage settings saved — restart the app for them to take effect.",
-                    level="info",
-                )
+        storage_changed = before_storage != (changes["storage_mode"], local_dir, url)
         self.accept()
+
+        # After accept(), so the offer to restart isn't stacked on top of a
+        # dialog the user has to dismiss first.
+        if storage_changed and parent is not None and hasattr(parent, "prompt_restart"):
+            parent.prompt_restart("Storage settings")

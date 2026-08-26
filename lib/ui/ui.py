@@ -1,3 +1,6 @@
+import os
+import subprocess
+import sys
 from time import monotonic
 from typing import Optional
 from PyQt5.QtWidgets import (
@@ -1601,6 +1604,81 @@ class InitiativeTracker(QMainWindow, Application):
     def open_shortcut_settings(self):
         ShortcutSettingsDialog(self).exec_()
 
+    RESTART_BANNER_KEY = "restart-required"
+
+    def restart_app(self) -> bool:
+        """Save, start a fresh copy, and quit. Returns False if it couldn't.
+
+        Three shapes of installation, in decreasing order of how well this
+        works: a versioned install restarts through the launcher, which waits
+        for this process to exit first; a flat frozen build re-runs its own
+        executable; a source checkout re-runs the interpreter. Only the first
+        can guarantee the old process is gone before the new one opens the same
+        files, so the others save first and skip the save on the way out.
+        """
+        from app import install_layout, update_install
+
+        for step in ("save_state", "save_layout"):
+            try:
+                getattr(self, step)()
+            except Exception as exc:
+                self._log(f"[WARN] Could not {step} before restart: {exc}")
+        # closeEvent must not save again: the replacement may already have
+        # started and written its own state by then.
+        self._restarting = True
+
+        try:
+            layout = install_layout.detect()
+            if layout is not None and layout.has_launcher():
+                update_install.relaunch(layout)
+            else:
+                command = (
+                    [sys.executable] + sys.argv[1:]
+                    if install_layout.running_frozen()
+                    else [sys.executable] + sys.argv
+                )
+                kwargs = {"close_fds": True}
+                if os.name == "posix":
+                    kwargs["start_new_session"] = True
+                subprocess.Popen(command, **kwargs)
+        except Exception as exc:
+            self._restarting = False
+            report_error(
+                self, "Could Not Restart",
+                "The settings are saved, but the app could not restart itself. "
+                "Close and reopen it to pick them up.",
+                exc,
+            )
+            return False
+
+        QApplication.instance().quit()
+        return True
+
+    def prompt_restart(self, what: str = "Some settings") -> None:
+        """Offer to restart now, rather than leaving the user to do it by hand.
+
+        Declining leaves a banner with the same button, so the offer is still
+        one click away once they have finished what they were doing.
+        """
+        answer = QMessageBox.question(
+            self,
+            "Restart Required",
+            f"{what} only take effect when the app restarts.\n\n"
+            "Restart now? Your combat is saved first.",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.Yes,
+        )
+        if answer == QMessageBox.Yes:
+            self.restart_app()
+            return
+        self.show_banner(
+            self.RESTART_BANNER_KEY,
+            f"{what} take effect after a restart.",
+            level="info",
+            action_label="Restart Now",
+            action=self.restart_app,
+        )
+
     def apply_synced_settings(self):
         """Re-read everything a pull may have changed, without a restart.
 
@@ -2161,7 +2239,10 @@ class InitiativeTracker(QMainWindow, Application):
         super().keyPressEvent(event)
     
     def closeEvent(self, event):
-        self.save_layout()
+        # A restart already saved, and its replacement may have written its own
+        # state by now -- saving again here would overwrite the newer copy.
+        if not getattr(self, "_restarting", False):
+            self.save_layout()
         # Commands are delivered on a worker thread now, so a turn change or a
         # damage roll made just before quitting may still be in flight. Time-
         # boxed: a slow bridge must not hold the window open.
