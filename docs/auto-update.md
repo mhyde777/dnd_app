@@ -144,10 +144,23 @@ failed update has nothing on disk to fall back to and has to be recovered by
 downloading. Whatever `current` names is protected regardless of the count,
 since that is the build queued to start next.
 
-Versions that have been pruned are still listed, greyed out, from the history
-kept in settings (`version_history`). Their release is still downloadable, so
-"gone from disk" is not "gone" — picking one downloads and installs it through
-the same path an update uses.
+The dialog lists more than what is on disk. Three sources are merged, newest
+first:
+
+- **Installed** — instant to switch to.
+- **Previously run here** — from `version_history` in settings.
+- **Every published release** — fetched from GitHub on a worker thread, so the
+  dialog opens instantly and still works offline with the first two.
+
+Anything not installed is greyed out and downloads on selection, through the
+same path an update uses. A release with no build for this platform says so
+instead of offering a button that cannot work.
+
+**Going backwards is not always safe**, and the dialog says so rather than
+pretending to know: a newer version can write settings and saved encounters an
+older one has never seen. There is no compatibility metadata yet. A per-release
+"reads data written by" floor would let the warning be specific — refusing the
+switch, or naming what would be lost — instead of general.
 
 ## Testing it
 

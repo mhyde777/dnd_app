@@ -12,9 +12,10 @@ from __future__ import annotations
 
 import os
 import shutil
+import threading
 from datetime import datetime, timezone
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -32,6 +33,12 @@ from app.version import __version__
 
 
 _ON_DISK = Qt.UserRole + 1
+_AVAILABLE = Qt.UserRole + 2
+
+
+def _version_key(version: str) -> tuple:
+    parts = [int(p) if p.isdigit() else 0 for p in version.split(".")]
+    return tuple(parts + [0] * (4 - len(parts)))[:4]
 
 
 def _directory_size(path: str) -> int:
@@ -54,10 +61,15 @@ def _human(size: float) -> str:
 
 
 class VersionsDialog(QDialog):
-    """The installed versions, and which one starts next."""
+    """Every version you can run: on disk, previously run, or published."""
+
+    # Releases are fetched on a worker thread and merged in when they arrive,
+    # so the dialog opens instantly and works offline with whatever is local.
+    releases_fetched = pyqtSignal(object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._releases = {}          # version -> release payload
         self._tracker = parent
         self._layout_info = install_layout.detect()
 
@@ -93,6 +105,29 @@ class VersionsDialog(QDialog):
         row.addWidget(buttons)
         root.addLayout(row)
 
+        self.releases_fetched.connect(self._on_releases, Qt.QueuedConnection)
+        self._reload()
+        self._fetch_releases()
+
+    # ---- published releases -------------------------------------------------
+
+    def _fetch_releases(self) -> None:
+        if self._layout_info is None:
+            return
+
+        def run():
+            try:
+                releases = update_check.fetch_releases()
+            except Exception:
+                releases = []
+            self.releases_fetched.emit(releases)
+
+        threading.Thread(target=run, name="versions-fetch", daemon=True).start()
+
+    def _on_releases(self, releases) -> None:
+        self._releases = {
+            update_check.version_of(release): release for release in (releases or [])
+        }
         self._reload()
 
     # ---- state --------------------------------------------------------------
@@ -140,33 +175,55 @@ class VersionsDialog(QDialog):
             item = QListWidgetItem(f"{version}   ({_human(size)}){suffix}")
             item.setData(Qt.UserRole, version)
             item.setData(_ON_DISK, True)
+            item.setData(_AVAILABLE, True)
             self._list.addItem(item)
             if version == selected:
                 self._list.setCurrentItem(item)
 
-        # Versions that have been pruned off disk but that this machine has
-        # run before. The release is still downloadable, so they are still
-        # somewhere to go back to -- just not instantly.
-        for entry in install_layout.version_history():
-            version = entry.get("version")
-            if not version or version in versions:
+        # Everything else you could run: versions this machine used before, and
+        # published releases it never did. Both are still downloadable, so both
+        # are somewhere to go back to -- just not instantly.
+        last_used = {
+            entry.get("version"): (entry.get("last_run") or "")[:10]
+            for entry in install_layout.version_history()
+            if entry.get("version")
+        }
+        elsewhere = sorted(
+            set(last_used) | set(self._releases),
+            key=_version_key,
+            reverse=True,
+        )
+        for version in elsewhere:
+            if version in versions:
                 continue
-            when = (entry.get("last_run") or "")[:10]
-            label = f"{version}   (not installed"
-            label += f", last used {when})" if when else ")"
-            item = QListWidgetItem(label)
+            release = self._releases.get(version)
+            # A release with no build for this platform cannot be offered; the
+            # 0.2.0 release went out with no assets at all, for instance.
+            downloadable = release is None or bool(
+                update_check.asset_for_platform(release)
+            )
+            if version in last_used:
+                note = f"not installed, last used {last_used[version]}"
+            else:
+                note = "available to download"
+            if not downloadable:
+                note = "no build for this system"
+
+            item = QListWidgetItem(f"{version}   ({note})")
             item.setData(Qt.UserRole, version)
             item.setData(_ON_DISK, False)
+            item.setData(_AVAILABLE, downloadable)
             item.setForeground(Qt.gray)
             self._list.addItem(item)
 
         keep = install_layout.keep_versions()
+        pending = "" if self._releases else " Checking for other released versions…"
         self._intro.setText(
             f"{len(versions)} version{'s' if len(versions) != 1 else ''} on disk, "
-            f"{_human(total)} in total. Updating keeps the one it replaces until "
-            f"the new one has started, so a failed update can fall back to it; "
-            f"after that only the newest {keep} are kept. Anything greyed out has "
-            f"been removed but can be downloaded again."
+            f"{_human(total)} in total; only the newest {keep} "
+            f"{'is' if keep == 1 else 'are'} kept once a new one has proved "
+            f"itself. Greyed-out versions are not installed — selecting one "
+            f"downloads it from its release." + pending
         )
         self._sync_buttons()
 
@@ -186,9 +243,11 @@ class VersionsDialog(QDialog):
         running = self._layout_info.version
         selected = install_layout.read_current(self._layout_info) or running
 
+        item = self._list.currentItem()
+        available = bool(item and item.data(_AVAILABLE))
         if version and not on_disk:
             self._switch.setText("Download and Switch")
-            self._switch.setEnabled(True)
+            self._switch.setEnabled(available)
         else:
             self._switch.setText("Switch and Restart")
             self._switch.setEnabled(bool(version) and version != selected)
@@ -208,11 +267,22 @@ class VersionsDialog(QDialog):
             self._download_and_switch(version)
             return
 
-        direction = "Reverting to" if version < self._layout_info.version else "Switching to"
+        older = _version_key(version) < _version_key(self._layout_info.version)
+        direction = "Reverting to" if older else "Switching to"
+        # No compatibility metadata exists yet, so this says what is true rather
+        # than pretending to know: newer versions can write settings and saves
+        # an older one has never seen. A per-release "reads data from" floor
+        # would let this be specific instead of general.
+        caution = (
+            "\n\nGoing back more than a version or two can matter: settings and "
+            "saved encounters written by a newer version may not be understood "
+            "by an older one. Your files are not deleted either way."
+            if older else ""
+        )
         answer = QMessageBox.question(
             self,
             "Switch Version",
-            f"{direction} {version}.\n\n"
+            f"{direction} {version}.{caution}\n\n"
             "Restart now? Your combat is saved first, and nothing is deleted — "
             f"you can come back to {self._layout_info.version} the same way.",
             QMessageBox.Yes | QMessageBox.No,
@@ -248,7 +318,9 @@ class VersionsDialog(QDialog):
             self,
             "Download Version",
             f"{version} is not installed. Download it from its release and "
-            "switch to it?\n\nYour combat is saved first.",
+            "switch to it?\n\nYour combat is saved first. Settings and saved "
+            "encounters written by a newer version may not be understood by an "
+            "older one, though nothing is deleted.",
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.Yes,
         )

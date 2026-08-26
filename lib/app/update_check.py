@@ -96,6 +96,45 @@ def fetch_release_by_tag(tag: str) -> Optional[dict]:
     return fetch_latest_release(release_by_tag_url(tag))
 
 
+def fetch_releases(limit: int = 30) -> list:
+    """Every published release, newest first. Empty list if unreachable.
+
+    Used to offer versions this machine has never run: the ones it *has* are
+    remembered locally, but a release nobody here installed is still somewhere
+    to go back to.
+    """
+    payload = fetch_latest_release(f"{_REPO_API}/releases?per_page={int(limit)}")
+    if payload is None:
+        # A list endpoint returns a list, which fetch_latest_release rejects as
+        # "not a dict" -- fetch it directly.
+        try:
+            request = urllib.request.Request(
+                f"{_REPO_API}/releases?per_page={int(limit)}",
+                headers={
+                    "Accept": "application/vnd.github+json",
+                    "User-Agent": f"dnd-combat-tracker/{__version__}",
+                },
+            )
+            with urllib.request.urlopen(request, timeout=_TIMEOUT_SECONDS) as response:
+                payload = json.load(response)
+        except (urllib.error.URLError, OSError, json.JSONDecodeError, ValueError):
+            return []
+    if not isinstance(payload, list):
+        return []
+    return [
+        release for release in payload
+        if isinstance(release, dict)
+        and not release.get("draft")
+        and (release.get("tag_name") or release.get("name"))
+    ]
+
+
+def version_of(release: dict) -> str:
+    """The bare version string for a release, without its leading v."""
+    tag = release.get("tag_name") or release.get("name") or ""
+    return str(tag).lstrip("vV")
+
+
 def fetch_latest_version(url: str = RELEASES_API) -> Optional[str]:
     """The latest release tag, or None if it can't be determined."""
     payload = fetch_latest_release(url)

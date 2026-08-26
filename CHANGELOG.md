@@ -13,6 +13,21 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ## [Unreleased]
 
+### Changed
+
+- **Installed Versions lists every published release**, not just what is on
+  disk and what this machine happens to have run. Older versions predating the
+  history feature — or run only on another machine — were unreachable, which
+  was not the intent. Releases are fetched in the background, so the dialog
+  still opens instantly and works offline with what is local. A release with no
+  build for your platform says so rather than offering a button that cannot
+  work.
+- Switching to an older version now warns that settings and saved encounters
+  written by a newer one may not be understood by it. There is no compatibility
+  metadata yet, so the warning is general; a per-release "reads data written
+  by" floor would let it be specific.
+
+
 ## [0.4.1] — 2026-08-26
 
 ### Fixed
