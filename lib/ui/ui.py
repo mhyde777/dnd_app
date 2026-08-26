@@ -28,7 +28,22 @@ from ui.icons import icon_for
 from ui.layout_settings_dialog import (
     PANEL_REGISTRY, load_panel_layout, save_panel_layout,
 )
+from ui.control_sections_dialog import (
+    ControlSectionsDialog,
+    DEFAULT_CONTROL_SECTIONS,
+    load_control_sections,
+    ordered_all,
+    save_control_sections,
+)
 from ui.notifications import report_error, reposition_toasts, toast
+from ui.shortcut_settings_dialog import (
+    FIXED_SHORTCUTS,
+    SHORTCUT_SCHEMA,
+    ShortcutSettingsDialog,
+    ZOOM_IN_ALIAS,
+    defaults as shortcut_defaults,
+    load as load_shortcuts,
+)
 from ui.spellcasting_dropdown import SpellcastingDropdown
 from ui.ability_uses_dropdown import AbilityUsesDropdown
 from ui.conditions_dropdown import ConditionsDropdown, DEFAULT_CONDITIONS
@@ -177,18 +192,23 @@ class InitiativeTracker(QMainWindow, Application):
         self.setup_menu_and_toolbar()
         self._build_status_bar()
 
-        self.filter_shortcut = QShortcut(QKeySequence("Ctrl+F"), self)
+        # Sequences are not set here -- apply_shortcuts() reads them from the
+        # registry so the user's bindings win. These only wire key to command.
+        self.filter_shortcut = QShortcut(self)
         self.filter_shortcut.activated.connect(self.focus_creature_filter)
 
         # Statblock legibility without resizing the panel.
-        for sequence, slot in (
-            ("Ctrl++", self.statblock_widget.zoom_in),
-            ("Ctrl+=", self.statblock_widget.zoom_in),   # same physical key, unshifted
-            ("Ctrl+-", self.statblock_widget.zoom_out),
-            ("Ctrl+0", self.statblock_widget.reset_zoom),
-        ):
-            shortcut = QShortcut(QKeySequence(sequence), self)
-            shortcut.activated.connect(slot)
+        self.zoom_in_shortcut = QShortcut(self)
+        self.zoom_in_shortcut.activated.connect(self.statblock_widget.zoom_in)
+        self.zoom_out_shortcut = QShortcut(self)
+        self.zoom_out_shortcut.activated.connect(self.statblock_widget.zoom_out)
+        self.zoom_reset_shortcut = QShortcut(self)
+        self.zoom_reset_shortcut.activated.connect(self.statblock_widget.reset_zoom)
+        # Ctrl+= is the unshifted twin of Ctrl++; see ZOOM_IN_ALIAS.
+        self.zoom_in_alias_shortcut = QShortcut(self)
+        self.zoom_in_alias_shortcut.activated.connect(self.statblock_widget.zoom_in)
+
+        self.apply_shortcuts()
 
     # ---- layout construction ------------------------------------------------
 
@@ -306,7 +326,6 @@ class InitiativeTracker(QMainWindow, Application):
         self.next_button.setToolTip("Advance to next turn (Ctrl+N)")
         self.next_button.clicked.connect(self.next_turn)
         turn_group_layout.addWidget(self.next_button)
-        self.dam_layout.addWidget(turn_group)
 
         # -- Combatants group --
         combatants_group = QGroupBox("Combatants")
@@ -351,7 +370,6 @@ class InitiativeTracker(QMainWindow, Application):
         selection_row.addWidget(select_all_btn)
         selection_row.addWidget(clear_sel_btn)
         combatants_group_layout.addLayout(selection_row)
-        self.dam_layout.addWidget(combatants_group)
         self._fit_creature_list_height()
 
         # -- HP Controls group --
@@ -384,7 +402,6 @@ class InitiativeTracker(QMainWindow, Application):
         hp_button_row.addWidget(self.dam_button)
 
         hp_group_layout.addLayout(hp_button_row)
-        self.dam_layout.addWidget(hp_group)
 
         # -- HP Mods group (Temp HP + Max HP Bonus, multi-creature) --
         hp_mods_group = QGroupBox("HP Mods")
@@ -418,14 +435,19 @@ class InitiativeTracker(QMainWindow, Application):
         hp_mods_btn_layout.addWidget(self.hp_mods_clear_button)
         hp_mods_layout.addRow(hp_mods_btn_row)
 
-        self.dam_layout.addWidget(hp_mods_group)
-        # Spare height collects here, under the last group, instead of being
-        # handed to the combatant list and dragging HP Controls to the bottom.
-        self.dam_layout.addStretch(1)
+        # Which of these are shown, and in what order, is the user's call.
+        # apply_control_sections() puts them into dam_layout.
+        self._control_sections = {
+            "turn_controls": turn_group,
+            "combatants":    combatants_group,
+            "hp_controls":   hp_group,
+            "hp_mods":       hp_mods_group,
+        }
 
         self.dam_widget = QWidget()
         self.dam_widget.setLayout(self.dam_layout)
         self.dam_widget.setMinimumWidth(210)
+        self.apply_control_sections()
 
         # Scrolled, so shrinking the dock hides nothing outright.
         controls_scroll = QScrollArea()
@@ -463,6 +485,39 @@ class InitiativeTracker(QMainWindow, Application):
             max(visible, self._CREATURE_LIST_MIN_ROWS), self._CREATURE_LIST_MAX_ROWS
         )
         listw.setFixedHeight(rows * row_height + 2 * listw.frameWidth() + 4)
+
+    def apply_control_sections(self, config: list = None):
+        """Lay the Combat Controls dock out from the saved section config.
+
+        Hidden sections stay in the layout rather than being reparented out of
+        it -- a hidden widget takes no space, and showing one again is then a
+        setVisible() instead of a rebuild.
+        """
+        if config is None:
+            config = load_control_sections()
+        visible = set(config)
+
+        layout = self.dam_layout
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.hide()
+
+        for key in ordered_all(config):
+            section = self._control_sections.get(key)
+            if section is None:
+                continue
+            layout.addWidget(section)
+            section.setVisible(key in visible)
+
+        # Spare height collects under the last section rather than being handed
+        # to the combatant list and dragging the HP controls to the bottom.
+        layout.addStretch(1)
+
+        # The dock can be much shorter now; re-fit what is sized to content.
+        if "combatants" in visible:
+            self._fit_creature_list_height()
 
     def _filter_creature_list(self, text: str):
         """Hide non-matching rows; a hidden row keeps its selection state."""
@@ -957,6 +1012,8 @@ class InitiativeTracker(QMainWindow, Application):
         self._user_column_widths = {}
         app_settings.set("table_column_widths", {})
         self.adjust_table_size()
+        save_control_sections(list(DEFAULT_CONTROL_SECTIONS))
+        self.apply_control_sections()
         toast(self, "Panel layout reset", "success")
 
     def resizeEvent(self, event):
@@ -1137,8 +1194,7 @@ class InitiativeTracker(QMainWindow, Application):
 
         self.save_action = QAction("Save", self)
         self.save_action.triggered.connect(self.save_state)
-        self.save_action.setShortcut(QKeySequence("Ctrl+S"))
-        self.save_action.setToolTip("Save current state (Ctrl+S)")
+        self.save_action.setToolTip("Save current state")
         self.file_menu.addAction(self.save_action)
 
         self.save_as_action = QAction('Save As', self)
@@ -1232,8 +1288,7 @@ class InitiativeTracker(QMainWindow, Application):
 
         self.monsters_menu.addSeparator()
         self.lookup_action = QAction("Reference Lookup", self)
-        self.lookup_action.setShortcut(QKeySequence("Ctrl+L"))
-        self.lookup_action.setToolTip("Look up spells, monsters, and conditions (Ctrl+L)")
+        self.lookup_action.setToolTip("Look up spells, monsters, and conditions")
         self.lookup_action.triggered.connect(self.open_lookup_dialog)
         self.monsters_menu.addAction(self.lookup_action)
 
@@ -1249,12 +1304,10 @@ class InitiativeTracker(QMainWindow, Application):
         self.tools_menu.addAction(self.foundry_ignore_action)
 
         self.next_turn_action = QAction("Next Turn", self)
-        self.next_turn_action.setShortcut(QKeySequence("Ctrl+N"))
         self.next_turn_action.triggered.connect(self.next_turn)
         self.edit_menu.addAction(self.next_turn_action)
 
         self.prev_turn_action = QAction("Previous Turn", self)
-        self.prev_turn_action.setShortcut(QKeySequence("Ctrl+Shift+N"))
         self.prev_turn_action.triggered.connect(self.prev_turn)
         self.edit_menu.addAction(self.prev_turn_action)
 
@@ -1340,6 +1393,18 @@ class InitiativeTracker(QMainWindow, Application):
         self.view_menu.addAction(self.customize_toolbar_action)
         self.view_menu.addAction(self.customize_colors_action)
 
+        self.customize_controls_action = QAction("Customize Combat Controls…", self)
+        self.customize_controls_action.setToolTip(
+            "Show, hide and reorder the sections of the Combat Controls panel"
+        )
+        self.customize_controls_action.triggered.connect(self.open_control_sections)
+        self.view_menu.addAction(self.customize_controls_action)
+
+        self.customize_shortcuts_action = QAction("Customize Shortcuts…", self)
+        self.customize_shortcuts_action.setToolTip("Rebind the keyboard shortcuts")
+        self.customize_shortcuts_action.triggered.connect(self.open_shortcut_settings)
+        self.view_menu.addAction(self.customize_shortcuts_action)
+
         self.reset_columns_action = QAction("Reset Column Widths", self)
         self.reset_columns_action.setToolTip(
             "Size the initiative table's columns from their contents again"
@@ -1354,7 +1419,6 @@ class InitiativeTracker(QMainWindow, Application):
 
     def _setup_help_menu(self):
         self.shortcuts_action = QAction("Keyboard Shortcuts", self)
-        self.shortcuts_action.setShortcut(QKeySequence("F1"))
         self.shortcuts_action.triggered.connect(self.show_shortcuts)
         self.help_menu.addAction(self.shortcuts_action)
 
@@ -1388,31 +1452,116 @@ class InitiativeTracker(QMainWindow, Application):
         from ui.log_dialog import LogDialog
         LogDialog(self).exec_()
 
+    def _shortcut_targets(self) -> dict:
+        """Registry id → the QAction or QShortcut it drives.
+
+        Ids must match SHORTCUT_SCHEMA in shortcut_settings_dialog.py, the same
+        contract _toolbar_action_map has with TOOLBAR_REGISTRY.
+        """
+        candidates = {
+            "next_turn":            getattr(self, "next_turn_action", None),
+            "prev_turn":            getattr(self, "prev_turn_action", None),
+            "save_state":           getattr(self, "save_action", None),
+            "reference_lookup":     getattr(self, "lookup_action", None),
+            "show_shortcuts":       getattr(self, "shortcuts_action", None),
+            "focus_filter":         getattr(self, "filter_shortcut", None),
+            "statblock_zoom_in":    getattr(self, "zoom_in_shortcut", None),
+            "statblock_zoom_out":   getattr(self, "zoom_out_shortcut", None),
+            "statblock_zoom_reset": getattr(self, "zoom_reset_shortcut", None),
+        }
+        return {key: target for key, target in candidates.items() if target is not None}
+
+    def apply_shortcuts(self):
+        """Bind every registered shortcut from settings. Safe to call again.
+
+        Called once at startup and again whenever the customizer saves, so a
+        rebind takes effect immediately rather than at the next launch.
+        """
+        bindings = load_shortcuts()
+
+        for key, target in self._shortcut_targets().items():
+            sequence = QKeySequence(bindings.get(key, ""))
+            # QShortcut and QAction spell the same idea differently.
+            if isinstance(target, QShortcut):
+                target.setKey(sequence)
+            else:
+                target.setShortcut(sequence)
+
+        # The unshifted twin of Ctrl++ only makes sense while zoom-in still is
+        # Ctrl++; once rebound, an alias nobody chose would just be a mystery.
+        alias = getattr(self, "zoom_in_alias_shortcut", None)
+        if alias is not None:
+            at_default = (
+                bindings.get("statblock_zoom_in")
+                == shortcut_defaults()["statblock_zoom_in"]
+            )
+            alias.setKey(QKeySequence(ZOOM_IN_ALIAS if at_default else ""))
+
+        self._refresh_shortcut_hints(bindings)
+
+    def _refresh_shortcut_hints(self, bindings: dict):
+        """Keep the hints that quote a shortcut honest after a rebind."""
+        def hint(key: str) -> str:
+            sequence = QKeySequence(bindings.get(key, "")).toString(
+                QKeySequence.NativeText
+            )
+            return f" ({sequence})" if sequence else ""
+
+        if hasattr(self, "prev_button"):
+            self.prev_button.setToolTip(f"Go to previous turn{hint('prev_turn')}")
+        if hasattr(self, "next_button"):
+            self.next_button.setToolTip(f"Advance to next turn{hint('next_turn')}")
+        if hasattr(self, "creature_filter"):
+            self.creature_filter.setPlaceholderText(
+                f"Filter combatants…{hint('focus_filter')}"
+            )
+
+    def open_shortcut_settings(self):
+        ShortcutSettingsDialog(self).exec_()
+
+    def open_control_sections(self):
+        ControlSectionsDialog(self).exec_()
+
     def show_shortcuts(self):
-        """A discoverable list of shortcuts — otherwise they're only in tooltips."""
-        rows = [
-            ("Ctrl+N", "Next turn"),
-            ("Ctrl+Shift+N", "Previous turn"),
-            ("Ctrl+S", "Save state"),
-            ("Ctrl+L", "Reference lookup"),
-            ("Ctrl+F", "Focus the combatant filter"),
-            ("Ctrl +/-", "Zoom the statblock in/out (or Ctrl+scroll)"),
-            ("Ctrl+0", "Reset statblock zoom"),
-            ("Enter", "Damage selected (in the HP value box)"),
-            ("Shift+Enter", "Heal selected (in the HP value box)"),
-            ("Esc", "Clear selection / close dropdowns"),
-            ("F1", "This list"),
-        ]
-        body = "\n".join(f"{key:<16}{label}" for key, label in rows)
+        """A discoverable list of shortcuts — otherwise they're only in tooltips.
+
+        Read from the live bindings, so a rebind shows up here instead of this
+        list quietly becoming a list of what the shortcuts used to be.
+        """
+        bindings = load_shortcuts()
+        lines = []
+        for group_name, entries in SHORTCUT_SCHEMA:
+            lines.append(group_name.upper())
+            for key, label, _default, _tip in entries:
+                sequence = QKeySequence(bindings.get(key, "")).toString(
+                    QKeySequence.NativeText
+                )
+                lines.append(f"  {sequence or '— unbound —':<16}{label}")
+            lines.append("")
+
+        lines.append("FIXED")
+        for sequence, label in FIXED_SHORTCUTS:
+            lines.append(f"  {sequence:<16}{label}")
+
         dialog = QDialog(self)
         dialog.setWindowTitle("Keyboard Shortcuts")
         layout = QVBoxLayout(dialog)
         view = QTextEdit(dialog)
         view.setReadOnly(True)
-        view.setPlainText(body)
-        view.setMinimumSize(400, 280)
+        # Monospaced, or the two columns won't line up.
+        view.setFont(QFont("monospace"))
+        view.setPlainText("\n".join(lines))
+        view.setMinimumSize(430, 380)
         layout.addWidget(view)
+
         buttons = QDialogButtonBox(QDialogButtonBox.Close, dialog)
+        customize = buttons.addButton("Customize…", QDialogButtonBox.ActionRole)
+        # Reopened afterwards so the list shows what was just changed.
+        def _customize():
+            dialog.accept()
+            self.open_shortcut_settings()
+            self.show_shortcuts()
+        customize.clicked.connect(_customize)
         buttons.rejected.connect(dialog.reject)
         buttons.accepted.connect(dialog.accept)
         layout.addWidget(buttons)
