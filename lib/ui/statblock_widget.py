@@ -18,6 +18,10 @@ from app import settings as app_settings
 from app.conditions import get_condition
 from app.spell_parser import spell_key as _spell_key
 
+# Only px sizes: the statblock markup uses no other unit, and matching pt/em
+# would silently rescale anything a future template borrows from elsewhere.
+_FONT_SIZE_RE = re.compile(r"font-size:\s*(\d+(?:\.\d+)?)px")
+
 _SPELL_ORDINALS = {0: "Cantrip", 1: "1st", 2: "2nd", 3: "3rd",
                    4: "4th", 5: "5th", 6: "6th", 7: "7th", 8: "8th", 9: "9th"}
 
@@ -130,6 +134,7 @@ class StatblockWidget(QTextBrowser):
         # The HTML uses fixed pixel sizes, so the panel is only as legible as the
         # window is wide. A persisted zoom decouples readability from layout.
         self._zoom_steps = 0
+        self._source_html = ""
         self._restore_zoom()
 
         self.clear_statblock()
@@ -139,25 +144,66 @@ class StatblockWidget(QTextBrowser):
     ZOOM_SETTING = "statblock_zoom"
     MIN_ZOOM_STEPS = -4
     MAX_ZOOM_STEPS = 12
+    ZOOM_STEP = 0.1     # 10% of the shipped size per step
 
     def _restore_zoom(self) -> None:
         try:
             saved = int(app_settings.get(self.ZOOM_SETTING, 0) or 0)
         except (TypeError, ValueError):
             saved = 0
-        self.set_zoom_steps(saved, persist=False)
+        # Set directly: nothing has been rendered yet, and the first _render()
+        # picks the factor up on its own.
+        self._zoom_steps = max(self.MIN_ZOOM_STEPS, min(self.MAX_ZOOM_STEPS, saved))
 
     def set_zoom_steps(self, steps: int, persist: bool = True) -> None:
-        """Zoom relative to the base font size, clamped to a usable range."""
+        """Zoom relative to the base font size, clamped to a usable range.
+
+        Not QTextEdit.zoomIn(): that scales the document's *base* font, and
+        every size in this statblock is an explicit `font-size:NNpx` in the
+        HTML, which wins over the base font. Zooming that way moved the line
+        spacing and left every glyph exactly the same size. The sizes in the
+        markup are rewritten instead, and the page re-rendered.
+        """
         steps = max(self.MIN_ZOOM_STEPS, min(self.MAX_ZOOM_STEPS, int(steps)))
-        delta = steps - self._zoom_steps
-        if delta > 0:
-            self.zoomIn(delta)
-        elif delta < 0:
-            self.zoomOut(-delta)
+        if steps == self._zoom_steps:
+            return
         self._zoom_steps = steps
+        self._rerender()
         if persist:
             app_settings.set(self.ZOOM_SETTING, steps)
+
+    def _zoom_factor(self) -> float:
+        return 1.0 + self.ZOOM_STEP * self._zoom_steps
+
+    def _scaled(self, html: str) -> str:
+        """Multiply every px font size in the markup by the zoom factor."""
+        factor = self._zoom_factor()
+        if abs(factor - 1.0) < 1e-9:
+            return html
+
+        def resize(match: "re.Match") -> str:
+            # Never round down to nothing: a 0px font renders as garbage.
+            scaled = max(1, round(float(match.group(1)) * factor))
+            return f"font-size:{scaled}px"
+
+        return _FONT_SIZE_RE.sub(resize, html)
+
+    def _render(self, html: str) -> None:
+        """Show `html`, scaled to the current zoom.
+
+        The unscaled source is kept so re-zooming rescales the original rather
+        than compounding the last factor.
+        """
+        self._source_html = html
+        self.setHtml(self._scaled(html))
+
+    def _rerender(self) -> None:
+        """Re-apply the zoom to what is already on screen, holding position."""
+        scrollbar = self.verticalScrollBar()
+        span = max(1, scrollbar.maximum())
+        fraction = scrollbar.value() / span
+        self.setHtml(self._scaled(self._source_html))
+        scrollbar.setValue(round(fraction * max(1, scrollbar.maximum())))
 
     def zoom_in(self) -> None:
         self.set_zoom_steps(self._zoom_steps + 1)
@@ -194,17 +240,11 @@ class StatblockWidget(QTextBrowser):
 
     def load_statblock(self, data: dict) -> None:
         """Render a statblock dict as HTML and display it."""
-        self.setHtml(self._build_html(data))
-        self._reapply_zoom()
-
-    def _reapply_zoom(self) -> None:
-        """setHtml() resets font scaling, so restate the zoom after each render."""
-        steps, self._zoom_steps = self._zoom_steps, 0
-        self.set_zoom_steps(steps, persist=False)
+        self._render(self._build_html(data))
 
     def clear_statblock(self) -> None:
         """Show an empty placeholder state."""
-        self.setHtml(
+        self._render(
             f'<body style="background-color:{_BG}; color:#999; '
             f'font-family:&quot;Palatino Linotype&quot;,Palatino,serif;">'
             f'<p style="margin:20px; text-align:center; font-style:italic;">'
