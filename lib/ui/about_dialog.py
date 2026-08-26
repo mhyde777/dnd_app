@@ -56,11 +56,15 @@ class AboutDialog(QDialog):
         root.addWidget(summary)
 
         root.addWidget(self._separator())
+        # Kept in step with the "How this was built" section of the README --
+        # the two are the same disclosure, and only one of them is visible to
+        # someone running the packaged app.
         built_with = QLabel(
-            "Built by mhyde777 with substantial help from AI coding assistants "
-            "(Anthropic's Claude), which wrote or reworked much of the code "
-            "under direction and review. Design decisions, testing and "
-            "everything it does at the table are the author's."
+            "This app was built with substantial help from AI coding "
+            "assistants, which wrote or reworked a large share of the code. "
+            "This work was directed, reviewed and tested by Mason Hyde.\n\n"
+            "Early versions of the app and the code foundations were "
+            "implemented by Mason and Mikhail Hyde."
         )
         built_with.setWordWrap(True)
         built_with.setStyleSheet("color: #999; font-size: 11px;")
