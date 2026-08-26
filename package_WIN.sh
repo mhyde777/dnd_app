@@ -121,7 +121,7 @@ On first launch you'll be asked where to keep your data. Everything the app
 writes lives in %USERPROFILE%\\.dnd_tracker_config\\ -- delete that folder to
 start over.
 
-The Foundry VTT bridge is off by default; see docs/foundry-bridge.md in the
+The Foundry VTT bridge is off by default; see docs/foundry-setup.md in the
 project repository to turn it on.
 EOF
 
@@ -147,18 +147,23 @@ echo "Release artifact: $ZIP_PATH"
 # Published alongside the build so the in-app updater can check what it
 # downloaded. Upload both to the GitHub release.
 if command -v sha256sum >/dev/null 2>&1; then
-    (cd "$ROOT_DIR/dist" && sha256sum "${STAGE_NAME}.zip" >> SHA256SUMS)
+    (cd "$ROOT_DIR/dist" && sha256sum "${STAGE_NAME}.zip" "foundryvtt-bridge.zip" > SHA256SUMS)
     echo "Checksums:        $ROOT_DIR/dist/SHA256SUMS"
 fi
 
 # ------------------------------------------------------------
 # Publish (opt-in)
 # ------------------------------------------------------------
+# The Foundry module ships with every release; its manifest URL points at
+# /releases/latest/download/, so a release without it breaks installs.
+"$ROOT_DIR/package_module.sh"
+
 if [[ "$PUBLISH" -eq 1 ]]; then
     # Uploads the zip and the checksums together, then checks the release
     # really has them -- a release with no assets looks finished but leaves
     # the in-app updater reporting "no build for this system".
-    "$ROOT_DIR/publish.sh" "$ZIP_PATH" "$ROOT_DIR/dist/SHA256SUMS"
+    "$ROOT_DIR/publish.sh" "$ZIP_PATH" "$ROOT_DIR/dist/SHA256SUMS" \
+        "$ROOT_DIR/dist/foundryvtt-bridge.zip" "$ROOT_DIR/dist/module.json"
 fi
 
 # ------------------------------------------------------------

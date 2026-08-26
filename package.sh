@@ -148,7 +148,7 @@ writes points at wherever this folder currently is.
 On first launch you'll be asked where to keep your data. Everything the app
 writes lives in ~/.dnd_tracker_config/ -- delete that directory to start over.
 
-The Foundry VTT bridge is off by default; see docs/foundry-bridge.md in the
+The Foundry VTT bridge is off by default; see docs/foundry-setup.md in the
 project repository to turn it on.
 EOF
 
@@ -160,21 +160,29 @@ TARBALL="$ROOT_DIR/dist/${STAGE_NAME}.tar.gz"
 tar -C "$ROOT_DIR/package" -czf "$TARBALL" "$STAGE_NAME"
 echo "Release artifact: $TARBALL"
 
-# Published alongside the build so the in-app updater can check what it
-# downloaded. Upload both to the GitHub release.
-if command -v sha256sum >/dev/null 2>&1; then
-  (cd "$ROOT_DIR/dist" && sha256sum "${STAGE_NAME}.tar.gz" >> SHA256SUMS)
-  echo "Checksums:        $ROOT_DIR/dist/SHA256SUMS"
-fi
+# Checksums are written after every artifact exists, below.
 
 # ------------------------------------------------------------
 # Publish (opt-in)
 # ------------------------------------------------------------
+# The Foundry module ships with every release: its manifest URL points at
+# /releases/latest/download/, so a release without it breaks installs for
+# everyone, not just people updating.
+"$ROOT_DIR/package_module.sh"
+
+# Published alongside the builds so the in-app updater can check what it
+# downloaded. Written once every artifact exists, so nothing is left unlisted.
+if command -v sha256sum >/dev/null 2>&1; then
+  (cd "$ROOT_DIR/dist" && sha256sum "${STAGE_NAME}.tar.gz" "foundryvtt-bridge.zip" > SHA256SUMS)
+  echo "Checksums:        $ROOT_DIR/dist/SHA256SUMS"
+fi
+
 if [[ "$PUBLISH" -eq 1 ]]; then
   # Uploading both files together, and checking afterwards that they are
   # really on the release. A release published with no assets looks finished
   # but leaves the in-app updater reporting "no build for this system".
-  "$ROOT_DIR/publish.sh" "$TARBALL" "$ROOT_DIR/dist/SHA256SUMS"
+  "$ROOT_DIR/publish.sh" "$TARBALL" "$ROOT_DIR/dist/SHA256SUMS" \
+    "$ROOT_DIR/dist/foundryvtt-bridge.zip" "$ROOT_DIR/dist/module.json"
 fi
 
 # ------------------------------------------------------------

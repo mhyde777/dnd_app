@@ -1,11 +1,12 @@
 {
   "id": "foundryvtt-bridge",
-  "title": "Foundry Bridge Sync",
-  "description": "Posts combat snapshots to the local bridge service for read-only sync.",
+  "title": "D&D Combat Tracker Bridge",
+  "description": "Two-way sync between Foundry VTT and the D&D Combat Tracker desktop app: posts combat snapshots out, and applies HP, initiative and condition changes coming back.",
   "version": "0.3.0",
   "authors": [
     {
-      "name": "DND App" 
+      "name": "mhyde777",
+      "url": "https://github.com/mhyde777/dnd_app"
     }
   ],
   "compatibility": {
@@ -14,5 +15,10 @@
   },
   "scripts": [
     "bridge.js"
-  ]
+  ],
+  "url": "https://github.com/mhyde777/dnd_app",
+  "manifest": "https://github.com/mhyde777/dnd_app/releases/latest/download/module.json",
+  "download": "https://github.com/mhyde777/dnd_app/releases/latest/download/foundryvtt-bridge.zip",
+  "readme": "https://github.com/mhyde777/dnd_app/blob/master/docs/foundry-setup.md",
+  "license": "https://github.com/mhyde777/dnd_app/blob/master/LICENSE-SRD.md"
 }

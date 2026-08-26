@@ -5,6 +5,10 @@ This dialog is not decoration. The bundled SRD library is used under
 CC-BY-4.0, which requires the attribution notice to travel with the material
 wherever it is distributed — putting it only in a repository file would not
 cover the packaged application. If the SRD payload ships, this notice ships.
+
+The AI-assistance disclosure is here for the same reason: someone running the
+packaged app has no reason to read the repository, and a disclosure only they
+can't see is not a disclosure.
 """
 from __future__ import annotations
 
@@ -50,6 +54,17 @@ class AboutDialog(QDialog):
         )
         summary.setWordWrap(True)
         root.addWidget(summary)
+
+        root.addWidget(self._separator())
+        built_with = QLabel(
+            "Built by mhyde777 with substantial help from AI coding assistants "
+            "(Anthropic's Claude), which wrote or reworked much of the code "
+            "under direction and review. Design decisions, testing and "
+            "everything it does at the table are the author's."
+        )
+        built_with.setWordWrap(True)
+        built_with.setStyleSheet("color: #999; font-size: 11px;")
+        root.addWidget(built_with)
 
         if srd_content.is_available():
             root.addWidget(self._separator())

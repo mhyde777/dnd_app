@@ -1,330 +1,141 @@
-# Dungeons & Dragons Combat Tracker
+# D&D 5e Combat Tracker
 
-## Dependecy management
-This project uses **pipenv** as the primary dependency manager, driven by the `Pipfile`. A minimal `requirements.txt` is also provided for environments that prefer `pip`, and it includes the editable install of the local `lib/` directory (`dnd-app-lib`).
-## Setup and running the app 
-### Windows (Git Bash) notes
-* The app reads a `.env` from the repo root (next to `main.py`) **and** from `~/.dnd_tracker_config/.env`. The home directory `~` resolves inside Git Bash, so you can keep a shared config in `C:\Users\<you>\.dnd_tracker_config\.env` if desired. The first load happens in `main.py`, and the config folder load happens in `lib/app/config.py`. 
-* Use `source` to activate virtualenvs in Git Bash, and prefer `python -m venv` (works on Windows).
-* When pointing to services on your server, use the same URLs you already use on Linux/macOS (e.g., `https://bridge.example.com`). Windows does not require any special formatting beyond valid URLs.
+A desktop app for running combat in D&D 5e: initiative, hit points, conditions,
+death saves and combat state, with optional two-way sync to Foundry VTT.
 
-### Option A: pipenv (recommended)
-1. Install pipenv if needed: `pip install --user pipenv`
-2. Install dependencies and create the virtual environment (Python 3.10 recommended):
-    ```bash
-    pipenv install
-    ```
-3. Run the application:
-    ```bash
-    pipenv run python main.py 
-    ```
+Built for use at an actual table — the things you do every turn are one click
+or one key, and the things you do once are behind a menu.
 
-### Option B: pip (alternative)
-1. Create a virtual environment:
-    ```bash
-    python -m venv .venv
-    source .venv/bin/activate
-    ```
-2. Install dependencies with pip:
-    ```bash
-    pip install --upgrade pip
-    pip install -r requirements.txt
-    ```
-3. Launch the application:
-    ```bash
-    python main.py 
-    ```
+![Python 3.10](https://img.shields.io/badge/python-3.10-blue)
 
-## Packaging the app (PyInstaller)
-The packaging flow builds a standalone binary and a release zip. PyInstaller
-cannot cross-compile, so each platform's build has to run on that platform.
+---
 
-1. Install dependencies, PyInstaller included:
-    ```bash
-    pipenv install
-    ```
-2. Build:
-    ```bash
-    ./package.sh        # Linux
-    ./package_WIN.sh    # Windows, from Git Bash
-    ```
-3. The release artifact is a versioned zip in `dist/`, e.g.
-   `dist/combat-tracker-0.1.0-windows-x64.zip`, with the staged tree beside it
-   in `package/` (Linux) or `package_win/` (Windows). Extract it outside the
-   repo — every build deletes `dist/`, `build/`, `package/` and `package_win/`.
+## Get it running
 
-Both scripts take `--dev-install` to also install this machine's `.env` into
-`~/.dnd_tracker_config/`. Release builds never write outside the repo.
+**Just want to use it:** download the build for your system from the
+[latest release](https://github.com/mhyde777/dnd_app/releases/latest),
+unpack it somewhere permanent, and run it.
 
-See [docs/updating-windows.md](docs/updating-windows.md) for updating an
-existing Windows install, and [docs/packaging-macos.md](docs/packaging-macos.md)
-for macOS.
+| | |
+|---|---|
+| **Linux** | `tar -xzf combat-tracker-*-linux-*.tar.gz`, then `./combat-tracker`. Run `./install.sh` for a desktop entry. |
+| **Windows** | Unzip, then `combat-tracker.exe`. The build is unsigned, so SmartScreen warns on first run — *More info* → *Run anyway*. |
+| **macOS** | No build yet. See [docs/packaging-macos.md](docs/packaging-macos.md). |
 
-## Storage API Configuration
-The app can optionally persist encounters to a storage API. Configuration is controlled by two environmental variables (e.g., in a `.env` file next to `main.py`):
+Run `combat-tracker`, **not** the binary inside `versions/`. That one is the
+launcher, and it is what makes in-app updates work.
 
-* `USE_STORAGE_API_ONLY` - When truthy (`1`, `true`, etc.), the app routes all save/load flows through the storage API instead of local JSON files. Defaults to `0` (local files).
-* `STORAGE_API_BASE` - Base URL of the Storage serves, such as `http://127.0.0.1:8000`. This is required when `USE_STORAGE_API_ONLY` is enabled.
+On first launch you choose where to keep your data and whether to install the
+bundled SRD library. Both are changeable later.
 
-### Example `.env` snippets
+> **Updating from a version before 0.2.1?** The install layout changed to make
+> in-app updates possible, and it cannot install itself into existence — unpack
+> this release once, and updates after that are a single button. Nothing in
+> `~/.dnd_tracker_config/` is affected.
 
-**Local files (default, no Storage service):**
-```
-USE_STORAGE_API_ONLY=0
-```
+---
 
-**Storage API enabled:**
-```
-USE_STORAGE_API_ONLY=1 
-STORAGE_API_BASE=http://127.0.0.1:800
-```
+## Documentation
 
-**Storage API enabled (remote server example):**
-```
-USE_STORAGE_API_ONLY=1
-STORAGE_API_BASE=https://your-storage-api.example.com
-STORAGE_API_KEY=your_api_key_if_required
-```
+| | |
+|---|---|
+| **[Running a combat](docs/using-the-tracker.md)** | Everything the app does, in the order you meet it |
+| **[Where your data lives](docs/storage.md)** | Local folder or shared API, backups, syncing settings |
+| **[Connecting to Foundry VTT](docs/foundry-setup.md)** | The bridge, the module, and what to do when it doesn't work |
+| **[Importing content](docs/importing-content.md)** | Statblocks, spells and items from D&D Beyond |
+| **[In-app updating](docs/auto-update.md)** | How updates install, and how to go back |
+| **[Changelog](CHANGELOG.md)** | What changed in each release |
 
-### Running without the Storage service
+---
 
-Leave `USE_STORAGE_API_ONLY` unset (or set it to `0`) to kep using the built-in local JSOn files. If you enable `USE_STORAGE_API_ONLY` without providing `STORAGE_API_BASE`, the app will start but show a warning explaining how the to fix the configuration so you are not blocked while the Storage service is offline.
+## What it does
 
+- **Initiative** — sorted automatically, natural ordering so "Goblin 2" comes
+  before "Goblin 10". Lair actions get their own place in the order.
+- **HP** — click a creature's HP to damage or heal it, or select several and
+  do them together. Temp HP, max HP bonuses, and a concentration prompt with
+  the DC already worked out.
+- **Conditions and the action economy** — conditions per creature, action /
+  bonus / reaction tracking that resets each round, death saves for players
+  at 0 HP.
+- **Encounters** — build them ahead of time, load them, or merge one into a
+  fight in progress for reinforcements.
+- **SRD content included** — 333 monsters, 338 spells, 258 magic items, with
+  search. Import your own from D&D Beyond text.
+- **Foundry VTT sync** — optional, two-way, and off unless you turn it on.
+- **Yours to arrange** — panels, toolbar, colours and keyboard shortcuts are
+  all configurable, and settings can travel between machines.
 
-## One-time bulk spell import script
-If you want to paste many D&D Beyond spells at once, use the helper script:
+---
 
-```bash
-python scripts/import_spells_bulk.py /path/to/spells.txt
-```
+## Running from source
 
-By default, this will upload to the Storage API using `STORAGE_API_BASE` from your repo `.env`.
-It also skips `Legacy` entries unless you include `--include-legacy`.
+Python 3.10.
 
-Use `--dry-run` if you want parse + summary only:
-
-```bash
-python scripts/import_spells_bulk.py /path/to/spells.txt --dry-run
-```
-
-```bash
-# include legacy blocks and override API URL explicitly
-python scripts/import_spells_bulk.py /path/to/spells.txt --include-legacy --base-url https://your-storage-api.example.com
-```
-
-You can also paste directly from clipboard content via stdin:
-
-```bash
-pbpaste | python scripts/import_spells_bulk.py --base-url https://your-storage-api.example.com
-```
-
-## Bulk item import script
-The same idea for magic items. Paste D&D Beyond item pages into text files —
-keep them in `items/`, which is gitignored — then hand the whole folder over at
-once:
-
-```bash
-pipenv run python scripts/import_items_bulk.py items/
-```
-
-It takes any number of files or directories, so there is no shell loop to write,
-and duplicates are resolved across the whole run rather than per file. A `Legacy`
-block is kept only when no non-legacy version of the same item turned up
-anywhere in the run.
-
-Both D&D Beyond paste formats work and are detected automatically: the equipment
-listing (name, type, cost, weight) and the magic items listing (name, rarity,
-type, then the type line). **Items you do not own are skipped and listed by
-name** — D&D Beyond shows those with a "purchase the book" blurb where the
-description would be, so there is nothing to import.
-
-**Items already in your library are left alone.** That is the default because
-the library also holds the bundled SRD items and anything you have edited by
-hand; pass `--overwrite` when you actually mean to replace them.
-
-```bash
-# see what would be imported, write nothing
-pipenv run python scripts/import_items_bulk.py items/ --dry-run
-
-# replace existing entries, and drop Legacy blocks entirely
-pipenv run python scripts/import_items_bulk.py items/ --overwrite --skip-legacy
-
-# write to a local data directory instead of the API
-pipenv run python scripts/import_items_bulk.py items/ --local-dir ~/.dnd_tracker_config/data
-```
-
-It writes to the storage API you configured in Settings → Storage; `--base-url`
-overrides that. Imported items pick up `magic_item` and rarity tags, which is
-what the Shop Generator's Magic Shop and Apothecary profiles match on.
-
-## Combatant notes and the context menu
-
-Right-click a combatant row in the initiative table (the name cell works best)
-for per-creature actions.
-
-* **Edit Public Notes... / Edit Private Notes...** for longer notes. The
-  initiative table shows a compact **Notes** column for short flags.
-* **Set Statblock...** to attach a stat block to a monster or NPC.
-
-
-## Foundry → Bridge → App (Phase 1: snapshot sync)
-
-This repo includes a minimal bridge service and a Foundry module for sending combat snapshots to the bridge. The app fetches the latest snapshot from the bridge and mirrors Foundry initiative, turn state, and conditions. Foundry conditions are the source of truth: the app derives conditions only from the snapshot effects list and does not normalize or rename them.
-
-### Bridge service
-
-**Environment variables:**
-* `BRIDGE_HOST` (default `127.0.0.1`)
-* `BRIDGE_PORT` (default `8787`)
-* `BRIDGE_TOKEN` (**required** for external access to `/state`, `/health`, `/version`)
-* `BRIDGE_INGEST_SECRET` (optional shared secret for Foundry → bridge POSTs)
-* `BRIDGE_SNAPSHOT_PATH` (optional file path to persist the latest snapshot)
-* `BRIDGE_COMMANDS_PATH` (optional file path to persist queued commands)
-* `BRIDGE_VERSION` (optional version string for `/version`)
-* `COMMAND_TTL_SECONDS` (optional; default `60`)
-* `COMMAND_SWEEP_INTERVAL_SECONDS` (optional; default `5`)
-* `BRIDGE_STREAM_KEEPALIVE_SECONDS` (optional; default `15`)
-
-**Example `.env` for a remote bridge (app + bridge):**
-```
-# App-side config
-BRIDGE_URL=https://bridge.example.com
-BRIDGE_TOKEN=your_bridge_token
-
-# Bridge-side config (set on the bridge server)
-BRIDGE_HOST=0.0.0.0
-BRIDGE_PORT=8787
-BRIDGE_TOKEN=your_bridge_token
-BRIDGE_INGEST_SECRET=your_shared_secret
-```
-
-**Run locally (pipenv):**
 ```bash
 pipenv install
-BRIDGE_TOKEN=changeme BRIDGE_HOST=127.0.0.1 BRIDGE_PORT=8787 pipenv run python -m bridge_service.app
+pipenv run python main.py
 ```
 
-**Run locally (venv/pip):**
+Or with pip:
+
 ```bash
-python -m venv .venv
-source .venv/bin/activate
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-BRIDGE_TOKEN=changeme BRIDGE_HOST=127.0.0.1 BRIDGE_PORT=8787 python -m bridge_service.app
+python main.py
 ```
 
-**Quick curl test:**
+Tests (offscreen, so they need no display):
+
 ```bash
-export BRIDGE_TOKEN=changeme
-curl -H "Authorization: Bearer ${BRIDGE_TOKEN}" http://127.0.0.1:8787/health
-curl -H "Authorization: Bearer ${BRIDGE_TOKEN}" http://127.0.0.1:8787/state
+QT_QPA_PLATFORM=offscreen pipenv run python -m pytest tests/ -v
 ```
 
-**Systemd unit template:**
-See `deploy/bridge.service` for a sample unit. Create `/etc/dnd_app/bridge.env` for environment values.
+### Building a release
 
-### Foundry module
+PyInstaller cannot cross-compile, so each platform builds on that platform.
 
-Module folder: `foundryvtt-bridge/`
-
-**Install:**
-1. Copy `foundryvtt-bridge/` into your Foundry `Data/modules/` folder.
-2. Enable **Foundry Bridge Sync** in your world. (Module activation is per-world — a new world needs this again.)
-3. In **Module Settings**, confirm the Bridge URL (default `http://127.0.0.1:8787`) and optional shared secret. These two are client-scoped: set them once per browser and they carry over to every world.
-
-The module posts a full combat snapshot to `http://127.0.0.1:8787/foundry/snapshot` on combat/turn/HP/effect changes.
-
-### Python app client
-
-Set these environment variables (for the app process):
-* `BRIDGE_URL` (default `http://127.0.0.1:8787`)
-* `BRIDGE_TOKEN` (required to fetch `/state` and enqueue `/commands`)
-* `BRIDGE_STREAM_ENABLED` (default `1`, use `/state/stream` SSE instead of polling `/state`)
-
-On startup the app logs bridge sync status and prints the snapshot count when it loads.
-
-### Snapshot JSON schema
-
-```json
-{
-  "source": "foundry",
-  "world": "<world name>",
-  "timestamp": "<iso8601>",
-  "combat": {
-    "active": true,
-    "id": "<combatId or null>",
-    "round": 1,
-    "turn": 0,
-    "activeCombatant": {
-      "combatantId": "<combatantId or null>",
-      "tokenId": "<id>",
-      "actorId": "<id>",
-      "name": "<string>",
-      "initiative": 12
-    }
-  },
-  "combatants": [
-    {
-      "combatantId": "<combatantId or null>",
-      "tokenId": "<id>",
-      "actorId": "<id>",
-      "name": "<string>",
-      "initiative": 12,
-      "hp": { "value": 10, "max": 15 },
-      "effects": [
-        {
-          "id": "<activeEffectId>",
-          "label": "<foundry label>",
-          "icon": "<icon url or null>",
-          "disabled": false,
-          "origin": "<origin or null>"
-        }
-      ]
-    }
-  ]
-}
+```bash
+./package.sh                  # Linux  -> dist/*.tar.gz + SHA256SUMS
+./package_WIN.sh              # Windows (Git Bash) -> dist/*.zip
+./package_module.sh           # the Foundry module -> dist/foundryvtt-bridge.zip
+./package.sh --dev-install    # also install to ~/.local/opt for daily use
+./package.sh --publish        # also upload to the GitHub release for this version
 ```
 
-## App → Foundry (Phase 2: command queue)
+`--publish` needs the [GitHub CLI](https://cli.github.com/) (`gh auth login`)
+and the tag pushed. It uploads the artifacts and then asks the API what is
+actually attached, because a release published with no files on it looks
+exactly like a finished one.
 
-The bridge supports an app-to-Foundry command queue via `POST /commands`. When the app edits current HP or conditions for a combatant that matches a Foundry combatant, it posts commands to the bridge and Foundry polls the queue. Additional commands include `set_initiative`, `add_condition`, and `remove_condition`.
-When enabled in the Foundry module settings, Foundry can keep a persistent EventSource connection to `/commands/stream` for lower latency.
+Repository layout, architecture notes and the invariants worth knowing before
+changing things are in [CLAUDE.md](CLAUDE.md).
 
-**Foundry module settings:**
-* `Use command stream (EventSource)` toggles a persistent stream instead of polling.
+---
 
-**App environment variables:**
-* `BRIDGE_URL` (default `http://127.0.0.1:8787`)
-* `BRIDGE_TOKEN` (required to enqueue `/commands`)
+## How this was built
 
-**Bridge environment variables:**
-* `BRIDGE_TOKEN` (required to authorize `/commands`)
-* `BRIDGE_COMMANDS_PATH` (optional; defaults to `/var/lib/dnd-bridge/commands.json`)
-* `BRIDGE_INGEST_SECRET` (required for Foundry polling `/commands` and `/commands/<id>/ack`)
-* `COMMAND_TTL_SECONDS` (optional; default `60`)
-* `COMMAND_SWEEP_INTERVAL_SECONDS` (optional; default `5`)
+This app was built with substantial help from AI coding assistants —
+principally Anthropic's Claude, which wrote or reworked a large share of the
+code across many sessions.
 
-## Local bridge server (single-machine mode)
-By default, the desktop app can start a local bridge server inside the app process. This keeps snapshots, commands, and storage local by default.
+That work was directed, reviewed and tested by me, and the decisions about what
+this should be and how it should behave at the table are mine. But it would be
+misleading to present the result as though I had typed it all, and I would
+rather say so plainly than let anyone assume otherwise.
 
-**Environment variables:**
-* `LOCAL_BRIDGE_ENABLED` (default `1`, set to `0` to disable)
-* `LOCAL_BRIDGE_HOST` (default `127.0.0.1`)
-* `LOCAL_BRIDGE_PORT` (default `8787`)
+The same notice is in Help → About, because someone running the packaged app
+has no reason to read this file.
 
-If `BRIDGE_TOKEN` is not set, the app defaults it to `local-dev` and also uses that value for `BRIDGE_INGEST_SECRET`. Configure your Foundry module to use the same shared secret.
+---
 
+## Licence and attribution
 
-### Manual test checklist
+The bundled reference content is from the **System Reference Document 5.2.1**,
+© Wizards of the Coast LLC, used under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/legalcode). See
+[LICENSE-SRD.md](LICENSE-SRD.md); the attribution also travels with the app in
+Help → About.
 
-1. Start the bridge service locally with `BRIDGE_TOKEN` set.
-2. Use the curl test above to confirm `/health` and `/state` respond.
-3. Install/enable the Foundry module and start combat; verify bridge logs show snapshot receipt.
-4. Verify snapshots include `combatantId` and the full `effects[]` list for combatants.
-5. Add/remove a condition in Foundry and confirm the app mirrors the snapshot effects list.
-6. In the app, toggle a condition from the conditions dropdown and verify it appears in Foundry.
-7. Run the dev helper to exercise `add_condition`, `remove_condition`, and `set_initiative`:
-   ```bash
-   PYTHONPATH=lib BRIDGE_URL=http://127.0.0.1:8787 BRIDGE_TOKEN=changeme \
-     BRIDGE_TEST_CONDITION_LABEL="Prone" python -m app.bridge_dev
-   ```
-8. Verify the condition add/remove and initiative changes in Foundry, and confirm the command queue drains/acks.
+This project is not affiliated with or endorsed by Wizards of the Coast or
+Foundry Gaming LLC.

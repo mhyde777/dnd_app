@@ -15,6 +15,26 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ### Added
 
+- **Documentation you can actually follow.** The README is a front door rather
+  than a pile of everything, with guides behind it: [running a
+  combat](docs/using-the-tracker.md), [where your data
+  lives](docs/storage.md), and [connecting to Foundry
+  VTT](docs/foundry-setup.md) — the last with the three-piece diagram, the
+  per-world module gotcha, and a symptom-by-symptom section for when sync does
+  not work.
+- **The Foundry module can be installed from a URL.** Its manifest was missing
+  the `manifest` and `download` fields Foundry needs, so the only way to install
+  it was copying files by hand. Paste
+  `https://github.com/mhyde777/dnd_app/releases/latest/download/module.json`
+  into Foundry's *Install Module* box. The module and its manifest are now built
+  by `./package_module.sh` and published with every release.
+- **A reference storage server** (`storage_service/`). API mode needed a server
+  the app did not ship and the docs never said where to get — it is about 150
+  readable lines, file-backed, and stores the same layout local mode uses, so
+  the two are interchangeable. Not required: local mode remains the default.
+- **A disclosure that AI tools did much of the work on this app**, in the README
+  and in Help → About.
+
 - **Help → Installed Versions** switches between the versions installed side by
   side and removes ones you no longer want. Updating keeps the previous build
   rather than replacing it, so going back is the same operation as going

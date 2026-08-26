@@ -215,7 +215,7 @@ class SetupWizard(QDialog):
         self.bridge_stream_check = QCheckBox("Use live streaming instead of polling")
         details.addWidget(self.bridge_stream_check)
 
-        hint = QLabel("See docs/foundry-bridge.md for the Foundry-side setup.")
+        hint = QLabel("See docs/foundry-setup.md for the Foundry-side setup.")
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #888; font-size: 11px;")
         details.addWidget(hint)
