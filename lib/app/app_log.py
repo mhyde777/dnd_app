@@ -98,5 +98,3 @@ def recent(limit: int | None = None) -> list[str]:
     return lines
 
 
-def clear_ring() -> None:
-    _ring.records.clear()

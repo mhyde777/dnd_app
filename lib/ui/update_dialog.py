@@ -20,7 +20,7 @@ import threading
 from typing import Optional
 
 from PyQt5.QtCore import Qt, QUrl, pyqtSignal
-from PyQt5.QtGui import QDesktopServices, QFont
+from PyQt5.QtGui import QDesktopServices
 from PyQt5.QtWidgets import (
     QApplication,
     QDialog,

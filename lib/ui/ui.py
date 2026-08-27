@@ -1970,23 +1970,6 @@ class InitiativeTracker(QMainWindow, Application):
         frame_geometry.moveCenter(screen_center)
         self.move(frame_geometry.topLeft())
 
-    def handle_clicked_index(self, index):
-        row = index.row()
-        col = index.column()
-        field = self.table_model.fields[col]
-        creature_name = self.table_model.creature_names[row]
-        # print(f"Clicked {creature_name} - {field}")
-
-    def handle_data_changed(self, topLeft, bottomRight, roles):
-        seen = set()
-        for row in range(topLeft.row(), bottomRight.row() + 1):
-            if row >= len(self.table_model.creature_names):
-                continue
-            creature_name = self.table_model.creature_names[row]
-            if creature_name not in seen:
-                # print(f"Data changed for: {creature_name}")
-                seen.add(creature_name)
-
     def toggle_boolean_cell(self, index):
         if not index.isValid():
             return
@@ -2225,15 +2208,6 @@ class InitiativeTracker(QMainWindow, Application):
                 self._clear_statblock()
         else:
             self._clear_statblock()
-
-    def _set_active_turn_by_name(self, name: str):
-        if not name:
-            return
-        self.build_turn_order()
-        if name in self.turn_order:
-            self.current_idx = self.turn_order.index(name)
-            self.current_creature_name = name
-            self.update_active_ui()
 
     def show_table_context_menu(self, pos):
         index = self.table.indexAt(pos)

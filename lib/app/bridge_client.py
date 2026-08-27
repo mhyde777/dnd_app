@@ -160,6 +160,28 @@ class BridgeClient:
                     on_disconnect()
                 time.sleep(retry_delay)
 
+    def _enqueue_token_value(
+        self,
+        command_type: str,
+        value_key: str,
+        value: int,
+        token_id: str,
+        actor_id: Optional[str],
+        command_id: Optional[str],
+    ) -> bool:
+        """Send one integer against a token. The HP-ish commands differ only in
+        the command name and the payload key they carry it under."""
+        payload: Dict[str, Any] = {"tokenId": token_id, value_key: int(value)}
+        if actor_id:
+            payload["actorId"] = actor_id
+        return self._post_command(
+            command_type=command_type,
+            payload=payload,
+            command_id=command_id,
+            log_label=command_type,
+            redact_fields=("tokenId", "actorId"),
+        )
+
     def enqueue_set_hp(
         self,
         token_id: str,
@@ -167,15 +189,8 @@ class BridgeClient:
         actor_id: Optional[str] = None,
         command_id: Optional[str] = None,
     ) -> bool:
-        payload = {"tokenId": token_id, "hp": int(hp)}
-        if actor_id:
-            payload["actorId"] = actor_id
-        return self._post_command(
-            command_type="set_hp",
-            payload=payload,
-            command_id=command_id,
-            log_label="set_hp",
-            redact_fields=("tokenId", "actorId"),
+        return self._enqueue_token_value(
+            "set_hp", "hp", hp, token_id, actor_id, command_id
         )
 
     def enqueue_set_temp_hp(
@@ -185,15 +200,8 @@ class BridgeClient:
         actor_id: Optional[str] = None,
         command_id: Optional[str] = None,
     ) -> bool:
-        payload = {"tokenId": token_id, "temp": int(temp_hp)}
-        if actor_id:
-            payload["actorId"] = actor_id
-        return self._post_command(
-            command_type="set_temp_hp",
-            payload=payload,
-            command_id=command_id,
-            log_label="set_temp_hp",
-            redact_fields=("tokenId", "actorId"),
+        return self._enqueue_token_value(
+            "set_temp_hp", "temp", temp_hp, token_id, actor_id, command_id
         )
 
     def enqueue_set_max_hp_bonus(
@@ -203,15 +211,8 @@ class BridgeClient:
         actor_id: Optional[str] = None,
         command_id: Optional[str] = None,
     ) -> bool:
-        payload = {"tokenId": token_id, "tempmax": int(max_hp_bonus)}
-        if actor_id:
-            payload["actorId"] = actor_id
-        return self._post_command(
-            command_type="set_max_hp_bonus",
-            payload=payload,
-            command_id=command_id,
-            log_label="set_max_hp_bonus",
-            redact_fields=("tokenId", "actorId"),
+        return self._enqueue_token_value(
+            "set_max_hp_bonus", "tempmax", max_hp_bonus, token_id, actor_id, command_id
         )
 
     def send_set_initiative(
@@ -237,14 +238,17 @@ class BridgeClient:
             redact_fields=("combatantId", "tokenId", "actorId"),
         )
 
-    def send_add_condition(
+    def _send_condition(
         self,
-        effect_id: Optional[str] = None,
-        label: Optional[str] = None,
-        token_id: Optional[str] = None,
-        actor_id: Optional[str] = None,
-        command_id: Optional[str] = None,
+        command_type: str,
+        effect_id: Optional[str],
+        label: Optional[str],
+        token_id: Optional[str],
+        actor_id: Optional[str],
+        command_id: Optional[str],
     ) -> bool:
+        """Add and remove differ only in the command name; every id is optional
+        because Foundry accepts whichever of them the app managed to resolve."""
         payload: Dict[str, Any] = {}
         if effect_id:
             payload["effectId"] = effect_id
@@ -255,11 +259,23 @@ class BridgeClient:
         if actor_id:
             payload["actorId"] = actor_id
         return self._post_command(
-            command_type="add_condition",
+            command_type=command_type,
             payload=payload,
             command_id=command_id,
-            log_label="add_condition",
+            log_label=command_type,
             redact_fields=("tokenId", "actorId", "effectId"),
+        )
+
+    def send_add_condition(
+        self,
+        effect_id: Optional[str] = None,
+        label: Optional[str] = None,
+        token_id: Optional[str] = None,
+        actor_id: Optional[str] = None,
+        command_id: Optional[str] = None,
+    ) -> bool:
+        return self._send_condition(
+            "add_condition", effect_id, label, token_id, actor_id, command_id
         )
 
     def send_remove_condition(
@@ -270,21 +286,8 @@ class BridgeClient:
         actor_id: Optional[str] = None,
         command_id: Optional[str] = None,
     ) -> bool:
-        payload: Dict[str, Any] = {}
-        if effect_id:
-            payload["effectId"] = effect_id
-        if label:
-            payload["label"] = label
-        if token_id:
-            payload["tokenId"] = token_id
-        if actor_id:
-            payload["actorId"] = actor_id
-        return self._post_command(
-            command_type="remove_condition",
-            payload=payload,
-            command_id=command_id,
-            log_label="remove_condition",
-            redact_fields=("tokenId", "actorId", "effectId"),
+        return self._send_condition(
+            "remove_condition", effect_id, label, token_id, actor_id, command_id
         )
 
     def send_next_turn(self, command_id: Optional[str] = None) -> bool:

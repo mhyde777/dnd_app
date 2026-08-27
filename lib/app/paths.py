@@ -34,6 +34,3 @@ def config_path(*parts: str) -> str:
     return os.path.join(config_dir(), *parts)
 
 
-def is_overridden() -> bool:
-    """True when running against a throwaway profile rather than the real one."""
-    return bool(os.environ.get(ENV_VAR, "").strip())

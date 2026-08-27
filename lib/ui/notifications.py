@@ -5,6 +5,7 @@ User-facing error and status reporting.
 Three levels, so failures stop being invisible:
 
   toast(...)        transient, non-blocking — "State saved", "Loaded PC group"
+  InlineWarning     a strip inside a dialog — "Parse error: ..."
   report_warning()  something didn't work, but the app carried on
   report_error()    the action failed; shows the exception under "Show Details"
 
@@ -35,6 +36,36 @@ _TOAST_STYLES = {
 _TOAST_MARGIN = 18
 _TOAST_MAX_WIDTH = 380
 _TOAST_SPACING = 8
+
+
+# Inline warning strip. The import dialogs all grew their own copy of this
+# label -- same colours, same ⚠ prefix, same hide-until-needed behaviour -- so
+# it lives here with the rest of the reporting vocabulary.
+WARNING_BG = "#FFF3CD"
+WARNING_FG = "#856404"
+WARNING_BORDER = "#FFEEBA"
+
+
+class InlineWarning(QLabel):
+    """A warning strip that sits in a dialog's layout, hidden until it has text.
+
+    Unlike report_warning() this does not interrupt: it is for problems the
+    user is expected to fix by editing what they pasted.
+    """
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self.setWordWrap(True)
+        self.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+        self.setStyleSheet(
+            f"background:{WARNING_BG}; color:{WARNING_FG};"
+            f"border:1px solid {WARNING_BORDER}; padding:6px; border-radius:3px;"
+        )
+        self.hide()
+
+    def show_message(self, message: str) -> None:
+        self.setText(f"\u26a0  {message}")
+        self.show()
 
 
 class _Toast(QWidget):

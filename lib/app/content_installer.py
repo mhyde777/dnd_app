@@ -25,10 +25,6 @@ class InstallResult:
     failed: list[str] = field(default_factory=list)
     cancelled: bool = False
 
-    @property
-    def total_seen(self) -> int:
-        return self.installed + self.skipped + len(self.failed)
-
     def summary(self) -> str:
         parts = [f"{self.installed} installed"]
         if self.skipped:

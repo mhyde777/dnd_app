@@ -26,6 +26,48 @@ _COND_ABBR = {
     "Unconscious": "Unc",
 }
 
+# Creature fields the table never shows as a column: either they are internal
+# bookkeeping (Foundry ids, death-save counters) or they already have a
+# dedicated widget elsewhere (spell slots, ability uses, notes).
+_HIDDEN_FIELDS = {
+    "_public_notes",
+    "_player_visible",
+    "_spell_slots",
+    "_innate_slots",
+    "_spell_slots_used",
+    "_innate_slots_used",
+    "_ability_uses",
+    "_ability_uses_used",
+    "_death_successes",
+    "_death_failures",
+    "_death_stable",
+    "_death_saves_prompt",
+    "_active",
+    "_foundry_combatant_id",
+    "_foundry_token_id",
+    "_foundry_actor_id",
+    "_temp_hp",
+    "_max_hp_bonus",
+    "_is_lair_action",
+    "_lair_action_notes",
+    "_statblock_override",
+}
+
+
+def _column_fields(sample) -> list:
+    """The column list for a creature, derived from its dataclass fields.
+
+    One definition, because three copies had already drifted: the one in
+    refresh() was missing the death-save counters and would have grown three
+    stray columns.
+    """
+    fields = [f.name for f in dataclass_fields(sample) if f.name not in _HIDDEN_FIELDS]
+    for icon_column in (SPELL_ICON_COLUMN_NAME, ABILITY_ICON_COLUMN_NAME):
+        if icon_column not in fields:
+            fields.append(icon_column)
+    return fields
+
+
 class CreatureTableModel(QAbstractTableModel):
     def __init__(self, manager, fields=None, parent=None, bridge_owner=None):
         super().__init__(parent)
@@ -37,36 +79,7 @@ class CreatureTableModel(QAbstractTableModel):
 
         # Build fields from a sample creature if not provided
         if fields is None and self.manager.creatures:
-            excluded = {
-                "_public_notes",
-                "_player_visible",
-                "_spell_slots",
-                "_innate_slots",
-                "_spell_slots_used",
-                "_innate_slots_used",
-                "_ability_uses",
-                "_ability_uses_used",
-                "_death_successes",
-                "_death_failures",
-                "_death_stable",
-                "_death_saves_prompt",
-                "_active",
-                "_foundry_combatant_id",
-                "_foundry_token_id",
-                "_foundry_actor_id",
-                "_temp_hp",
-                "_max_hp_bonus",
-                "_is_lair_action",
-                "_lair_action_notes",
-                "_statblock_override",
-            }
-            sample = next(iter(self.manager.creatures.values()))
-            self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
-
-            if SPELL_ICON_COLUMN_NAME not in self.fields:
-                self.fields.append(SPELL_ICON_COLUMN_NAME)
-            if ABILITY_ICON_COLUMN_NAME not in self.fields:
-                self.fields.append(ABILITY_ICON_COLUMN_NAME)
+            self.fields = _column_fields(next(iter(self.manager.creatures.values())))
         else:
             self.fields = fields or []
 
@@ -432,37 +445,7 @@ class CreatureTableModel(QAbstractTableModel):
         if not self.manager.creatures:
             return
 
-        excluded = {
-            "_public_notes",
-            "_player_visible",
-            "_spell_slots",
-            "_innate_slots",
-            "_spell_slots_used",
-            "_innate_slots_used",
-            "_ability_uses",
-            "_ability_uses_used",
-            "_death_successes",
-            "_death_failures",
-            "_death_stable",
-            "_death_saves_prompt",
-            "_active",
-            "_foundry_combatant_id",
-            "_foundry_token_id",
-            "_foundry_actor_id",
-            "_temp_hp",
-            "_max_hp_bonus",
-            "_is_lair_action",
-            "_lair_action_notes",
-            "_statblock_override",
-        }
-        sample = next(iter(self.manager.creatures.values()))
-        self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
-
-        if SPELL_ICON_COLUMN_NAME not in self.fields:
-            self.fields.append(SPELL_ICON_COLUMN_NAME)
-        if ABILITY_ICON_COLUMN_NAME not in self.fields:
-            self.fields.append(ABILITY_ICON_COLUMN_NAME)
-
+        self.fields = _column_fields(next(iter(self.manager.creatures.values())))
         self.layoutChanged.emit()
 
     def refresh(self):
@@ -470,32 +453,7 @@ class CreatureTableModel(QAbstractTableModel):
 
         # If fields were never initialized (edge-case), rebuild them consistently
         if not self.fields and self.manager.creatures:
-            excluded = {
-                "_public_notes",
-                "_player_visible",
-                "_spell_slots",
-                "_innate_slots",
-                "_spell_slots_used",
-                "_innate_slots_used",
-                "_ability_uses",
-                "_ability_uses_used",
-                "_death_saves_prompt",
-                "_active",
-                "_foundry_combatant_id",
-                "_foundry_token_id",
-                "_foundry_actor_id",
-                "_temp_hp",
-                "_max_hp_bonus",
-                "_is_lair_action",
-                "_lair_action_notes",
-                "_statblock_override",
-            }
-            sample = next(iter(self.manager.creatures.values()))
-            self.fields = [f.name for f in dataclass_fields(sample) if f.name not in excluded]
-            if SPELL_ICON_COLUMN_NAME not in self.fields:
-                self.fields.append(SPELL_ICON_COLUMN_NAME)
-            if ABILITY_ICON_COLUMN_NAME not in self.fields:
-                self.fields.append(ABILITY_ICON_COLUMN_NAME)
+            self.fields = _column_fields(next(iter(self.manager.creatures.values())))
 
         self.layoutChanged.emit()
 
@@ -514,7 +472,3 @@ class CreatureTableModel(QAbstractTableModel):
             [Qt.BackgroundRole],
         )
 
-    def set_creatures(self, creatures):
-        # Keep the model consistent with how everything else reads creatures
-        self.manager.creatures = creatures
-        self.refresh()

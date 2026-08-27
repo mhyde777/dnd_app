@@ -1,7 +1,6 @@
-import json
 from typing import Dict, List
 
-from app.creature import Player, Monster, I_Creature
+from app.creature import Player, Monster
 
 class GameState:
     players: List[Player]

@@ -56,16 +56,18 @@ lib/
     bridge_client.py            # Client for Foundry bridge communication (threading)
     local_bridge_server.py      # In-process bridge server (single-machine mode)
     storage_api.py              # Optional remote storage API
+    storage_factory.py          # open_storage() — the one answer to "which backend?"
   ui/
     ui.py                       # InitiativeTracker QMainWindow (main UI)
     creature_table_model.py     # QAbstractTableModel for creature table
+    json_edit_dialog.py         # JsonEditDialog base — JSON + live preview (spells, statblocks)
     windows.py                  # Dialog windows (add/remove combatants, encounters)
     conditions_dropdown.py      # Condition selection widget
     spellcasting_dropdown.py    # Spell slot management widget
     death_saves_dialog.py       # Death saving throws dialog
     enter_initiatives_dialog.py # Initiative roll input dialog
     update_characters.py        # Creature property editor
-    notifications.py            # toast() / report_error() / report_warning() + sys.excepthook
+    notifications.py            # toast() / InlineWarning / report_error() / report_warning() + sys.excepthook
     banner.py                   # BannerArea — persistent, keyed, dismissible notifications
     layout_settings_dialog.py   # Panel placement/width config + PANEL_REGISTRY
     log_dialog.py               # Help → Show Log viewer

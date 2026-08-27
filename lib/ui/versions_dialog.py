@@ -28,8 +28,9 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
 )
 
-from app import install_layout, update_check, update_install
+from app import install_layout, update_check
 from app.version import __version__
+from ui.update_dialog import _human
 
 
 _ON_DISK = Qt.UserRole + 1
@@ -50,14 +51,6 @@ def _directory_size(path: str) -> int:
             except OSError:
                 pass
     return total
-
-
-def _human(size: float) -> str:
-    for unit in ("B", "KB", "MB", "GB"):
-        if size < 1024 or unit == "GB":
-            return f"{size:.0f} {unit}" if unit == "B" else f"{size:.1f} {unit}"
-        size /= 1024.0
-    return f"{size:.1f} GB"
 
 
 class VersionsDialog(QDialog):

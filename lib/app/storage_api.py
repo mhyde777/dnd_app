@@ -56,11 +56,6 @@ class StorageAPI:
     def _statblock_item_url(self, key: str) -> str:
         return f"{self._statblocks_url()}/{key}"
 
-    def _headers(self) -> dict:
-        if getattr(self, "api_key", ""):
-            return {"X-Api-Key": self.api_key}
-        return {}
-
     # ----- Response helpers -----
 
     @staticmethod

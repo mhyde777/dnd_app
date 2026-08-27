@@ -82,9 +82,7 @@ class SpellcastingDropdown(QWidget):
     def update_innate_usage(self, spell):
         checked_count = sum(1 for box in self.innate_checkboxes.get(spell, []) if box.isChecked())
         self.creature._innate_slots_used[spell] = checked_count
-        # print("[INNATE UPDATED]", spell, checked_count)
 
     def update_slot_usage(self, level):
         checked_count = sum(1 for box in self.slot_checkboxes.get(level, []) if box.isChecked())
         self.creature._spell_slots_used[level] = checked_count
-        # print("[SLOTS UPDATED]", level, checked_count)

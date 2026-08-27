@@ -356,7 +356,6 @@ _MAGIC_TYPE_WORDS = frozenset({
     "ring", "rod", "staff", "wand", "ammunition",
 })
 
-_MARKETPLACE_LOWER = "view marketplace"
 _DETAILS_LOWER = "view details page"
 
 # "Weapon (any sword), rare (requires attunement)" -- the line _parse_type_line

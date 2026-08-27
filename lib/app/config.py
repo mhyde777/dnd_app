@@ -2,18 +2,14 @@ import os
 from dotenv import load_dotenv
 
 import app.settings as _settings
-from app.paths import config_dir as _config_dir, config_path as _config_path
+from app.paths import config_path as _config_path
 
-
-def get_config_dir() -> str:
-    return _config_dir()
 
 def get_config_path(filename: str) -> str:
     return _config_path(filename)
 
 load_dotenv(get_config_path(".env"), override=False)
 
-TOKEN_PATH = get_config_path("token.json")
 
 # ---- Storage config ----
 

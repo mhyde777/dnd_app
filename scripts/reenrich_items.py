@@ -21,7 +21,8 @@ import os
 # Make lib importable
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "lib"))
 
-from app.item_parser import _build_tags, _TYPE_MAP
+from app.item_parser import _build_tags
+from app.storage_factory import open_storage
 
 
 # ── Name-based type inference ─────────────────────────────────────────────────
@@ -63,20 +64,11 @@ def _infer_type_from_name(name: str) -> str | None:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def _get_storage():
-    from app import settings as _settings
-    mode = _settings.get("storage_mode", "local")
-    if mode == "api":
-        from app.storage_api import StorageAPI
-        from app.config import get_storage_api_base
-        return StorageAPI(get_storage_api_base())
-    else:
-        from app.local_storage import LocalStorage
-        from app.config import get_local_data_dir
-        data_dir = get_local_data_dir()
-        if not data_dir:
-            print("ERROR: local_data_dir not set in settings. Run the app first to configure storage.")
-            sys.exit(1)
-        return LocalStorage(data_dir)
+    storage, problem = open_storage()
+    if storage is None:
+        print(f"ERROR: {problem}")
+        sys.exit(1)
+    return storage
 
 
 def main():

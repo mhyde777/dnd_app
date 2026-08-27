@@ -181,9 +181,3 @@ class BannerArea(QWidget):
         banner.deleteLater()
         self.setVisible(bool(self._banners))
 
-    def clear_all(self) -> None:
-        for key in list(self._banners):
-            self.clear_banner(key)
-
-    def active_keys(self) -> list[str]:
-        return list(self._banners)
