@@ -104,7 +104,7 @@ class Application:
         self._initiative_reset_pending = False
 
         # --- Storage backend ---
-        self.storage_api, self.storage_api_warning = open_storage()
+        self.storage, self.storage_warning = open_storage()
 
     def _refresh_table(self) -> None:
         """Repaint the table through whichever surface this instance has.
@@ -1443,7 +1443,7 @@ class Application:
         return state.to_dict()
 
     def save_as_encounter(self):
-        if not getattr(self, "storage_api", None):
+        if not getattr(self, "storage", None):
             QMessageBox.critical(
                 self,
                 "Storage Not Configured",
@@ -1468,7 +1468,7 @@ class Application:
 
         # ----- Save to Storage -----
         try:
-            self.storage_api.put_json(filename, self._current_state_payload())
+            self.storage.put_json(filename, self._current_state_payload())
 
             QMessageBox.information(
                 self,
@@ -1483,8 +1483,8 @@ class Application:
         filename = "last_state.json"
 
         try:
-            if getattr(self, "storage_api", None):
-                self.storage_api.put_json(filename, save_data)
+            if getattr(self, "storage", None):
+                self.storage.put_json(filename, save_data)
             else:
                 file_path = self.get_data_path(filename)
                 with open(file_path, "w", encoding="utf-8") as f:
@@ -1505,9 +1505,9 @@ class Application:
             # --- Decide source: Storage key vs local file ---
             file_path = self.get_data_path(file_name)
 
-            if getattr(self, "storage_api", None) and not os.path.exists(file_path):
+            if getattr(self, "storage", None) and not os.path.exists(file_path):
                 # Treat file_name as a Storage key
-                raw = self.storage_api.get_json(file_name)
+                raw = self.storage.get_json(file_name)
                 if raw is None:
                     self._log(f"[WARN] Storage key not found: {file_name}")
                     return False
@@ -2125,11 +2125,11 @@ class Application:
     # ================== Edit Menu Actions =====================
     def fetch_statblock_for_creature(self, name: str) -> dict | None:
         """Look up a statblock JSON by creature name. Returns dict or None."""
-        if not self.storage_api:
+        if not self.storage:
             return None
         try:
             from app.statblock_parser import statblock_key
-            return self.storage_api.get_statblock(statblock_key(name))
+            return self.storage.get_statblock(statblock_key(name))
         except Exception:
             return None
 
@@ -2443,12 +2443,12 @@ class Application:
         self.resize_to_fit_screen(base_name)
 
     def resize_to_fit_screen(self, base_name):
-        if self.storage_api:
+        if self.storage:
             try:
                 from app.statblock_parser import statblock_key
-                data = self.storage_api.get_statblock(statblock_key(base_name))
+                data = self.storage.get_statblock(statblock_key(base_name))
                 if data:
-                    self.statblock_widget.set_storage_api(self.storage_api)
+                    self.statblock_widget.set_storage(self.storage)
                     self.statblock_widget.load_statblock(data)
                     self.statblock_widget.show()
                     return
@@ -2464,28 +2464,28 @@ class Application:
 
     def open_import_statblock_dialog(self):
         from ui.statblock_import_dialog import StatblockImportDialog
-        dlg = StatblockImportDialog(storage_api=self.storage_api, parent=self)
+        dlg = StatblockImportDialog(storage=self.storage, parent=self)
         dlg.exec_()
 
     def open_import_spell_dialog(self):
         from ui.spell_import_dialog import SpellImportDialog
-        dlg = SpellImportDialog(storage_api=self.storage_api, parent=self)
+        dlg = SpellImportDialog(storage=self.storage, parent=self)
         dlg.exec_()
 
     def open_bulk_item_import_dialog(self):
         from ui.bulk_item_import_dialog import BulkItemImportDialog
-        dlg = BulkItemImportDialog(storage_api=self.storage_api, parent=self)
+        dlg = BulkItemImportDialog(storage=self.storage, parent=self)
         dlg.exec_()
 
     def open_shop_generator_dialog(self):
         from ui.shop_generator_dialog import ShopGeneratorDialog
-        dlg = ShopGeneratorDialog(storage_api=self.storage_api, bridge_client=getattr(self, 'bridge_client', None), parent=self)
+        dlg = ShopGeneratorDialog(storage=self.storage, bridge_client=getattr(self, 'bridge_client', None), parent=self)
         dlg.exec_()
 
     def open_lookup_dialog(self):
         from ui.lookup_dialog import LookupDialog
         if not hasattr(self, "_lookup_dialog") or self._lookup_dialog is None:
-            self._lookup_dialog = LookupDialog(storage_api=self.storage_api, parent=self)
+            self._lookup_dialog = LookupDialog(storage=self.storage, parent=self)
         self._lookup_dialog.show()
         self._lookup_dialog.raise_()
         self._lookup_dialog.activateWindow()
@@ -2636,7 +2636,7 @@ class Application:
 
     # ================= Encounter Builder =====================
     def save_encounter(self):
-        dialog = BuildEncounterWindow(self, storage_api=self.storage_api)
+        dialog = BuildEncounterWindow(self, storage=self.storage)
         if dialog.exec_() != QDialog.Accepted:
             return
 
@@ -2678,9 +2678,9 @@ class Application:
             # payload["_meta"] = {"description": description}
 
         try:
-            if not getattr(self, "storage_api", None):
+            if not getattr(self, "storage", None):
                 raise RuntimeError("Storage API is not configured.")
-            self.storage_api.put_json(filename, payload)
+            self.storage.put_json(filename, payload)
             QMessageBox.information(self, "Saved", f"Saved encounter to Storage as:\n{filename}")
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to save encounter:\n{e}")
@@ -2728,11 +2728,11 @@ class Application:
 
     def list_pc_groups(self) -> List[tuple]:
         """Return sorted list of (display_name, key) for saved PC groups."""
-        if not getattr(self, "storage_api", None):
+        if not getattr(self, "storage", None):
             return []
         out: List[tuple] = []
         try:
-            for key in self.storage_api.list():
+            for key in self.storage.list():
                 if (
                     isinstance(key, str)
                     and key.startswith(self.PC_GROUP_PREFIX)
@@ -2878,7 +2878,7 @@ class Application:
         to create a group and fill it in, and saving a party down to zero PCs is
         a legitimate edit.
         """
-        if not getattr(self, "storage_api", None):
+        if not getattr(self, "storage", None):
             raise RuntimeError("Storage is not configured. Go to File → Settings.")
         state = GameState()
         state.players = list(players)
@@ -2886,7 +2886,7 @@ class Application:
         state.current_turn = 0
         state.round_counter = 1
         state.time_counter = 0
-        self.storage_api.put_json(key, state.to_dict())
+        self.storage.put_json(key, state.to_dict())
         return key
 
     def save_pc_group(self, name: str) -> str:
@@ -2900,18 +2900,18 @@ class Application:
 
     def get_pc_group_players(self, key: str) -> List[Player]:
         """Return the saved roster for a group without touching the live table."""
-        if not getattr(self, "storage_api", None):
+        if not getattr(self, "storage", None):
             raise RuntimeError("Storage is not configured.")
-        raw = self.storage_api.get_json(key)
+        raw = self.storage.get_json(key)
         if raw is None:
             raise RuntimeError(f"Group not found: {key}")
         state = json.loads(json.dumps(raw), object_hook=self.custom_decoder)
         return [c for c in (state.get("players", []) or []) if isinstance(c, Player)]
 
     def delete_pc_group(self, key: str) -> None:
-        if not getattr(self, "storage_api", None):
+        if not getattr(self, "storage", None):
             raise RuntimeError("Storage is not configured.")
-        self.storage_api.delete(key)
+        self.storage.delete(key)
         if self.active_pc_group == key:
             self._set_active_pc_group(None)
 
@@ -2955,7 +2955,7 @@ class Application:
 
     # ================== Secondary Windows ======================
     def load_encounter(self):
-        dialog = LoadEncounterWindow(self, storage=self.storage_api)
+        dialog = LoadEncounterWindow(self, storage=self.storage)
         if dialog.exec_() == QDialog.Accepted and dialog.selected_file:
             self.load_file_to_manager(dialog.selected_file, self.manager, prompt_for_initiatives=True)
             # After load, use the active creature from stable order
@@ -2968,7 +2968,7 @@ class Application:
                 self.notify(f"Loaded encounter: {dialog.selected_file}", "success")
 
     def merge_encounter(self):
-        dialog = LoadEncounterWindow(self, storage=self.storage_api)
+        dialog = LoadEncounterWindow(self, storage=self.storage)
         if dialog.exec_() == QDialog.Accepted and dialog.selected_file:
             self.load_file_to_manager(dialog.selected_file, self.manager, merge=True, prompt_for_initiatives=False)
 
@@ -2983,18 +2983,18 @@ class Application:
 
     def manage_encounter_statuses(self):
         from ui.storage_status import StorageStatusWindow
-        if not getattr(self, "storage_api", None):
+        if not getattr(self, "storage", None):
             QMessageBox.information(self, "Unavailable", "Storage API not configured.")
             return
-        dlg = StorageStatusWindow(self.storage_api, self)
+        dlg = StorageStatusWindow(self.storage, self)
         dlg.exec_()
 
     def delete_encounters(self):
         from ui.delete_storage import DeleteStorageWindow
-        if not getattr(self, "storage_api", None):
+        if not getattr(self, "storage", None):
             QMessageBox.information(self, "Unavailable", "Storage API not configured.")
             return
-        dlg = DeleteStorageWindow(self.storage_api, self)
+        dlg = DeleteStorageWindow(self.storage, self)
         if dlg.exec_() == QDialog.Accepted:
             # Optional: refresh any open pickers or cached lists here
             pass

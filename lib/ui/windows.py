@@ -272,11 +272,11 @@ class RemoveCombatantWindow(QDialog):
 
 
 class BuildEncounterWindow(QDialog):
-    def __init__(self, parent=None, storage_api=None):
+    def __init__(self, parent=None, storage=None):
         super().__init__(parent)
         self.setWindowTitle("Build Encounter")
         self.setMinimumWidth(620)
-        self._storage_api = storage_api
+        self._storage = storage
         self.roster_rows: list[dict] = []
         self._display_key_map: dict[str, str] = {}
 
@@ -344,13 +344,13 @@ class BuildEncounterWindow(QDialog):
         self._populate_list()
 
     def _populate_list(self):
-        if not self._storage_api:
+        if not self._storage:
             placeholder = QListWidgetItem("(No storage API configured)")
             placeholder.setFlags(placeholder.flags() & ~Qt.ItemIsEnabled)
             self._list.addItem(placeholder)
             return
         try:
-            keys = self._storage_api.list_statblock_keys()
+            keys = self._storage.list_statblock_keys()
         except Exception:
             keys = []
         if not keys:
@@ -378,7 +378,7 @@ class BuildEncounterWindow(QDialog):
         if not key:
             return
         try:
-            data = self._storage_api.get_statblock(key) or {}
+            data = self._storage.get_statblock(key) or {}
         except Exception:
             data = {}
 

@@ -1,10 +1,10 @@
 """
 Install the bundled SRD library into whichever storage backend is configured.
 
-`LocalStorage` and `StorageAPI` expose the same save/list methods, so one code
-path serves both. That matters for the remote case: installing into an API
-server is ~670 HTTP PUTs over a possibly slow link, so the work is
-interruptible and re-running it is cheap.
+Every provider exposes the same save/list methods (see `app.storage.base`), so
+one code path serves all of them. That matters for the network-backed ones:
+installing into WebDAV, S3 or an HTTP server is ~670 requests over a possibly
+slow link, so the work is interruptible and re-running it is cheap.
 """
 from __future__ import annotations
 

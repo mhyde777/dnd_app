@@ -12,11 +12,19 @@ datas = [
 
 # The bundled SRD library, when this tree has one. Absent in a plain source
 # checkout, so the spec has to stay valid without it.
-# Shipped so Help -> Release Notes works offline and describes the running
-# build, not whatever is on the web.
-for _doc in ("CHANGELOG.md", "LICENSE-SRD.md"):
+# Shipped so Help -> Release Notes and Help -> Documentation work offline and
+# describe the running build, not whatever is on the web. README.md is the
+# "Overview" page in the docs window, so it travels with the rest.
+for _doc in ("CHANGELOG.md", "LICENSE-SRD.md", "README.md"):
     if (project_dir / _doc).is_file():
         datas.append((project_dir / _doc, "."))
+
+# The docs/ tree, kept at the same relative path it has in the source checkout
+# so app/docs_content.py needs one search order for both. Without this the
+# Help -> Documentation window opens empty in a packaged build, which is
+# exactly the build where a user cannot fall back to reading the repository.
+if (project_dir / "docs").is_dir():
+    datas.append((project_dir / "docs", "docs"))
 
 _srd_content = project_dir / "srd_content"
 if _srd_content.is_dir():
@@ -38,6 +46,17 @@ hiddenimports = [
     "bridge_service.app",
     "bridge_service.command_queue",
     "werkzeug.serving",
+]
+
+# Python-Markdown, for Help -> Documentation. ui/docs_window.py imports the
+# extension classes directly rather than by name, so static analysis does find
+# them -- these are belt and braces, because the failure mode is a window that
+# raises "Failed loading extension" only in a packaged build.
+hiddenimports += [
+    "markdown.extensions.fenced_code",
+    "markdown.extensions.sane_lists",
+    "markdown.extensions.tables",
+    "markdown.extensions.toc",
 ]
 
 qdark_datas, qdark_binaries, qdark_hidden = collect_all("qdarktheme")

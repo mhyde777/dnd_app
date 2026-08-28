@@ -297,7 +297,7 @@ class _LookupTab(QWidget):
 class LookupDialog(QDialog):
     """Non-modal reference lookup — Spells | Monsters | Conditions.
 
-    Pass ``storage_api`` (a StorageAPI instance or None). When None the spell
+    Pass ``storage`` (a storage backend or None). When None the spell
     and monster tabs display a configuration notice.
     """
 
@@ -308,7 +308,7 @@ class LookupDialog(QDialog):
     _monster_loaded     = pyqtSignal(object)    # dict | None
     _item_loaded        = pyqtSignal(object)    # dict | None
 
-    def __init__(self, storage_api, parent=None):
+    def __init__(self, storage, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Reference Lookup")
         self.setMinimumSize(720, 520)
@@ -316,7 +316,7 @@ class LookupDialog(QDialog):
         # Don't destroy on close — caller reuses the same instance
         self.setAttribute(Qt.WA_DeleteOnClose, False)
 
-        self._api = storage_api
+        self._api = storage
         self._all_spell_keys:    list[str] = []
         self._spell_display_names: dict[str, str] = {}
         self._all_monster_keys: list[str] = []
@@ -357,7 +357,7 @@ class LookupDialog(QDialog):
 
         # ── Monsters tab
         self._monster_widget = StatblockWidget()
-        self._monster_widget.set_storage_api(self._api)
+        self._monster_widget.set_storage(self._api)
         self._monster_tab = _LookupTab(self._monster_widget)
         self._monster_edit_btn   = QPushButton("Edit")
         self._monster_delete_btn = QPushButton("Delete")

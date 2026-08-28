@@ -1,42 +1,37 @@
 """
-Which storage backend this install uses.
+Which storage provider this install uses.
 
 app.py and the maintenance scripts all have to answer the same question --
-"remote API or local files, and where?" -- and they had drifted: the scripts
-refused to run unless `local_data_dir` was set explicitly, while the app
-happily fell back to the config directory. Same install, two answers.
+"where does this install keep its library?" -- and they had drifted: the
+scripts refused to run unless a data directory was set explicitly, while the
+app happily fell back to the config directory. Same install, two answers.
 
-Import this rather than reconstructing the choice.
+Import this rather than reconstructing the choice. There is no branching here
+any more: the provider registry says how to build each backend, so adding a
+provider never means editing this file.
 """
 from __future__ import annotations
 
-from typing import Any, Optional, Tuple
+from typing import Optional, Tuple
 
-from app.config import (
-    get_config_path,
-    get_local_data_dir,
-    get_storage_api_base,
-    use_storage_api_only,
-)
-
-MISSING_API_URL = (
-    "Remote API mode is enabled, but no API URL is configured.\n\n"
-    "Go to File → Settings to set your API URL, or switch to Local Files mode."
-)
+from app.config import get_storage_config, get_storage_provider
+from app.storage import providers
+from app.storage.base import StorageBackend
 
 
-def open_storage() -> Tuple[Optional[Any], Optional[str]]:
+def open_storage() -> Tuple[Optional[StorageBackend], Optional[str]]:
     """The configured backend, or (None, reason) when it cannot be built.
 
-    The two backends share an interface (see StorageAPI and LocalStorage), so
-    callers do not need to know which one they got.
+    Every backend presents the same interface, so callers do not need to know
+    which one they got. The reason is written for a user to read in a dialog,
+    not for a log.
     """
-    if use_storage_api_only():
-        base = get_storage_api_base()
-        if not base:
-            return None, MISSING_API_URL
-        from app.storage_api import StorageAPI
-        return StorageAPI(base), None
-
-    from app.local_storage import LocalStorage
-    return LocalStorage(get_local_data_dir() or get_config_path("data")), None
+    provider_id = get_storage_provider()
+    try:
+        return providers.build(provider_id, get_storage_config(provider_id)), None
+    except Exception as exc:
+        return None, (
+            f"Could not open your storage ({providers.label(provider_id)}).\n\n"
+            f"{exc}\n\n"
+            "Go to File → Settings → Storage to fix it."
+        )

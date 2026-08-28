@@ -3,7 +3,7 @@
 SpellImportDialog — paste D&D Beyond spell text, preview it, then save to storage.
 
 Usage:
-    dlg = SpellImportDialog(storage_api=self.storage_api, spell_name="Fireball", parent=self)
+    dlg = SpellImportDialog(storage=self.storage, spell_name="Fireball", parent=self)
     if dlg.exec_() == QDialog.Accepted:
         key, data = dlg.saved_key, dlg.saved_data
 """
@@ -41,12 +41,12 @@ class SpellImportDialog(QDialog):
 
     def __init__(
         self,
-        storage_api=None,
+        storage=None,
         spell_name: str = "",
         parent=None,
     ):
         super().__init__(parent)
-        self.storage_api = storage_api
+        self.storage = storage
         self._spell_name_hint = spell_name
 
         self._parsed_data: Optional[dict] = None
@@ -290,7 +290,7 @@ class SpellImportDialog(QDialog):
 
         key = spell_key(name)
 
-        if self.storage_api is None:
+        if self.storage is None:
             self._warning.show_message(
                 "Storage API is not configured — spell cannot be saved remotely."
             )
@@ -301,7 +301,7 @@ class SpellImportDialog(QDialog):
         save_data["name"] = name
 
         try:
-            self.storage_api.save_spell(key, save_data)
+            self.storage.save_spell(key, save_data)
         except Exception as exc:
             self._warning.show_message(f"Save failed: {exc}")
             return

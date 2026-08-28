@@ -125,7 +125,7 @@ class StatblockWidget(QTextBrowser):
         self.setOpenLinks(False)
         self.setMouseTracking(True)
         self._last_mouse_pos: QPoint = QPoint(0, 0)
-        self._storage_api = None
+        self._storage = None
         self._spell_cache: dict[str, Optional[dict]] = {}
 
         # highlighted(str) fires when the mouse moves over/away from a link
@@ -231,9 +231,9 @@ class StatblockWidget(QTextBrowser):
         menu.addAction("Reset Zoom\tCtrl+0", self.reset_zoom)
         menu.exec_(event.globalPos())
 
-    def set_storage_api(self, api) -> None:
-        """Attach a StorageAPI instance for live spell tooltip lookup."""
-        self._storage_api = api
+    def set_storage(self, api) -> None:
+        """Attach a storage backend for live spell tooltip lookup."""
+        self._storage = api
         self._spell_cache.clear()
 
     # ── Public API ───────────────────────────────────────────────────
@@ -297,10 +297,10 @@ class StatblockWidget(QTextBrowser):
         """Return spell dict from cache or storage API. Returns None on miss/error."""
         if key in self._spell_cache:
             return self._spell_cache[key]
-        if self._storage_api is None:
+        if self._storage is None:
             return None
         try:
-            data = self._storage_api.get_spell(f"{key}.json")
+            data = self._storage.get_spell(f"{key}.json")
             self._spell_cache[key] = data  # cache even None (404)
             return data
         except Exception:

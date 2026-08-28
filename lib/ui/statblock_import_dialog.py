@@ -4,7 +4,7 @@ StatblockImportDialog — paste D&D Beyond statblock text, preview it live,
 then save it to the storage API.
 
 Usage:
-    dlg = StatblockImportDialog(storage_api=self.storage_api, parent=self)
+    dlg = StatblockImportDialog(storage=self.storage, parent=self)
     if dlg.exec_() == QDialog.Accepted:
         key, data = dlg.saved_key, dlg.saved_data
 """
@@ -31,9 +31,9 @@ class StatblockImportDialog(QDialog):
     key (e.g. "goblin.json") and the parsed dict respectively.
     """
 
-    def __init__(self, storage_api=None, parent=None):
+    def __init__(self, storage=None, parent=None):
         super().__init__(parent)
-        self.storage_api = storage_api
+        self.storage = storage
 
         self._parsed_data: Optional[dict] = None
         self.saved_key:  Optional[str]  = None
@@ -179,7 +179,7 @@ class StatblockImportDialog(QDialog):
 
         key = statblock_key(name)
 
-        if self.storage_api is None:
+        if self.storage is None:
             self._warning.show_message(
                 "Storage API is not configured — statblock cannot be saved remotely. "
                 "Connect to a storage server in settings."
@@ -187,7 +187,7 @@ class StatblockImportDialog(QDialog):
             return
 
         try:
-            self.storage_api.save_statblock(key, self._parsed_data)
+            self.storage.save_statblock(key, self._parsed_data)
         except Exception as exc:
             self._warning.show_message(f"Save failed: {exc}")
             return
@@ -217,7 +217,7 @@ class StatblockImportDialog(QDialog):
             return
 
         try:
-            existing_keys = set(self.storage_api.list_spell_keys())
+            existing_keys = set(self.storage.list_spell_keys())
         except Exception:
             return  # don't block the save on a spell-list failure
 
@@ -246,7 +246,7 @@ class StatblockImportDialog(QDialog):
             from ui.missing_spells_dialog import MissingSpellsDialog
             dlg = MissingSpellsDialog(
                 missing=unique_missing,
-                storage_api=self.storage_api,
+                storage=self.storage,
                 parent=self,
             )
             dlg.exec_()

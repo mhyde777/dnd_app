@@ -7,7 +7,7 @@ Legacy items are included when no non-legacy counterpart exists in the paste.
 Items without a "View Details Page" line (unowned sourcebook) are skipped.
 
 Usage:
-    dlg = BulkItemImportDialog(storage_api=self.storage_api, parent=self)
+    dlg = BulkItemImportDialog(storage=self.storage, parent=self)
     dlg.exec_()
 """
 from __future__ import annotations
@@ -100,9 +100,9 @@ class _ItemRow(QWidget):
 class BulkItemImportDialog(QDialog):
     """Dialog for bulk-importing D&D Beyond items via paste-and-parse."""
 
-    def __init__(self, storage_api=None, parent=None) -> None:
+    def __init__(self, storage=None, parent=None) -> None:
         super().__init__(parent)
-        self.storage_api = storage_api
+        self.storage = storage
         self._rows: list[_ItemRow] = []
 
         self.setWindowTitle("Bulk Item Import")
@@ -298,7 +298,7 @@ class BulkItemImportDialog(QDialog):
     # ── Save ──────────────────────────────────────────────────────────────────
 
     def _save_selected(self) -> None:
-        if self.storage_api is None:
+        if self.storage is None:
             self._warning.show_message(
                 "Storage is not configured — items cannot be saved. "
                 "Check your settings."
@@ -315,7 +315,7 @@ class BulkItemImportDialog(QDialog):
         for row in selected:
             block = row.block
             try:
-                self.storage_api.save_item(block.key, block.data)
+                self.storage.save_item(block.key, block.data)
                 row.mark_saved()
                 saved += 1
             except Exception as exc:

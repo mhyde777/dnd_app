@@ -39,13 +39,13 @@ class JsonEditDialog(QDialog):
     splitter_sizes = (340, 510)
     editor_minimum_width = 280
 
-    def __init__(self, storage_api, key: str, data: dict, parent=None):
+    def __init__(self, storage, key: str, data: dict, parent=None):
         super().__init__(parent)
         self.setWindowTitle(f"Edit {self.noun}")
         self.setMinimumSize(*self.minimum_size)
         self.resize(*self.initial_size)
 
-        self._api          = storage_api
+        self._api          = storage
         self._original_key = key
         self.action        = None
         self.saved_key     = None

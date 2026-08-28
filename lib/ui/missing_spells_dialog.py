@@ -4,7 +4,7 @@ MissingSpellsDialog — shown after a statblock is saved when some of its
 spells are not yet in the spell library.
 
 Usage:
-    dlg = MissingSpellsDialog(missing=["fireball", "shield"], storage_api=api, parent=self)
+    dlg = MissingSpellsDialog(missing=["fireball", "shield"], storage=api, parent=self)
     dlg.exec_()   # result doesn't matter — spells are saved inline
 """
 from __future__ import annotations
@@ -27,11 +27,11 @@ class MissingSpellsDialog(QDialog):
     def __init__(
         self,
         missing: list[str],
-        storage_api=None,
+        storage=None,
         parent=None,
     ):
         super().__init__(parent)
-        self.storage_api = storage_api
+        self.storage = storage
         self._missing = list(missing)          # original names, e.g. ["Fireball", "Shield"]
         self._row_widgets: dict[str, dict] = {}  # name → {status_label, import_btn}
 
@@ -117,7 +117,7 @@ class MissingSpellsDialog(QDialog):
         from ui.spell_import_dialog import SpellImportDialog
 
         dlg = SpellImportDialog(
-            storage_api=self.storage_api,
+            storage=self.storage,
             spell_name=spell_name,
             parent=self,
         )

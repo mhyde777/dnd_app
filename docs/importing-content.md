@@ -87,7 +87,8 @@ xclip -o | python scripts/import_spells_bulk.py
 | `--dry-run` | Parse and summarize; upload nothing. |
 | `--include-legacy` | Include blocks marked *Legacy* (skipped by default). |
 | `--no-dedupe` | Keep duplicate keys (default dedupes, preferring non-legacy). |
-| `--base-url URL` | Storage API base. Defaults to `STORAGE_API_BASE`. |
+| `--base-url URL` | Write to this HTTP storage server instead of your configured storage. |
+| `--local-dir DIR` | Write to this folder instead of your configured storage. |
 
 Run `--dry-run` first, every time. Bulk splitting is heuristic: a spell
 description that happens to start with a line like `3rd` can fool the splitter

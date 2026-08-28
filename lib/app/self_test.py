@@ -189,20 +189,28 @@ def _check_state_roundtrip() -> None:
 
 
 def _check_storage_backend() -> None:
-    from app import settings
+    from app import config
+    from app.storage import providers
 
-    mode = settings.get("storage_mode")
-    if mode != "local":
-        # An API backend means a network call, and being offline is not a
+    provider_id = config.get_storage_provider()
+    provider = providers.get(provider_id)
+    if provider is None:
+        raise IOError(f"unknown storage provider: {provider_id!r}")
+    if provider.group != providers.FOLDER:
+        # A network backend means a network call, and being offline is not a
         # reason to revert someone's update.
-        raise Skip("storage is remote; not exercised here")
-    directory = settings.get("local_data_dir")
-    if not directory:
-        raise Skip("no local data directory configured")
+        raise Skip(f"storage is {provider.label}; not exercised here")
+
+    try:
+        backend = providers.build(provider_id, config.get_storage_config(provider_id))
+    except Exception as exc:
+        raise IOError(f"storage could not be opened: {exc}") from exc
+
+    directory = backend.describe()
     if not os.path.isdir(directory):
-        raise IOError(f"the data directory does not exist: {directory}")
+        raise IOError(f"the library folder does not exist: {directory}")
     if not os.access(directory, os.R_OK | os.W_OK):
-        raise IOError(f"the data directory is not readable and writable: {directory}")
+        raise IOError(f"the library folder is not readable and writable: {directory}")
 
 
 def _check_install_layout() -> None:

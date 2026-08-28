@@ -121,9 +121,9 @@ class InitiativeTracker(QMainWindow, Application):
         # silently no-ops for docks that weren't created yet.
         self._layout_restored = self.restore_layout()
 
-        warning = getattr(self, "storage_api_warning", None)
+        warning = getattr(self, "storage_warning", None)
         if warning:
-            QMessageBox.warning(self, "Storage API", warning)
+            QMessageBox.warning(self, "Storage", warning)
 
         try:
             self.load_state()
@@ -1525,6 +1525,13 @@ class InitiativeTracker(QMainWindow, Application):
         self.view_menu.addAction(self.reset_layout_action)
 
     def _setup_help_menu(self):
+        self.docs_action = QAction("Documentation…", self)
+        self.docs_action.setToolTip(
+            "The full guide, in a window you can leave open while you work"
+        )
+        self.docs_action.triggered.connect(self.show_docs)
+        self.help_menu.addAction(self.docs_action)
+
         self.shortcuts_action = QAction("Keyboard Shortcuts", self)
         self.shortcuts_action.triggered.connect(self.show_shortcuts)
         self.help_menu.addAction(self.shortcuts_action)
@@ -1561,6 +1568,27 @@ class InitiativeTracker(QMainWindow, Application):
         self.about_action.triggered.connect(self.show_about)
         self.help_menu.addAction(self.about_action)
 
+    def show_docs(self, filename: str = ""):
+        """Help → Documentation. Non-modal, and one window however often asked.
+
+        Held on self because a QDialog with no parent reference is garbage
+        collected the moment this method returns -- the window would appear
+        and vanish. Re-triggering raises the existing one instead of stacking
+        a second copy, which is what makes the menu item safe to hit twice.
+        """
+        from ui.docs_window import DocsWindow
+
+        existing = getattr(self, "_docs_window", None)
+        if existing is None:
+            existing = DocsWindow(self)
+            self._docs_window = existing
+        if filename:
+            existing.show_doc(filename)
+        existing.show()
+        existing.raise_()
+        existing.activateWindow()
+        return existing
+
     def show_release_notes(self, version=None):
         from ui.release_notes_dialog import ReleaseNotesDialog
         ReleaseNotesDialog(self, version=version or None).exec_()
@@ -1585,6 +1613,7 @@ class InitiativeTracker(QMainWindow, Application):
             "save_state":           getattr(self, "save_action", None),
             "reference_lookup":     getattr(self, "lookup_action", None),
             "show_shortcuts":       getattr(self, "shortcuts_action", None),
+            "show_docs":            getattr(self, "docs_action", None),
             "focus_filter":         getattr(self, "filter_shortcut", None),
             "statblock_zoom_in":    getattr(self, "zoom_in_shortcut", None),
             "statblock_zoom_out":   getattr(self, "zoom_out_shortcut", None),
@@ -2250,7 +2279,7 @@ class InitiativeTracker(QMainWindow, Application):
 
         if statblock_action and chosen == statblock_action:
             try:
-                keys = self.storage_api.list_statblock_keys()
+                keys = self.storage.list_statblock_keys()
             except Exception:
                 keys = []
             display_names = sorted(

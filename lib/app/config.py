@@ -12,22 +12,113 @@ load_dotenv(get_config_path(".env"), override=False)
 
 
 # ---- Storage config ----
+#
+# Two settings keys describe storage:
+#
+#   storage_provider  the id of an entry in app.storage.providers.PROVIDERS
+#   storage_config    {provider_id: {field: value}}
+#
+# Config is kept *per provider* rather than flat, so switching from S3 to a
+# Dropbox folder and back does not lose the bucket credentials in between --
+# the old shape had one set of fields for whichever mode was active, and
+# changing your mind meant retyping them.
+#
+# Everything below also understands the previous shape (`storage_mode` of
+# "local"/"api", plus storage_api_base / storage_api_key / local_data_dir, and
+# the environment variables behind them). Existing installs therefore keep
+# working untouched; they are rewritten to the new keys the next time the
+# settings dialog is saved. See migrate_legacy_storage().
 
-def get_storage_api_key() -> str:
-    return _settings.get("storage_api_key") or os.getenv("STORAGE_API_KEY", "").strip()
+PROVIDER_KEY = "storage_provider"
+CONFIG_KEY = "storage_config"
 
-def get_storage_api_base() -> str:
-    return (_settings.get("storage_api_base") or os.getenv("STORAGE_API_BASE", "")).rstrip("/")
+# Old settings/env keys, kept readable so nobody's .env stops working.
+LEGACY_KEYS = (
+    "storage_mode",
+    "storage_api_base",
+    "storage_api_key",
+    "local_data_dir",
+)
 
-def use_storage_api_only() -> bool:
+
+def _legacy_storage() -> tuple:
+    """(provider_id, config) implied by the pre-provider settings and env."""
     mode = _settings.get("storage_mode")
-    if mode is not None:
-        return mode == "api"
-    return os.getenv("USE_STORAGE_API_ONLY", "0").strip() not in ("", "0", "false", "False")
+    if mode is None:
+        env_flag = os.getenv("USE_STORAGE_API_ONLY", "0").strip()
+        mode = "api" if env_flag not in ("", "0", "false", "False") else "local"
+
+    if mode == "api":
+        return "http", {
+            "url": (
+                _settings.get("storage_api_base")
+                or os.getenv("STORAGE_API_BASE", "")
+            ).rstrip("/"),
+            "api_key": (
+                _settings.get("storage_api_key")
+                or os.getenv("STORAGE_API_KEY", "")
+            ).strip(),
+        }
+    return "local", {
+        "path": _settings.get("local_data_dir") or os.getenv("LOCAL_DATA_DIR", "")
+    }
+
+
+def get_storage_provider() -> str:
+    """The configured provider id."""
+    configured = _settings.get(PROVIDER_KEY)
+    if configured:
+        return str(configured)
+    return _legacy_storage()[0]
+
+
+def get_storage_config(provider_id: str = "") -> dict:
+    """The saved field values for a provider (the active one by default)."""
+    provider_id = provider_id or get_storage_provider()
+    stored = _settings.get(CONFIG_KEY) or {}
+    if isinstance(stored, dict) and isinstance(stored.get(provider_id), dict):
+        return dict(stored[provider_id])
+    # Nothing saved under the new keys: fall back to the legacy shape, but only
+    # for the provider it actually described.
+    legacy_id, legacy_config = _legacy_storage()
+    return dict(legacy_config) if legacy_id == provider_id else {}
+
+
+def set_storage_config(provider_id: str, config: dict) -> None:
+    """Save one provider's fields, leaving every other provider's alone."""
+    stored = dict(_settings.get(CONFIG_KEY) or {})
+    stored[provider_id] = dict(config)
+    _settings.update({PROVIDER_KEY: provider_id, CONFIG_KEY: stored})
+
+
+def migrate_legacy_storage() -> bool:
+    """Write the old storage keys into the new shape, once.
+
+    Returns True if anything was written. Safe to call on every startup: it
+    does nothing once `storage_provider` exists, and it never removes the old
+    keys -- an install that gets downgraded to a previous build still finds
+    what it expects.
+    """
+    if _settings.get(PROVIDER_KEY):
+        return False
+    if not any(_settings.get(key) is not None for key in LEGACY_KEYS):
+        return False
+    provider_id, config = _legacy_storage()
+    stored = dict(_settings.get(CONFIG_KEY) or {})
+    stored.setdefault(provider_id, config)
+    _settings.update({PROVIDER_KEY: provider_id, CONFIG_KEY: stored})
+    return True
+
 
 def get_local_data_dir() -> str:
-    """User-configured local data directory (empty = use default)."""
-    return _settings.get("local_data_dir") or os.getenv("LOCAL_DATA_DIR", "")
+    """The folder a folder-based provider uses (empty = the default)."""
+    provider_id = get_storage_provider()
+    from app.storage import providers as _providers
+
+    provider = _providers.get(provider_id)
+    if provider is None or provider.group != _providers.FOLDER:
+        return ""
+    return (get_storage_config(provider_id).get("path") or "").strip()
 
 # ---- Bridge configuration ----
 #

@@ -20,7 +20,7 @@ class StatblockEditDialog(JsonEditDialog):
 
     def _make_preview(self) -> QWidget:
         preview = StatblockWidget()
-        preview.set_storage_api(self._api)
+        preview.set_storage(self._api)
         return preview
 
     def _render_preview(self, data: dict) -> None:

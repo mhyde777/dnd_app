@@ -79,21 +79,26 @@ def _read(path: str) -> str:
 
 
 def _open_storage(args):
-    """The backend to write to: an explicit local directory, or the API."""
+    """The backend to write to.
+
+    Defaults to whatever the app itself is configured to use, so importing
+    into a Dropbox folder or an S3 bucket needs no flags at all. The two
+    overrides are for writing somewhere other than your configured library.
+    """
     if args.local_dir:
-        from app.local_storage import LocalStorage
-        return LocalStorage(args.local_dir), args.local_dir
+        from app.storage import FolderStorage
+        return FolderStorage(args.local_dir), args.local_dir
 
-    if not args.base_url:
-        print(
-            "No storage target. Set the API base URL in Settings → Storage, or "
-            "pass --base-url, or use --local-dir to write to a folder.",
-            file=sys.stderr,
-        )
+    if args.base_url:
+        from app.storage import HttpStorage
+        return HttpStorage(args.base_url, config.get_storage_config("http").get("api_key", "")), args.base_url
+
+    from app.storage_factory import open_storage
+    storage, problem = open_storage()
+    if storage is None:
+        print(problem, file=sys.stderr)
         return None, ""
-
-    from app.storage_api import StorageAPI
-    return StorageAPI(args.base_url), args.base_url
+    return storage, storage.describe()
 
 
 def main() -> int:
@@ -131,13 +136,13 @@ def main() -> int:
     )
     parser.add_argument(
         "--base-url",
-        default=config.get_storage_api_base(),
-        help="Storage API base URL. Defaults to your configured storage API.",
+        default="",
+        help="Write to this HTTP storage server instead of your configured storage.",
     )
     parser.add_argument(
         "--local-dir",
         default="",
-        help="Write to this local data directory instead of the API.",
+        help="Write to this folder instead of your configured storage.",
     )
     args = parser.parse_args()
 
