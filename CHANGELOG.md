@@ -13,6 +13,17 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The paste box in the import dialogs no longer disappears while you are
+  editing.** Pasting a statblock collapsed the box to give the preview room,
+  which is intended — but it then re-collapsed every time the parse ran, which
+  is 500ms after you stop typing. Reopening it to correct something meant it
+  vanished again mid-edit and took the keyboard focus with it, so fixing a few
+  things meant clicking "Show" between every one. It now collapses once, and
+  reopening it puts the cursor in it. Affected the statblock, spell and bulk
+  item importers.
+
 ## [0.5.0] — 2026-08-28
 
 ### Added

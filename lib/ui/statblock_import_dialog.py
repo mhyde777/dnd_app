@@ -36,6 +36,11 @@ class StatblockImportDialog(QDialog):
         self.storage = storage
 
         self._parsed_data: Optional[dict] = None
+        # The paste box is collapsed once, after the first parse that works.
+        # Only once: re-collapsing on every parse pulls the box out from under
+        # someone correcting the pasted text, and since the parse fires 500ms
+        # after they stop typing, it lands mid-edit and takes the focus with it.
+        self._auto_collapsed = False
         self.saved_key:  Optional[str]  = None
         self.saved_data: Optional[dict] = None
 
@@ -118,6 +123,11 @@ class StatblockImportDialog(QDialog):
         visible = self.text_edit.isVisible()
         self.text_edit.setVisible(not visible)
         self._toggle_btn.setText("Show" if visible else "Hide")
+        if not visible:
+            # Opened: the user wants to edit, so put the cursor there rather
+            # than making them click into it, and never auto-collapse again.
+            self._auto_collapsed = True
+            self.text_edit.setFocus()
 
     # ── Parse pipeline ────────────────────────────────────────────────
 
@@ -162,8 +172,9 @@ class StatblockImportDialog(QDialog):
 
         self._save_btn.setEnabled(True)
 
-        # Collapse the text panel after the first successful parse
-        if self.text_edit.isVisible():
+        # Collapse the paste box once, to give the preview the window.
+        if not self._auto_collapsed and self.text_edit.isVisible():
+            self._auto_collapsed = True
             self._toggle_text_panel()
 
     # ── Save ──────────────────────────────────────────────────────────

@@ -104,6 +104,8 @@ class BulkItemImportDialog(QDialog):
         super().__init__(parent)
         self.storage = storage
         self._rows: list[_ItemRow] = []
+        # See _do_parse: the paste box collapses once, not on every parse.
+        self._auto_collapsed = False
 
         self.setWindowTitle("Bulk Item Import")
         self.resize(680, 640)
@@ -217,6 +219,11 @@ class BulkItemImportDialog(QDialog):
         visible = self.text_edit.isVisible()
         self.text_edit.setVisible(not visible)
         self._toggle_btn.setText("Show" if visible else "Hide")
+        if not visible:
+            # Opened: the user wants to edit, so put the cursor there rather
+            # than making them click into it, and never auto-collapse again.
+            self._auto_collapsed = True
+            self.text_edit.setFocus()
 
     # ── Parse pipeline ────────────────────────────────────────────────────────
 
@@ -276,7 +283,11 @@ class BulkItemImportDialog(QDialog):
         self._select_all_btn.setEnabled(True)
         self._deselect_all_btn.setEnabled(True)
 
-        if self.text_edit.isVisible():
+        # Collapse the paste box once, to give the results the window. Only
+        # once: re-collapsing on every parse pulls the box out from under
+        # someone correcting the pasted text.
+        if not self._auto_collapsed and self.text_edit.isVisible():
+            self._auto_collapsed = True
             self._toggle_paste_area()
 
     # ── Row management ────────────────────────────────────────────────────────

@@ -50,6 +50,8 @@ class SpellImportDialog(QDialog):
         self._spell_name_hint = spell_name
 
         self._parsed_data: Optional[dict] = None
+        # See _do_parse: the paste box collapses once, not on every parse.
+        self._auto_collapsed = False
         self.saved_key:  Optional[str]  = None
         self.saved_data: Optional[dict] = None
 
@@ -134,6 +136,11 @@ class SpellImportDialog(QDialog):
         visible = self.text_edit.isVisible()
         self.text_edit.setVisible(not visible)
         self._toggle_btn.setText("Show" if visible else "Hide")
+        if not visible:
+            # Opened: the user wants to edit, so put the cursor there rather
+            # than making them click into it, and never auto-collapse again.
+            self._auto_collapsed = True
+            self.text_edit.setFocus()
 
     # ── Parse pipeline ────────────────────────────────────────────────
 
@@ -174,7 +181,11 @@ class SpellImportDialog(QDialog):
 
         self._save_btn.setEnabled(True)
 
-        if self.text_edit.isVisible():
+        # Collapse the paste box once, to give the preview the window. Only
+        # once: re-collapsing on every parse pulls the box out from under
+        # someone correcting the pasted text.
+        if not self._auto_collapsed and self.text_edit.isVisible():
+            self._auto_collapsed = True
             self._toggle_text_panel()
 
     def _show_placeholder(self) -> None:
