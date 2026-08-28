@@ -4,7 +4,7 @@ StatblockImportDialog — paste D&D Beyond statblock text, preview it live,
 then save it to the storage API.
 
 Usage:
-    dlg = StatblockImportDialog(storage_api=self.storage_api, parent=self)
+    dlg = StatblockImportDialog(storage=self.storage, parent=self)
     if dlg.exec_() == QDialog.Accepted:
         key, data = dlg.saved_key, dlg.saved_data
 """
@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QPlainTextEdit, QPushButton, QSizePolicy,
@@ -20,6 +20,7 @@ from PyQt5.QtWidgets import (
 
 from app.statblock_parser import parse_statblock, validate_statblock, statblock_key
 from ui.statblock_widget import StatblockWidget
+from ui.notifications import InlineWarning
 
 
 class StatblockImportDialog(QDialog):
@@ -30,9 +31,9 @@ class StatblockImportDialog(QDialog):
     key (e.g. "goblin.json") and the parsed dict respectively.
     """
 
-    def __init__(self, storage_api=None, parent=None):
+    def __init__(self, storage=None, parent=None):
         super().__init__(parent)
-        self.storage_api = storage_api
+        self.storage = storage
 
         self._parsed_data: Optional[dict] = None
         self.saved_key:  Optional[str]  = None
@@ -80,14 +81,7 @@ class StatblockImportDialog(QDialog):
         layout.addWidget(self.text_edit)
 
         # ---- Warning banner (hidden until needed) ----
-        self._warning = QLabel()
-        self._warning.setWordWrap(True)
-        self._warning.setAlignment(Qt.AlignTop | Qt.AlignLeft)
-        self._warning.setStyleSheet(
-            "background:#FFF3CD; color:#856404;"
-            "border:1px solid #FFEEBA; padding:6px; border-radius:3px;"
-        )
-        self._warning.hide()
+        self._warning = InlineWarning()
         layout.addWidget(self._warning)
 
         # ---- Live preview ----
@@ -144,7 +138,7 @@ class StatblockImportDialog(QDialog):
         try:
             data = parse_statblock(text)
         except Exception as exc:
-            self._show_warning(f"Parse error: {exc}")
+            self._warning.show_message(f"Parse error: {exc}")
             self._parsed_data = None
             self._save_btn.setEnabled(False)
             return
@@ -154,7 +148,7 @@ class StatblockImportDialog(QDialog):
         # Warnings from validator
         warnings = validate_statblock(data)
         if warnings:
-            self._show_warning("  •  ".join(warnings))
+            self._warning.show_message("  •  ".join(warnings))
         else:
             self._warning.hide()
 
@@ -172,10 +166,6 @@ class StatblockImportDialog(QDialog):
         if self.text_edit.isVisible():
             self._toggle_text_panel()
 
-    def _show_warning(self, message: str) -> None:
-        self._warning.setText(f"\u26a0  {message}")
-        self._warning.show()
-
     # ── Save ──────────────────────────────────────────────────────────
 
     def _save(self) -> None:
@@ -184,22 +174,22 @@ class StatblockImportDialog(QDialog):
 
         name = self.name_edit.text().strip()
         if not name:
-            self._show_warning("Enter a creature name before saving.")
+            self._warning.show_message("Enter a creature name before saving.")
             return
 
         key = statblock_key(name)
 
-        if self.storage_api is None:
-            self._show_warning(
+        if self.storage is None:
+            self._warning.show_message(
                 "Storage API is not configured — statblock cannot be saved remotely. "
                 "Connect to a storage server in settings."
             )
             return
 
         try:
-            self.storage_api.save_statblock(key, self._parsed_data)
+            self.storage.save_statblock(key, self._parsed_data)
         except Exception as exc:
-            self._show_warning(f"Save failed: {exc}")
+            self._warning.show_message(f"Save failed: {exc}")
             return
 
         self.saved_key  = key
@@ -227,7 +217,7 @@ class StatblockImportDialog(QDialog):
             return
 
         try:
-            existing_keys = set(self.storage_api.list_spell_keys())
+            existing_keys = set(self.storage.list_spell_keys())
         except Exception:
             return  # don't block the save on a spell-list failure
 
@@ -256,7 +246,7 @@ class StatblockImportDialog(QDialog):
             from ui.missing_spells_dialog import MissingSpellsDialog
             dlg = MissingSpellsDialog(
                 missing=unique_missing,
-                storage_api=self.storage_api,
+                storage=self.storage,
                 parent=self,
             )
             dlg.exec_()

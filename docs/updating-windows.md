@@ -1,44 +1,41 @@
-# Updating the Windows build
+# Installing and updating on Windows
 
-The short version is still `git pull` then `./package_WIN.sh`, but four things
-changed: the branch, a new required file, where the output lands, and the fact
-that `.env` is no longer copied for you.
+PyInstaller cannot cross-compile, so a Windows build has to be made on the
+Windows machine. Everything below runs in **Git Bash**, from the repo root.
 
-Everything below runs in **Git Bash**, from the repo root.
+Once you are on 0.4.2 or newer this is a one-time exercise: after the first
+install, **Help → Check for Updates** does the rest, the same as on Linux. See
+[auto-update.md](auto-update.md) for what that button actually does.
 
 ---
 
-## 0. Push the branch first (on the Linux machine)
+## 1. Get the code
 
-The new work is on `feat/distribution`, not `master`, and the last few commits
-may still be local. From Linux:
-
-```bash
-git push origin feat/distribution
-```
-
-Nothing to pull otherwise.
-
-## 1. Get the new code
+The work is on `master`.
 
 ```bash
 git fetch origin
-git checkout feat/distribution
+git checkout master
 git pull
 ```
 
-This pulls ~44k lines, most of it the bundled SRD library under `srd_content/`
-(333 monsters, 338 spells, 258 magic items). That directory is the payload the
-build ships, so the pull has to succeed in full.
+> **If you are coming from `feat/distribution`:** that branch is frozen at
+> **0.1.0**. An earlier version of this document told you to check it out, so a
+> `git pull` there reports "already up to date" and rebuilds 0.1.0 forever.
+> Checking out `master` is the fix. Confirm with:
+>
+> ```bash
+> sed -n 's/^__version__ = "\(.*\)"/\1/p' lib/app/version.py
+> ```
 
 **If git refuses the checkout** complaining that an untracked file would be
-overwritten — likely `images/d20_icon.ico` or something under `spells/` — that
-is the `.gitignore` change landing: files that used to be ignored are now
-tracked. Move your local copy aside and retry:
+overwritten — likely `images/d20_icon.ico` — that is a `.gitignore` change
+landing: files that used to be ignored are now tracked. Move your copy aside
+and retry:
 
 ```bash
-mv images/d20_icon.ico images/d20_icon.ico.local   # only if git complains
-git checkout feat/distribution
+mv images/d20_icon.ico images/d20_icon.ico.local
+git checkout master
 ```
 
 ## 2. Refresh dependencies
@@ -47,89 +44,121 @@ git checkout feat/distribution
 pipenv install
 ```
 
-No new packages were added, so this is usually a no-op. Run it anyway — it is
-cheap, and it fails loudly if the environment drifted.
+Usually a no-op, but it is cheap and fails loudly if the environment drifted.
 
-## 3. Build
-
-```bash
-./package_WIN.sh
-```
-
-`pipenv run bash package_WIN.sh` still works, but is no longer needed: the
-script finds pipenv itself and skips the wrapper when it is already inside the
-environment.
-
-New precondition: **`images/d20_icon.ico` must exist.** Windows PyInstaller
-builds reject the `.png`, so the script now stops up front with a clear message
-rather than failing halfway through. The `.ico` is committed, so a clean pull
-has it; if you deleted yours, regenerate it with ImageMagick:
+## 3. Build and install
 
 ```bash
-convert images/d20_icon.png -define icon:auto-resize=256,128,64,48,32,16 images/d20_icon.ico
+./package_WIN.sh --dev-install
 ```
 
-Optional: `./package_WIN.sh --dev-install` also copies the repo's `.env` into
-`%USERPROFILE%\.dnd_tracker_config\`. **This used to happen automatically and
-now does not** — a release build must never carry your credentials. If you rely
-on `.env` for bridge or storage settings, either pass the flag or move those
-values into Settings (see step 5), which is where they belong now.
+`--dev-install` installs the build for daily use, the same way `./package.sh
+--dev-install` does on Linux. It:
 
-## 4. Install the result
+- installs the versioned tree into `%LOCALAPPDATA%\Programs\combat-tracker\`,
+- writes a **Combat Tracker** shortcut into your Start Menu pointing at the
+  launcher,
+- copies the repo's `.env` into `%USERPROFILE%\.dnd_tracker_config\`, if you
+  have one.
 
-The output moved. You now get a versioned zip:
+Set `DEV_INSTALL_DIR` to install somewhere else.
+
+Only *this version's* directory under `versions\` is replaced — versions
+installed by an earlier update are left alone, since they are the rollback.
+
+**Close the app first.** Windows holds a running `.exe` and its loaded DLLs
+open, so installing over a live copy would fail partway through. The script
+checks before building and stops with a message rather than wasting the build.
+
+Without the flag you get a release zip and nothing else:
 
 ```text
-dist/combat-tracker-0.1.0-windows-x64.zip
+dist/combat-tracker-<version>-windows-x64.zip
 ```
 
-with the staged tree beside it at
-`package_win/combat-tracker-0.1.0-windows-x64/`.
+staged beside it at `package_win/combat-tracker-<version>-windows-x64/`. To
+install that by hand, extract it **somewhere outside the repo** — every build
+starts by deleting `build/`, `dist/` and `package_win/`, which would take an
+installed copy with it.
 
-Extract the zip **somewhere outside the repo** — `Documents\combat-tracker\`,
-say — and run:
+Two preconditions the script enforces up front:
+
+- **`images/d20_icon.ico` must exist.** Windows PyInstaller builds reject the
+  `.png`. The `.ico` is committed, so a clean pull has it; regenerate a deleted
+  one with `convert images/d20_icon.png -define
+  icon:auto-resize=256,128,64,48,32,16 images/d20_icon.ico`.
+- **PyInstaller must be installed** in the pipenv environment.
+
+## 4. Run it
+
+Start it from the Start Menu, or:
 
 ```text
-combat_tracker\combat_tracker.exe
+%LOCALAPPDATA%\Programs\combat-tracker\combat-tracker.exe
 ```
 
-Do not run it from `dist/`, `build/` or `package_win/`: every build starts by
-deleting all three, which would take your installed copy with it.
+Run **`combat-tracker.exe` at the root**, never the `combat_tracker.exe` under
+`versions\`. The root binary is the launcher: it reads `current` to decide
+which version to start, and it is what lets Help → Check for Updates install a
+new version and restart into it. The inner one runs, but that copy cannot
+update itself.
 
 Windows SmartScreen will warn about an unrecognized publisher — the build is
-not code-signed. "More info" → "Run anyway".
+not code-signed. *More info* → *Run anyway*.
 
-To upgrade an existing install, delete the old `combat_tracker\` folder and
-extract the new one in its place. Your data is not in there (see below), so
-nothing is lost.
+Upgrading from a **0.1.0-era install** — the flat
+`combat_tracker\combat_tracker.exe` layout with no launcher — means deleting
+that old folder and any shortcut to it. Nothing is lost: your data lives in
+`%USERPROFILE%\.dnd_tracker_config\` and survives reinstalls untouched.
 
-## 5. First launch after the upgrade
+## 5. Updating from then on
 
-Your settings and data live in `%USERPROFILE%\.dnd_tracker_config\` and survive
-reinstalls untouched.
+**Help → Check for Updates** downloads the release, verifies its checksum,
+installs it beside the running version and restarts into it. There is also an
+optional startup check under **File → Settings… → Updates** that raises a
+banner when a newer version exists; it only tells you, it never downloads.
 
-Two things are worth doing once, both under **File → Settings…**, which is now
-tabbed:
+This works only if the release carries a Windows asset. The updater looks for
+
+```text
+combat-tracker-<version>-windows-x64.zip
+```
+
+and reports "no build for this system" when the release has only the Linux
+tarball — which is exactly what a release cut on the Linux machine produces.
+So publishing a version is two machines: cut and publish on Linux, then from
+Windows, on the same tag:
+
+```bash
+./package_WIN.sh --publish
+```
+
+That builds the Windows zip and attaches it to the existing GitHub release,
+then verifies it landed. Needs `gh` installed and logged in
+(`winget install GitHub.cli`, `gh auth login`).
+
+## 6. First launch after an upgrade
+
+Your settings and data live in `%USERPROFILE%\.dnd_tracker_config\`. Worth a
+look under **File → Settings…**:
 
 - **Content** — installs the bundled SRD monsters, spells and magic items into
   your library. Re-running only adds what is missing; it never overwrites your
   own edits. The magic items are what the Shop Generator's Magic Shop and
-  Apothecary profiles draw on, so install them before expecting those to fill.
-- **Foundry VTT** — the bridge is **off by default** now and lives here rather
-  than in `.env`. Changes apply immediately, no restart. Remember that Foundry
-  module settings are world-scoped: a new world means re-entering the bridge URL
-  and secret on the Foundry side.
-- **Updates** — an optional startup check against GitHub releases that raises a
-  banner when a newer version exists. It only tells you; it never downloads
-  anything. Turn it off here or with `UPDATE_CHECK_ENABLED=0`.
+  Apothecary profiles draw on.
+- **Foundry VTT** — the bridge is off by default. Changes apply immediately, no
+  restart. Foundry module settings are world-scoped: a new world means
+  re-entering the bridge URL and secret on the Foundry side.
+- **Updates** — the startup check described above. Turn it off here or with
+  `UPDATE_CHECK_ENABLED=0`.
 
-**Help → Release Notes** shows the changelog for the build you are actually
-running, offline.
+**Help → Release Notes** shows the changelog for the build you are running,
+offline.
 
-## 6. Testing a clean first run
+## 7. Testing a clean first run
 
-To see exactly what a new user sees without touching your real settings, logs
-or data, point the config directory somewhere disposable:
+To see what a new user sees without touching your real settings, logs or data,
+point the config directory somewhere disposable:
 
 ```bash
 DND_TRACKER_CONFIG_DIR=/c/temp/profile pipenv run python main.py
@@ -143,9 +172,14 @@ Delete that directory to reset.
 
 | Symptom | Cause |
 | --- | --- |
+| Built app is an old version | Wrong branch — see step 1. Check `lib/app/version.py`. |
+| `Combat Tracker is running -- close it before --dev-install` | Close the app; Windows locks the running `.exe` and its DLLs. |
 | `images/d20_icon.ico is missing` | See step 3. |
 | `PyInstaller is not installed in this environment` | `pipenv install` (step 2). |
-| `Neither zip nor powershell.exe found` | Git Bash has no `zip(1)`; the script falls back to PowerShell. If both are missing the staged tree is still left in `package_win/` and can be zipped by hand. |
-| App starts with the setup wizard again | No `settings.json` in `%USERPROFILE%\.dnd_tracker_config\` yet — expected if this is your first build with the settings system. Fill it in once. |
+| `Neither zip nor powershell.exe found` | Git Bash has no `zip(1)`; the script falls back to PowerShell. With both missing the staged tree is still in `package_win/` and can be zipped by hand. |
+| `warning: could not create the Start Menu shortcut` | Non-fatal; the install is fine, make your own shortcut to `combat-tracker.exe`. |
+| Check for Updates says "no build for this system" | The release has no Windows zip — see step 5. |
+| Update dialog offers only "Download", not "Update and Restart" | It says why: a source checkout, a pre-launcher install, a missing launcher, or an install directory you cannot write to. Usually it means you started the inner `versions\...\combat_tracker.exe` instead of the root `combat-tracker.exe`. |
+| App starts with the setup wizard again | No `settings.json` in `%USERPROFILE%\.dnd_tracker_config\` yet. Fill it in once. |
 | Magic Shop generates empty shelves | Install the magic items from Settings → Content. |
 | General Store / Blacksmith / Trade Post still sparse | Expected: the SRD ships magic items only, so `adventuring_gear`, `tool` and `trade_good` slots match nothing until you add mundane items yourself. |

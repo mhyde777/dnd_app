@@ -145,26 +145,6 @@ def extract(archive: str, dest: str) -> str:
     return dest
 
 
-def find_payload_root(unpacked: str, marker: str) -> Optional[str]:
-    """The directory inside an unpacked release that holds the app itself.
-
-    Release tarballs wrap everything in one `combat-tracker-<ver>-<plat>/`
-    directory, so the payload is one level down -- but not always, and guessing
-    wrong installs a version whose binary isn't where the launcher looks.
-    """
-    if os.path.isdir(os.path.join(unpacked, marker)):
-        return unpacked
-    entries = [
-        os.path.join(unpacked, name)
-        for name in os.listdir(unpacked)
-        if os.path.isdir(os.path.join(unpacked, name))
-    ]
-    for entry in entries:
-        if os.path.isdir(os.path.join(entry, marker)):
-            return entry
-    return None
-
-
 # ---- Installing a version beside the running one ----------------------------
 
 def find_app_payload(unpacked: str, binary: str, depth: int = 3) -> Optional[str]:

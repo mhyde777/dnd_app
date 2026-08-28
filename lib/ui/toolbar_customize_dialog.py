@@ -65,7 +65,6 @@ DEFAULT_TOOLBAR: list[str] = [
 ]
 
 _REGISTRY_MAP: dict[str, str] = {aid: label for aid, label, _ in TOOLBAR_REGISTRY}
-_GROUP_MAP: dict[str, str] = {aid: group for aid, _, group in TOOLBAR_REGISTRY}
 _VALID_IDS: set[str] = {aid for aid, _, _ in TOOLBAR_REGISTRY}
 
 # "separator" is a spacer, not a command, so it may legitimately repeat.

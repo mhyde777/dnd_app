@@ -1,3 +1,4 @@
+import ipaddress
 import json
 import os
 import threading
@@ -6,6 +7,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Tuple
+from urllib.parse import urlparse
 
 from flask import Flask, Response, jsonify, request, stream_with_context
 
@@ -75,6 +77,35 @@ def _normalize_command(raw: Dict[str, Any]) -> Dict[str, Any]:
     return command
 
 
+_PRIVATE_HOSTNAMES = {"localhost", "::1", "[::1]"}
+
+
+def _is_private_origin(origin: Optional[str]) -> bool:
+    """True for an Origin on this machine or a private network.
+
+    Used only when the bridge was started locally, where the thing on the far
+    end is the GM's own browser. A public address is never matched, so this
+    does not turn a LAN-exposed bridge into an open one.
+    """
+    if not origin:
+        return False
+    try:
+        parsed = urlparse(origin)
+    except ValueError:
+        return False
+    if parsed.scheme not in ("http", "https"):
+        return False
+    host = (parsed.hostname or "").lower()
+    if host in _PRIVATE_HOSTNAMES:
+        return True
+    try:
+        return ipaddress.ip_address(host).is_private
+    except ValueError:
+        # A hostname rather than an address: only .local (mDNS) is safe to
+        # assume is on this network.
+        return host.endswith(".local")
+
+
 def create_app() -> Flask:
     app = Flask(__name__)
     store = SnapshotStore()
@@ -107,11 +138,22 @@ def create_app() -> Flask:
         if o.strip()
     }
     allowed_origins = {"http://localhost:30000"} | _extra_origins
+    # Foundry is reached under whatever host the GM typed, and the browser
+    # sends that as the Origin. Pinning the allowlist to localhost:30000 meant
+    # a GM who browsed to 127.0.0.1:30000, their LAN IP, or a non-default port
+    # got a CORS rejection with nothing in the app to explain it. When the
+    # bridge is local, trust any private address instead of one spelling of it.
+    allow_local_origins = _load_env("BRIDGE_ALLOW_LOCAL_ORIGINS", "").strip() not in (
+        "",
+        "0",
+        "false",
+        "False",
+    )
 
     @app.after_request
     def cors(resp):
         origin = request.headers.get("Origin")
-        if origin in allowed_origins:
+        if origin in allowed_origins or (allow_local_origins and _is_private_origin(origin)):
             resp.headers["Access-Control-Allow-Origin"] = origin
             resp.headers["Vary"] = "Origin"
             resp.headers["Access-Control-Allow-Credentials"] = "true"

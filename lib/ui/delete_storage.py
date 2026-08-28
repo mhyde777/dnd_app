@@ -16,10 +16,10 @@ class DeleteStorageWindow(QDialog):
     Select and delete encounters from the Storage API.
     Also removes them from the local status file if present.
     """
-    def __init__(self, storage_api, parent=None):
+    def __init__(self, storage, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Delete Encounters")
-        self.storage_api = storage_api
+        self.storage = storage
 
         v = QVBoxLayout(self)
         v.addWidget(QLabel("Select encounters to delete:"))
@@ -42,9 +42,9 @@ class DeleteStorageWindow(QDialog):
 
     def _populate(self):
         try:
-            if not self.storage_api:
+            if not self.storage:
                 raise RuntimeError("Storage API not configured.")
-            items = self.storage_api.list()
+            items = self.storage.list()
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to list encounters:\n{e}")
             self.reject()
@@ -93,7 +93,7 @@ class DeleteStorageWindow(QDialog):
         errors = []
         for key in names:
             try:
-                self.storage_api.delete(key)
+                self.storage.delete(key)
             except Exception as e:
                 errors.append(f"{key}: {e}")
 

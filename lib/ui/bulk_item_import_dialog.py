@@ -7,26 +7,24 @@ Legacy items are included when no non-legacy counterpart exists in the paste.
 Items without a "View Details Page" line (unowned sourcebook) are skipped.
 
 Usage:
-    dlg = BulkItemImportDialog(storage_api=self.storage_api, parent=self)
+    dlg = BulkItemImportDialog(storage=self.storage, parent=self)
     dlg.exec_()
 """
 from __future__ import annotations
 
-from typing import Optional
 
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import (
     QCheckBox, QDialog, QFrame, QHBoxLayout, QLabel, QPlainTextEdit,
     QPushButton, QScrollArea, QSizePolicy, QVBoxLayout, QWidget,
 )
 
 from app.bulk_item_import import ParsedItemBlock, dedupe_prefer_non_legacy, parse_bulk_items
+from ui.notifications import InlineWarning
 
 
 # ── Colours ───────────────────────────────────────────────────────────────────
-_WARN_BG    = "#FFF3CD"
 _WARN_FG    = "#856404"
-_WARN_BORD  = "#FFEEBA"
 _OK_FG      = "#2d862d"
 _ERR_FG     = "#cc0000"
 _LEGACY_FG  = "#888888"
@@ -102,9 +100,9 @@ class _ItemRow(QWidget):
 class BulkItemImportDialog(QDialog):
     """Dialog for bulk-importing D&D Beyond items via paste-and-parse."""
 
-    def __init__(self, storage_api=None, parent=None) -> None:
+    def __init__(self, storage=None, parent=None) -> None:
         super().__init__(parent)
-        self.storage_api = storage_api
+        self.storage = storage
         self._rows: list[_ItemRow] = []
 
         self.setWindowTitle("Bulk Item Import")
@@ -148,14 +146,8 @@ class BulkItemImportDialog(QDialog):
         self.text_edit.setFixedHeight(160)
         layout.addWidget(self.text_edit)
 
-        # ---- Warning banner ----
-        self._warning = QLabel()
-        self._warning.setWordWrap(True)
-        self._warning.setStyleSheet(
-            f"background:{_WARN_BG}; color:{_WARN_FG};"
-            f"border:1px solid {_WARN_BORD}; padding:6px; border-radius:3px;"
-        )
-        self._warning.hide()
+        # ---- Warning banner (hidden until needed) ----
+        self._warning = InlineWarning()
         layout.addWidget(self._warning)
 
         # ---- Summary label ----
@@ -247,7 +239,7 @@ class BulkItemImportDialog(QDialog):
             raw = parse_bulk_items(text, include_legacy=True)
             items = dedupe_prefer_non_legacy(raw)
         except Exception as exc:
-            self._show_warning(f"Parse error: {exc}")
+            self._warning.show_message(f"Parse error: {exc}")
             self._summary_lbl.setText("Parse failed.")
             return
 
@@ -303,17 +295,11 @@ class BulkItemImportDialog(QDialog):
         for row in self._rows:
             row.checkbox.setChecked(False)
 
-    # ── Warning ───────────────────────────────────────────────────────────────
-
-    def _show_warning(self, msg: str) -> None:
-        self._warning.setText(f"\u26a0  {msg}")
-        self._warning.show()
-
     # ── Save ──────────────────────────────────────────────────────────────────
 
     def _save_selected(self) -> None:
-        if self.storage_api is None:
-            self._show_warning(
+        if self.storage is None:
+            self._warning.show_message(
                 "Storage is not configured — items cannot be saved. "
                 "Check your settings."
             )
@@ -321,7 +307,7 @@ class BulkItemImportDialog(QDialog):
 
         selected = [row for row in self._rows if row.is_selected()]
         if not selected:
-            self._show_warning("No items selected.")
+            self._warning.show_message("No items selected.")
             return
 
         saved = 0
@@ -329,7 +315,7 @@ class BulkItemImportDialog(QDialog):
         for row in selected:
             block = row.block
             try:
-                self.storage_api.save_item(block.key, block.data)
+                self.storage.save_item(block.key, block.data)
                 row.mark_saved()
                 saved += 1
             except Exception as exc:

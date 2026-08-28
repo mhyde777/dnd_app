@@ -2,21 +2,23 @@
 """
 A reference storage server for the D&D Combat Tracker.
 
-Storage mode "API" points the app at an HTTP service that keeps its encounters,
-statblocks, spells and items. This is a small, file-backed implementation of
-exactly the endpoints `lib/app/storage_api.py` calls -- enough to run for real,
-and short enough to read in one sitting if you would rather write your own.
+The "HTTP server" storage provider points the app at an HTTP service that keeps
+its encounters, statblocks, spells and items. This is a small, file-backed
+implementation of exactly the endpoints `lib/app/storage/http.py` calls --
+enough to run for real, and short enough to read in one sitting if you would
+rather write your own.
 
-You do not need this to use the app. Local mode keeps everything in a folder
-and is the default. An API is worth running when you want several machines to
-share one library without syncing a folder between them.
+You do not need this to use the app. "This computer" keeps everything in a
+folder and is the default, and there are Dropbox, Google Drive, WebDAV and S3
+providers besides. This is worth running when you want several machines to
+share one library with no sync client and nothing rented.
 
     pip install flask
     python -m storage_service.app --data ~/dnd-data --key secret --port 8000
 
 Everything is stored as plain JSON files under --data, one per key, so the data
-outlives this server: point local mode at the same directory and the app reads
-the same encounters.
+outlives this server: point the "This computer" provider at the same directory
+and the app reads the same encounters.
 
 Deliberately not included: users, TLS, rate limiting. Run it on a private
 network or behind something that provides those -- the API key is a guard

@@ -9,7 +9,7 @@ import sys
 from dotenv import find_dotenv, load_dotenv
 
 from app.bulk_spell_import import dedupe_prefer_non_legacy, parse_bulk_spells
-from app.storage_api import StorageAPI
+from app.storage.base import StorageBackend
 
 
 _LEGACY_NAME_RE = re.compile(r"\blegacy\b", re.IGNORECASE)
@@ -35,7 +35,7 @@ def _spell_is_legacy(*, key: str, data: dict | None) -> bool:
     return bool(_LEGACY_NAME_RE.search(name) or _LEGACY_NAME_RE.search(source))
 
 
-def _prepare_api_replacements(api: StorageAPI, spells) -> tuple[set[str], set[str]]:
+def _prepare_api_replacements(api: StorageBackend, spells) -> tuple[set[str], set[str]]:
     """
     Decide which existing API entries to delete and which parsed spells to skip.
 
@@ -128,12 +128,17 @@ def main() -> int:
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Parse and report only. Do not upload to the Storage API.",
+        help="Parse and report only. Write nothing.",
     )
     parser.add_argument(
         "--base-url",
-        default=os.getenv("STORAGE_API_BASE", ""),
-        help="Storage API base URL. Defaults to STORAGE_API_BASE env var.",
+        default="",
+        help="Write to this HTTP storage server instead of your configured storage.",
+    )
+    parser.add_argument(
+        "--local-dir",
+        default="",
+        help="Write to this folder instead of your configured storage.",
     )
     args = parser.parse_args()
 
@@ -164,21 +169,28 @@ def main() -> int:
         print(f"\n{warning_count} spells had parser warnings.")
 
     if args.dry_run:
-        print("\nDry-run only. Re-run without --dry-run to PUT to Storage API.")
+        print("\nDry-run only. Re-run without --dry-run to write them.")
         return 0
 
-    if not args.base_url:
-        print(
-            "No base URL set. Use --base-url or set STORAGE_API_BASE in your repo .env.",
-            file=sys.stderr,
-        )
-        return 2
+    # Defaults to whatever the app is configured to use, so importing into a
+    # Dropbox folder or an S3 bucket needs no flags at all.
+    if args.local_dir:
+        from app.storage import FolderStorage
+        api = FolderStorage(args.local_dir)
+    elif args.base_url:
+        from app.storage import HttpStorage
+        api = HttpStorage(args.base_url)
+    else:
+        from app.storage_factory import open_storage
+        api, problem = open_storage()
+        if api is None:
+            print(problem, file=sys.stderr)
+            return 2
 
-    api = StorageAPI(args.base_url)
     try:
         delete_keys, skip_upload_keys = _prepare_api_replacements(api, spells)
     except Exception as exc:
-        print(f"Failed to inspect existing spells in Storage API: {exc}", file=sys.stderr)
+        print(f"Failed to inspect existing spells in storage: {exc}", file=sys.stderr)
         return 4
 
     for key in sorted(delete_keys):

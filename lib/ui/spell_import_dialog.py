@@ -3,7 +3,7 @@
 SpellImportDialog — paste D&D Beyond spell text, preview it, then save to storage.
 
 Usage:
-    dlg = SpellImportDialog(storage_api=self.storage_api, spell_name="Fireball", parent=self)
+    dlg = SpellImportDialog(storage=self.storage, spell_name="Fireball", parent=self)
     if dlg.exec_() == QDialog.Accepted:
         key, data = dlg.saved_key, dlg.saved_data
 """
@@ -12,13 +12,14 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QPlainTextEdit, QPushButton, QSizePolicy, QTextBrowser,
 )
 
 from app.spell_parser import parse_spell, validate_spell, spell_key
+from ui.notifications import InlineWarning
 
 
 # ── Colours — D&D Beyond spell card palette ───────────────────────────────────
@@ -40,12 +41,12 @@ class SpellImportDialog(QDialog):
 
     def __init__(
         self,
-        storage_api=None,
+        storage=None,
         spell_name: str = "",
         parent=None,
     ):
         super().__init__(parent)
-        self.storage_api = storage_api
+        self.storage = storage
         self._spell_name_hint = spell_name
 
         self._parsed_data: Optional[dict] = None
@@ -92,15 +93,8 @@ class SpellImportDialog(QDialog):
         self.text_edit.setFixedHeight(130)
         layout.addWidget(self.text_edit)
 
-        # Warning banner
-        self._warning = QLabel()
-        self._warning.setWordWrap(True)
-        self._warning.setAlignment(Qt.AlignTop | Qt.AlignLeft)
-        self._warning.setStyleSheet(
-            "background:#FFF3CD; color:#856404;"
-            "border:1px solid #FFEEBA; padding:6px; border-radius:3px;"
-        )
-        self._warning.hide()
+        # ---- Warning banner (hidden until needed) ----
+        self._warning = InlineWarning()
         layout.addWidget(self._warning)
 
         # Preview
@@ -159,7 +153,7 @@ class SpellImportDialog(QDialog):
         try:
             data = parse_spell(text)
         except Exception as exc:
-            self._show_warning(f"Parse error: {exc}")
+            self._warning.show_message(f"Parse error: {exc}")
             self._parsed_data = None
             self._save_btn.setEnabled(False)
             return
@@ -168,7 +162,7 @@ class SpellImportDialog(QDialog):
 
         warnings = validate_spell(data)
         if warnings:
-            self._show_warning("  •  ".join(warnings))
+            self._warning.show_message("  •  ".join(warnings))
         else:
             self._warning.hide()
 
@@ -182,10 +176,6 @@ class SpellImportDialog(QDialog):
 
         if self.text_edit.isVisible():
             self._toggle_text_panel()
-
-    def _show_warning(self, message: str) -> None:
-        self._warning.setText(f"\u26a0  {message}")
-        self._warning.show()
 
     def _show_placeholder(self) -> None:
         self.preview.setHtml(
@@ -295,13 +285,13 @@ class SpellImportDialog(QDialog):
 
         name = self.name_edit.text().strip()
         if not name:
-            self._show_warning("Enter a spell name before saving.")
+            self._warning.show_message("Enter a spell name before saving.")
             return
 
         key = spell_key(name)
 
-        if self.storage_api is None:
-            self._show_warning(
+        if self.storage is None:
+            self._warning.show_message(
                 "Storage API is not configured — spell cannot be saved remotely."
             )
             return
@@ -311,9 +301,9 @@ class SpellImportDialog(QDialog):
         save_data["name"] = name
 
         try:
-            self.storage_api.save_spell(key, save_data)
+            self.storage.save_spell(key, save_data)
         except Exception as exc:
-            self._show_warning(f"Save failed: {exc}")
+            self._warning.show_message(f"Save failed: {exc}")
             return
 
         self.saved_key  = key

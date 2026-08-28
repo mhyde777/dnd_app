@@ -11,6 +11,7 @@ dnd-app-lib = {file = "lib/", editable = true}
 python-dotenv = "*"
 pyinstaller = "*"
 flask = "*"
+markdown = "*"
 
 [dev-packages]
 pyinstaller = "*"

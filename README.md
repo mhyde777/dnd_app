@@ -37,10 +37,14 @@ bundled SRD library. Both are changeable later.
 
 ## Documentation
 
+**All of this is in the app**, under **Help → Documentation** (`Shift+F1`) — a
+window you can leave open beside the tracker while you work. It ships with the
+build, so it works offline and describes the version you are actually running.
+
 | | |
 |---|---|
 | **[Running a combat](docs/using-the-tracker.md)** | Everything the app does, in the order you meet it |
-| **[Where your data lives](docs/storage.md)** | Local folder or shared API, backups, syncing settings |
+| **[Where your data lives](docs/storage.md)** | Storage providers — a folder, Dropbox, WebDAV, S3 — backups, syncing settings |
 | **[Connecting to Foundry VTT](docs/foundry-setup.md)** | The bridge, the module, and what to do when it doesn't work |
 | **[Importing content](docs/importing-content.md)** | Statblocks, spells and items from D&D Beyond |
 | **[In-app updating](docs/auto-update.md)** | How updates install, and how to go back |
@@ -100,6 +104,7 @@ PyInstaller cannot cross-compile, so each platform builds on that platform.
 ./package_WIN.sh              # Windows (Git Bash) -> dist/*.zip
 ./package_module.sh           # the Foundry module -> dist/foundryvtt-bridge.zip
 ./package.sh --dev-install    # also install to ~/.local/opt for daily use
+./package_WIN.sh --dev-install  # same, to %LOCALAPPDATA%\Programs + a Start Menu shortcut
 ./package.sh --publish        # also upload to the GitHub release for this version
 ```
 

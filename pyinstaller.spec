@@ -12,11 +12,19 @@ datas = [
 
 # The bundled SRD library, when this tree has one. Absent in a plain source
 # checkout, so the spec has to stay valid without it.
-# Shipped so Help -> Release Notes works offline and describes the running
-# build, not whatever is on the web.
-for _doc in ("CHANGELOG.md", "LICENSE-SRD.md"):
+# Shipped so Help -> Release Notes and Help -> Documentation work offline and
+# describe the running build, not whatever is on the web. README.md is the
+# "Overview" page in the docs window, so it travels with the rest.
+for _doc in ("CHANGELOG.md", "LICENSE-SRD.md", "README.md"):
     if (project_dir / _doc).is_file():
         datas.append((project_dir / _doc, "."))
+
+# The docs/ tree, kept at the same relative path it has in the source checkout
+# so app/docs_content.py needs one search order for both. Without this the
+# Help -> Documentation window opens empty in a packaged build, which is
+# exactly the build where a user cannot fall back to reading the repository.
+if (project_dir / "docs").is_dir():
+    datas.append((project_dir / "docs", "docs"))
 
 _srd_content = project_dir / "srd_content"
 if _srd_content.is_dir():
@@ -27,7 +35,29 @@ if _srd_content.is_dir():
         if (_srd_content / _sub).is_dir():
             datas.append((_srd_content / _sub, f"srd_content/{_sub}"))
 binaries = []
-hiddenimports = []
+# The in-process Foundry bridge. It is imported inside LocalBridgeServer.start()
+# rather than at module level, so that a user who never enables Foundry sync
+# does not pay for Flask at startup -- but that puts it out of easy reach of
+# PyInstaller's static analysis, and a packaged build with no bridge_service is
+# a build where "run the bridge on this computer" fails at the moment it is
+# ticked. Naming it here does not depend on that analysis working.
+hiddenimports = [
+    "bridge_service",
+    "bridge_service.app",
+    "bridge_service.command_queue",
+    "werkzeug.serving",
+]
+
+# Python-Markdown, for Help -> Documentation. ui/docs_window.py imports the
+# extension classes directly rather than by name, so static analysis does find
+# them -- these are belt and braces, because the failure mode is a window that
+# raises "Failed loading extension" only in a packaged build.
+hiddenimports += [
+    "markdown.extensions.fenced_code",
+    "markdown.extensions.sane_lists",
+    "markdown.extensions.tables",
+    "markdown.extensions.toc",
+]
 
 qdark_datas, qdark_binaries, qdark_hidden = collect_all("qdarktheme")
 datas += qdark_datas

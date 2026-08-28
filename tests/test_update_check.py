@@ -1,6 +1,5 @@
 import json
 import sys
-import threading
 from pathlib import Path
 
 import pytest

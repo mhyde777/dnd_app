@@ -272,11 +272,11 @@ class RemoveCombatantWindow(QDialog):
 
 
 class BuildEncounterWindow(QDialog):
-    def __init__(self, parent=None, storage_api=None):
+    def __init__(self, parent=None, storage=None):
         super().__init__(parent)
         self.setWindowTitle("Build Encounter")
         self.setMinimumWidth(620)
-        self._storage_api = storage_api
+        self._storage = storage
         self.roster_rows: list[dict] = []
         self._display_key_map: dict[str, str] = {}
 
@@ -344,13 +344,13 @@ class BuildEncounterWindow(QDialog):
         self._populate_list()
 
     def _populate_list(self):
-        if not self._storage_api:
+        if not self._storage:
             placeholder = QListWidgetItem("(No storage API configured)")
             placeholder.setFlags(placeholder.flags() & ~Qt.ItemIsEnabled)
             self._list.addItem(placeholder)
             return
         try:
-            keys = self._storage_api.list_statblock_keys()
+            keys = self._storage.list_statblock_keys()
         except Exception:
             keys = []
         if not keys:
@@ -378,7 +378,7 @@ class BuildEncounterWindow(QDialog):
         if not key:
             return
         try:
-            data = self._storage_api.get_statblock(key) or {}
+            data = self._storage.get_statblock(key) or {}
         except Exception:
             data = {}
 
@@ -483,108 +483,6 @@ class BuildEncounterWindow(QDialog):
             "filename": filename.strip().replace(" ", "_"),
             "description": description.strip()
         }
-
-
-class LoadEncounterWindow(QDialog):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Load Encounter")
-        self.selected_file = None
-        self.load_layout = QVBoxLayout()
-
-        self.file_list = QListWidget()
-        self.file_list.itemClicked.connect(self.on_item_clicked)
-        self.populate_file_list()
-
-        self.load_button = QDialogButtonBox(QDialogButtonBox.Open | QDialogButtonBox.Cancel, self)
-        self.load_button.accepted.connect(self.accept)
-        self.load_button.rejected.connect(self.reject)
-
-        self.load_layout.addWidget(self.file_list)
-        self.load_layout.addWidget(self.load_button)
-
-        self.setLayout(self.load_layout)
-
-    def on_item_clicked(self, item):
-        self.selected_file = item.text().replace(' ','_')
-
-    def get_data_dict(self):
-        return os.path.join(self.get_parent_dir(), 'data')
-
-    def get_data_path(self, filename):
-        return os.path.join(self.get_parent_dir(), 'data', filename)
-    
-    def get_parent_dir(self):
-        return os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
-
-
-class MergeEncounterWindow(QDialog):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Merger Encounter")
-        self.selected_file = None
-        self.merge_layout = QVBoxLayout()
-
-        self.file_list = QListWidget()
-        self.file_list.itemClicked.connect(self.on_item_clicked)
-        self.populate_file_list()
-
-        self.merge_button = QDialogButtonBox(QDialogButtonBox.Open | QDialogButtonBox.Cancel, self)
-        self.merge_button.accepted.connect(self.accept)
-        self.merge_button.rejected.connect(self.reject)
-
-        self.merge_layout.addWidget(self.file_list)
-        self.merge_layout.addWidget(self.merge_button)
-
-        self.setLayout(self.merge_layout)
-
-    def on_item_clicked(self, item):
-        self.selected_file = item.text().replace(' ','_')
-
-    def get_data_dict(self):
-        return os.path.join(self.get_parent_dir(), 'data')
-
-    def get_data_path(self, filename):
-        return os.path.join(self.get_parent_dir(), 'data', filename)
-    
-    def get_parent_dir(self):
-        return os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
-
-
-class UpdatePlayerWindow(QDialog):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Update Player Stats")
-        self.update_layout = QVBoxLayout()
-
-        title = QLabel("Update Player Stats")
-        title.setStyleSheet("font-size: 16px; font-weight: bold;")
-        self.update_layout.addWidget(title)
-
-        # Custom Table Widget
-        self.player_table = QTableWidget()
-
-        self.decision_buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel, self)
-        self.decision_buttons.accepted.connect(self.accept)
-        self.decision_buttons.rejected.connect(self.reject)
-        
-        self.update_layout.addWidget(self.player_table)
-        self.update_layout.addWidget(self.decision_buttons)
-        self.setLayout(self.update_layout)
-    
-    def resize_table(self):
-        total_width = self.player_table.verticalHeader().width()
-        for column in range(self.player_table.columnCount()):
-            self.player_table.resizeColumnToContents(column)
-            total_width += self.player_table.columnWidth(column)
-
-        total_height = self.player_table.horizontalHeader().height()
-        for row in range(self.player_table.rowCount()):
-            self.player_table.resizeRowToContents(row)
-            total_height += self.player_table.rowHeight(row)
-
-        self.player_table.setFixedWidth(total_width + self.player_table.frameWidth() * 2)
-        self.player_table.setFixedHeight(total_height + self.player_table.frameWidth() * 2)
 
 
 class LairActionDialog(QDialog):

@@ -121,9 +121,9 @@ class InitiativeTracker(QMainWindow, Application):
         # silently no-ops for docks that weren't created yet.
         self._layout_restored = self.restore_layout()
 
-        warning = getattr(self, "storage_api_warning", None)
+        warning = getattr(self, "storage_warning", None)
         if warning:
-            QMessageBox.warning(self, "Storage API", warning)
+            QMessageBox.warning(self, "Storage", warning)
 
         try:
             self.load_state()
@@ -149,6 +149,7 @@ class InitiativeTracker(QMainWindow, Application):
             self._on_manual_update_check, Qt.QueuedConnection
         )
         self.start_bridge_polling()
+        self.report_local_bridge_failure()
         self.check_for_updates()
         self.start_version_housekeeping()
         self.verify_new_version()
@@ -925,6 +926,9 @@ class InitiativeTracker(QMainWindow, Application):
             self.restart_bridge_sync()
         except Exception as exc:
             self._log(f"[WARN] Could not restart bridge sync: {exc}")
+        # The local bridge is torn down and restarted in there, so whether it
+        # came up is only known now -- and may have just changed.
+        self.report_local_bridge_failure()
 
     def open_layout_settings(self):
         from ui.layout_settings_dialog import LayoutSettingsDialog
@@ -1226,6 +1230,29 @@ class InitiativeTracker(QMainWindow, Application):
             self.bridge_status_label.setStyleSheet("padding: 0 8px; color: #888;")
             self.clear_banner(self.BRIDGE_BANNER_KEY)
 
+    LOCAL_BRIDGE_BANNER_KEY = "local_bridge_failed"
+
+    def report_local_bridge_failure(self) -> None:
+        """Say so when the in-process bridge could not start.
+
+        It used to take the whole app down (werkzeug exits the process on a
+        busy port), so anything at all is an improvement -- but a bridge that
+        silently is not there looks exactly like Foundry not being open, and
+        the user would have no way to tell the difference.
+        """
+        error = getattr(self, "local_bridge_error", None)
+        if not error:
+            self.clear_banner(self.LOCAL_BRIDGE_BANNER_KEY)
+            return
+        self.show_banner(
+            self.LOCAL_BRIDGE_BANNER_KEY,
+            f"{error} Close whatever is using the port, or change it in "
+            f"File → Settings.",
+            "error",
+            action_label="Show Log",
+            action=self.show_log,
+        )
+
     def _monster_list_context_menu(self, pos):
         menu = QMenu(self)
         import_action = menu.addAction("Import Statblock...")
@@ -1498,6 +1525,13 @@ class InitiativeTracker(QMainWindow, Application):
         self.view_menu.addAction(self.reset_layout_action)
 
     def _setup_help_menu(self):
+        self.docs_action = QAction("Documentation…", self)
+        self.docs_action.setToolTip(
+            "The full guide, in a window you can leave open while you work"
+        )
+        self.docs_action.triggered.connect(self.show_docs)
+        self.help_menu.addAction(self.docs_action)
+
         self.shortcuts_action = QAction("Keyboard Shortcuts", self)
         self.shortcuts_action.triggered.connect(self.show_shortcuts)
         self.help_menu.addAction(self.shortcuts_action)
@@ -1534,6 +1568,27 @@ class InitiativeTracker(QMainWindow, Application):
         self.about_action.triggered.connect(self.show_about)
         self.help_menu.addAction(self.about_action)
 
+    def show_docs(self, filename: str = ""):
+        """Help → Documentation. Non-modal, and one window however often asked.
+
+        Held on self because a QDialog with no parent reference is garbage
+        collected the moment this method returns -- the window would appear
+        and vanish. Re-triggering raises the existing one instead of stacking
+        a second copy, which is what makes the menu item safe to hit twice.
+        """
+        from ui.docs_window import DocsWindow
+
+        existing = getattr(self, "_docs_window", None)
+        if existing is None:
+            existing = DocsWindow(self)
+            self._docs_window = existing
+        if filename:
+            existing.show_doc(filename)
+        existing.show()
+        existing.raise_()
+        existing.activateWindow()
+        return existing
+
     def show_release_notes(self, version=None):
         from ui.release_notes_dialog import ReleaseNotesDialog
         ReleaseNotesDialog(self, version=version or None).exec_()
@@ -1558,6 +1613,7 @@ class InitiativeTracker(QMainWindow, Application):
             "save_state":           getattr(self, "save_action", None),
             "reference_lookup":     getattr(self, "lookup_action", None),
             "show_shortcuts":       getattr(self, "shortcuts_action", None),
+            "show_docs":            getattr(self, "docs_action", None),
             "focus_filter":         getattr(self, "filter_shortcut", None),
             "statblock_zoom_in":    getattr(self, "zoom_in_shortcut", None),
             "statblock_zoom_out":   getattr(self, "zoom_out_shortcut", None),
@@ -1943,23 +1999,6 @@ class InitiativeTracker(QMainWindow, Application):
         frame_geometry.moveCenter(screen_center)
         self.move(frame_geometry.topLeft())
 
-    def handle_clicked_index(self, index):
-        row = index.row()
-        col = index.column()
-        field = self.table_model.fields[col]
-        creature_name = self.table_model.creature_names[row]
-        # print(f"Clicked {creature_name} - {field}")
-
-    def handle_data_changed(self, topLeft, bottomRight, roles):
-        seen = set()
-        for row in range(topLeft.row(), bottomRight.row() + 1):
-            if row >= len(self.table_model.creature_names):
-                continue
-            creature_name = self.table_model.creature_names[row]
-            if creature_name not in seen:
-                # print(f"Data changed for: {creature_name}")
-                seen.add(creature_name)
-
     def toggle_boolean_cell(self, index):
         if not index.isValid():
             return
@@ -2199,15 +2238,6 @@ class InitiativeTracker(QMainWindow, Application):
         else:
             self._clear_statblock()
 
-    def _set_active_turn_by_name(self, name: str):
-        if not name:
-            return
-        self.build_turn_order()
-        if name in self.turn_order:
-            self.current_idx = self.turn_order.index(name)
-            self.current_creature_name = name
-            self.update_active_ui()
-
     def show_table_context_menu(self, pos):
         index = self.table.indexAt(pos)
         if not index.isValid():
@@ -2249,7 +2279,7 @@ class InitiativeTracker(QMainWindow, Application):
 
         if statblock_action and chosen == statblock_action:
             try:
-                keys = self.storage_api.list_statblock_keys()
+                keys = self.storage.list_statblock_keys()
             except Exception:
                 keys = []
             display_names = sorted(

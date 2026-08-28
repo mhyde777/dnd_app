@@ -88,10 +88,6 @@ DEFAULTS: dict[str, str] = {
 TINT_ACTION_CELLS_DEFAULT = False
 
 
-# Non-configurable layout constant.
-ACTIVE_BAR_WIDTH = 4
-
-
 def _is_hex(value: Any) -> bool:
     if not isinstance(value, str):
         return False

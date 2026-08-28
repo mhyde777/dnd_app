@@ -13,6 +13,42 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ## [Unreleased]
 
+### Added
+
+- **Help → Documentation** (`Shift+F1`) opens the full guide in a window you
+  can leave open beside the tracker while you work — set Foundry up with the
+  Foundry page in view, work through storage with the storage page in view. It
+  is the same documentation that is published with the project, shipped inside
+  the build, so it works offline and describes the version you are actually
+  running rather than whatever is currently on the web. Contents down the side,
+  links between pages, and Find (`Ctrl+F`) within a page.
+- **Storage is now a choice of provider rather than "local or API".** Alongside
+  a folder on this computer you can keep your library in **Dropbox, Google
+  Drive, OneDrive or iCloud Drive** — the app finds the folder those apps
+  already sync and says which ones it can see, with nothing to authorise and no
+  account to connect — or in a **WebDAV** share (Nextcloud, ownCloud, Box, a
+  NAS) or an **S3-compatible** bucket (S3, Cloudflare R2, Backblaze B2, MinIO),
+  where several machines can share one library at once. Every provider has a
+  **Test Connection** button that tells you what is wrong before you commit to
+  it.
+
+### Changed
+
+- The Storage settings tab is a provider list with a form for whichever one you
+  pick, replacing the two radio buttons and the always-visible API fields.
+  Settings you have entered for a provider are kept when you switch away and
+  back, so you can compare two without retyping credentials.
+- "API" is gone as a name for this: it described one of the ways to store a
+  library, not the thing itself, and it was also the name of the object the app
+  used even when your data was in a plain folder.
+
+### Upgrading
+
+Nothing to do. **Local Files** becomes **This computer** and **Remote API
+Server** becomes **HTTP server**, with your folder or URL and key already
+filled in. `.env` variables are still read, and the previous settings keys are
+left in place, so going back to an older build also works.
+
 ## [0.4.2] — 2026-08-26
 
 ### Changed

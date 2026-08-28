@@ -179,7 +179,7 @@ class UpdateCharactersWindow(QDialog):
         filename = "players.json"
 
         # Prefer Storage API (your app uses it when configured)
-        storage = getattr(self.app, "storage_api", None)
+        storage = getattr(self.app, "storage", None)
         if storage is not None:
             try:
                 raw = storage.get_json(filename)
@@ -225,7 +225,7 @@ class UpdateCharactersWindow(QDialog):
         filename = "players.json"
 
         # Prefer Storage API
-        storage = getattr(self.app, "storage_api", None)
+        storage = getattr(self.app, "storage", None)
         if storage is not None:
             try:
                 storage.put_json(filename, payload)

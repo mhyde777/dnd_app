@@ -2,12 +2,12 @@
 """
 Carry the *preferences* half of settings.json between machines.
 
-The transport is the storage backend already configured -- the remote API for
-anyone using one, or the local data directory, which covers a data dir that
-lives in Dropbox or on a NAS. Nothing new to host.
+The transport is the storage provider already configured -- a WebDAV share or
+an S3 bucket for anyone using one, or the library folder, which covers a folder
+that lives in Dropbox or on a NAS. Nothing new to host.
 
 SYNCABLE_KEYS is an allowlist, deliberately. settings.json also holds the
-storage API key and the Foundry bridge secret, and a denylist would leak a
+storage credentials and the Foundry bridge secret, and a denylist would leak a
 future secret the day someone adds one and forgets this file. Anything not
 named here stays on the machine it was set on.
 
@@ -23,8 +23,9 @@ from typing import Any, Optional
 
 from app import settings
 
-# The key the payload lives under in the storage backend. Leading underscore so
-# it sorts away from encounters, and both backends filter it out of list().
+# The key the payload lives under in storage. Leading underscore so it sorts
+# away from encounters; StorageBackend.list() filters it out for every
+# provider, so a new backend cannot forget to.
 REMOTE_KEY = "_app_settings.json"
 
 FORMAT_VERSION = 1
@@ -47,15 +48,14 @@ SYNCABLE_KEYS: tuple[str, ...] = (
 )
 
 # PC group rosters are deliberately absent: they are pcgroup_*.json files in
-# the storage backend, not settings, so they already travel with a shared API
-# or a shared data folder. Only *which* group is active is per-machine.
+# storage, not settings, so they already travel with a shared provider
+# or a shared folder. Only *which* group is active is per-machine.
 
 # Named only so the UI can explain the omissions; the allowlist above is what
 # actually decides. Keep the reasons accurate if this list grows.
 NOT_SYNCED: tuple[tuple[str, str], ...] = (
-    ("storage_api_base / storage_api_key", "credentials, and how you reach the sync itself"),
+    ("storage_provider / storage_config",  "credentials, and how you reach the sync itself"),
     ("bridge_url / bridge_secret",         "a secret, and the address differs per machine"),
-    ("storage_mode / local_data_dir",      "where this machine keeps its files"),
     ("window_geometry / window_state",     "sized for this machine's monitor"),
     ("srd_installed",                      "state of this installation"),
     ("verified_version",                   "which build this machine has vetted"),
@@ -121,7 +121,7 @@ def pull(storage) -> Optional[dict]:
     """Merge stored preferences into this machine's settings.
 
     Merge, not replace: keys outside the allowlist are left exactly as they
-    are, so pulling can never cost you your API key or your data directory.
+    are, so pulling can never cost you your credentials or your folder.
     Returns the payload that was applied, or None if there was nothing to pull.
     """
     payload = fetch(storage)

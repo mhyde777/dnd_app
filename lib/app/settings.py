@@ -66,6 +66,18 @@ def set(key: str, value: Any) -> None:
     save(data)
 
 
+def update(values: dict) -> None:
+    """Merge several keys in one write.
+
+    save() replaces the file wholesale, so writing keys one at a time is both
+    several disk writes and a wider window in which a crash leaves half the
+    change applied.
+    """
+    data = dict(load())
+    data.update(values)
+    save(data)
+
+
 # ---- Foundry sync ignore list ----
 # Combatants matching any of these are dropped from every Foundry snapshot
 # before the app sees them: never added to initiative, never synced.

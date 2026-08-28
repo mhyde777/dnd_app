@@ -11,7 +11,7 @@ from app.content_installer import install_srd  # noqa: E402
 
 
 class FakeStorage:
-    """Stands in for LocalStorage / StorageAPI, which share this interface."""
+    """Stands in for any storage provider; they all share this interface."""
 
     def __init__(self, existing=(), fail_keys=(), raise_on_list=False):
         self.statblocks = {}

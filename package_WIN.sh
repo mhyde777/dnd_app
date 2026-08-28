@@ -4,19 +4,27 @@
 # cannot cross-compile, so a Windows executable has to be built on Windows.
 #
 #   ./package_WIN.sh                 build a release zip in dist/
-#   ./package_WIN.sh --dev-install   also copy .env into %USERPROFILE%\.dnd_tracker_config
+#   ./package_WIN.sh --dev-install   also install to %LOCALAPPDATA%\Programs for daily use
 #   ./package_WIN.sh --publish       also upload to the GitHub release for this
 #                                    version (needs gh, and the tag pushed)
 #
-# As on Linux, the release path writes nothing outside the repo: a build that
-# ships someone else's credentials would be a serious mistake, so the .env copy
-# is opt-in and local-only.
+# The release path deliberately touches nothing outside the repo. Installing a
+# Start Menu shortcut and copying the developer's .env into ~/.dnd_tracker_config
+# is a convenience for this machine only -- a release build must never ship or
+# write someone else's credentials, so it lives behind the flag.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_NAME="combat_tracker"
 DIST_NAME="combat-tracker"
 LAUNCHER_NAME="combat-tracker"
+# A stable home for the dev install. Deliberately NOT under the repo: build/,
+# dist/ and package_win/ are all deleted at the start of every build, so a
+# shortcut pointing into any of them breaks the next time you rebuild.
+# %LOCALAPPDATA%\Programs is where per-user Windows apps belong; Git Bash
+# exposes it as $LOCALAPPDATA, but fall back in case it is unset.
+DEV_INSTALL_DIR="${DEV_INSTALL_DIR:-${LOCALAPPDATA:-${HOME}/AppData/Local}/Programs/combat-tracker}"
+START_MENU_DIR="${APPDATA:-${HOME}/AppData/Roaming}/Microsoft/Windows/Start Menu/Programs"
 CONFIG_DIR="${HOME}/.dnd_tracker_config"
 CONFIG_ENV="${CONFIG_DIR}/.env"
 
@@ -27,7 +35,7 @@ for arg in "$@"; do
     --dev-install) DEV_INSTALL=1 ;;
     --publish)     PUBLISH=1 ;;
     -h|--help)
-      sed -n '3,11p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      sed -n '3,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
@@ -52,6 +60,19 @@ if ! "${RUN[@]}" python -m PyInstaller --version >/dev/null 2>&1; then
     echo "Install it with: pip install pyinstaller" >&2
     echo "Or, if using pipenv: pipenv install --dev" >&2
     exit 1
+fi
+
+# Windows holds a running .exe and its loaded DLLs open, so installing over a
+# live copy fails partway and leaves a half-written version directory -- worse
+# than not starting at all. Checked here rather than at the install step so it
+# costs a second instead of a whole build.
+if [[ "$DEV_INSTALL" -eq 1 ]] && command -v tasklist >/dev/null 2>&1; then
+    if tasklist //FI "IMAGENAME eq ${LAUNCHER_NAME}.exe" 2>/dev/null | grep -qi "${LAUNCHER_NAME}.exe" \
+    || tasklist //FI "IMAGENAME eq ${APP_NAME}.exe" 2>/dev/null | grep -qi "${APP_NAME}.exe"; then
+        echo "Combat Tracker is running -- close it before --dev-install." >&2
+        echo "Windows keeps the running .exe and its DLLs locked, so the copy would fail partway." >&2
+        exit 1
+    fi
 fi
 
 if [[ ! -f "$ROOT_DIR/images/d20_icon.ico" ]]; then
@@ -170,11 +191,56 @@ fi
 # Dev install (opt-in, this machine only)
 # ------------------------------------------------------------
 if [[ "$DEV_INSTALL" -eq 1 ]]; then
+    mkdir -p "$CONFIG_DIR"
     if [[ -f "$ROOT_DIR/.env" ]]; then
-        mkdir -p "$CONFIG_DIR"
         cp "$ROOT_DIR/.env" "$CONFIG_ENV"
         echo "Installed .env -> $CONFIG_ENV"
     else
         echo "No .env at repo root; skipping env install" >&2
     fi
+
+    # Same versioned layout as the zip, so the dev install can exercise the
+    # in-app updater. Only this version's directory is replaced -- other
+    # versions installed by an update are left alone, which is the rollback.
+    mkdir -p "$DEV_INSTALL_DIR/versions/$VERSION"
+    if command -v rsync >/dev/null 2>&1; then
+        rsync -a --delete "$PAYLOAD_DIR/" "$DEV_INSTALL_DIR/versions/$VERSION/"
+    else
+        # Git Bash ships no rsync. Clear the directory first so a module
+        # deleted from the source does not linger in the install forever.
+        rm -rf "${DEV_INSTALL_DIR:?}/versions/$VERSION/"*
+        cp -r "$PAYLOAD_DIR/." "$DEV_INSTALL_DIR/versions/$VERSION/"
+    fi
+    cp "$ROOT_DIR/dist/${LAUNCHER_NAME}.exe" "$DEV_INSTALL_DIR/${LAUNCHER_NAME}.exe"
+    printf '%s\n' "$VERSION" > "$DEV_INSTALL_DIR/current"
+    cp "$ROOT_DIR/images/d20_icon.ico" "$DEV_INSTALL_DIR/$APP_NAME.ico"
+
+    # A flat install from before this layout leaves a stale binary at the root
+    # that a shortcut may still point at.
+    rm -rf "$DEV_INSTALL_DIR/_internal" "$DEV_INSTALL_DIR/$APP_NAME.exe"
+
+    # The Start Menu shortcut is the Windows counterpart of the .desktop entry
+    # package.sh writes. It points at the launcher, never at versions\ -- that
+    # is what lets Help -> Check for Updates swap the version underneath it.
+    if command -v powershell.exe >/dev/null 2>&1; then
+        mkdir -p "$START_MENU_DIR"
+        SHORTCUT_WIN="$(cygpath -w "$START_MENU_DIR/Combat Tracker.lnk")"
+        TARGET_WIN="$(cygpath -w "$DEV_INSTALL_DIR/${LAUNCHER_NAME}.exe")"
+        WORKDIR_WIN="$(cygpath -w "$DEV_INSTALL_DIR")"
+        ICON_WIN="$(cygpath -w "$DEV_INSTALL_DIR/$APP_NAME.ico")"
+        if powershell.exe -NoProfile -Command "
+            \$s = (New-Object -ComObject WScript.Shell).CreateShortcut('$SHORTCUT_WIN')
+            \$s.TargetPath = '$TARGET_WIN'
+            \$s.WorkingDirectory = '$WORKDIR_WIN'
+            \$s.IconLocation = '$ICON_WIN'
+            \$s.Description = 'D&D Combat Tracker'
+            \$s.Save()" >/dev/null 2>&1; then
+            echo "Start Menu -> $START_MENU_DIR/Combat Tracker.lnk"
+        else
+            # Not worth failing the install over -- the launcher still runs.
+            echo "warning: could not create the Start Menu shortcut" >&2
+        fi
+    fi
+
+    echo "Installed  -> $DEV_INSTALL_DIR\\${LAUNCHER_NAME}.exe (runs versions/$VERSION)"
 fi

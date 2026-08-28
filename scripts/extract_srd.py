@@ -28,7 +28,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
 
-from srd_pdf import Block, blocks, normalize_chars  # noqa: E402
+from srd_pdf import Block, blocks  # noqa: E402
 
 from app.item_parser import item_key, parse_item, validate_item  # noqa: E402
 from app.spell_parser import parse_spell, spell_key, validate_spell  # noqa: E402

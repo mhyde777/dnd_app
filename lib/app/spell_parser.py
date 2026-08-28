@@ -55,6 +55,13 @@ _CARD_LABEL_MAP: dict[str, str] = {
 
 _CARD_KNOWN_LABELS = set(_CARD_LABEL_MAP.keys())
 
+# Header lines that appear above the name in a card paste, or beside it
+_LEVEL_TOKEN_RE = re.compile(r'^(?:cantrip|\d+(?:st|nd|rd|th))$', re.IGNORECASE)
+_HEADER_NOISE = {"concentration", "legacy", "ritual"}
+
+# Trailing site furniture D&D Beyond includes in a card copy
+_CARD_END_MARKERS = {"view details page", "tags:", "available for:"}
+
 # Inline-format "Label: value" patterns
 _INLINE_LABEL_PATTERNS = [
     (re.compile(r'^casting\s*time\s*[:\u2014]\s*(.+)$', re.IGNORECASE), "casting_time"),
@@ -112,7 +119,7 @@ def _parse_level_value(s: str) -> int:
 
 def _is_card_format(lines: list[str]) -> bool:
     """Return True if this looks like the label-per-line card paste format."""
-    for line in lines[1:10]:
+    for line in lines[1:]:
         stripped = line.strip().lower()
         if stripped in _CARD_KNOWN_LABELS:
             return True
@@ -134,23 +141,65 @@ def _postprocess(result: dict) -> dict:
 
 # ── Card-format parser ────────────────────────────────────────────────────────
 
+def _find_label_block(lines: list[str]) -> int:
+    """Index of the first "Label\nValue" pair, or -1.
+
+    D&D Beyond's card copy leads with a summary header — the level badge, the
+    spell name, "School • Components", then the same values again unlabelled —
+    before the labelled block starts. The label block is the reliable part, so
+    find it rather than assuming it begins on line 1.
+    """
+    for idx in range(len(lines) - 1):
+        if lines[idx].strip().lower() in _CARD_LABEL_MAP:
+            return idx
+    return -1
+
+
+def _name_from_header(header: list[str]) -> tuple[str, bool]:
+    """Pick the spell name out of the summary header, and spot Concentration.
+
+    The name is the first line that isn't a level badge ("3rd"), a standalone
+    marker ("Concentration", "Legacy"), or the VTT card header.
+    """
+    name = ""
+    concentration = False
+    for line in header:
+        stripped = line.strip()
+        lower = stripped.lower()
+        if lower == "concentration":
+            concentration = True
+            continue
+        if lower in _HEADER_NOISE or _LEVEL_TOKEN_RE.match(stripped):
+            continue
+        if re.match(r'^display\s+spell\s+card', lower):
+            continue
+        if not name:
+            name = stripped
+    return name, concentration
+
+
 def _parse_card_format(lines: list[str]) -> dict:
     """Parse the label-per-line D&D Beyond card paste format."""
     result = _empty_result()
-    result["name"] = lines[0].strip()
 
-    idx = 1
+    label_start = _find_label_block(lines)
+    if label_start < 0:
+        label_start = 1
 
-    # Skip "Display Spell Card on VTT" header line(s)
-    while idx < len(lines) and re.match(r'^display\s+spell\s+card', lines[idx].strip(), re.IGNORECASE):
-        idx += 1
-
-    # Standalone "Concentration" indicator (sometimes appears before the label block)
-    if idx < len(lines) and lines[idx].strip().lower() == "concentration":
+    header = lines[:label_start] or lines[:1]
+    name, concentration = _name_from_header(header)
+    result["name"] = name or lines[0].strip()
+    if concentration:
         result["concentration"] = True
-        idx += 1
+
+    # A level badge in the header stands in if the block has no "Level" label
+    header_level = next(
+        (l.strip() for l in header if _LEVEL_TOKEN_RE.match(l.strip())), ""
+    )
 
     # Parse label / value pairs
+    idx = label_start
+    saw_level_label = False
     while idx < len(lines) - 1:
         label = lines[idx].strip().lower()
         if label in _CARD_LABEL_MAP:
@@ -158,19 +207,27 @@ def _parse_card_format(lines: list[str]) -> dict:
             value = lines[idx + 1].strip()
             if field == "level_str":
                 result["level"] = _parse_level_value(value)
+                saw_level_label = True
             else:
                 result[field] = value
             idx += 2
         else:
             break   # everything after this is description / footnotes
 
-    # Remaining lines: description + footnotes
+    if not saw_level_label and header_level:
+        result["level"] = _parse_level_value(header_level)
+
+    # Remaining lines: description + footnotes, minus the site furniture
+    # ("View Details Page", "Tags:" and the tag list) that trails a card copy.
     desc_lines: list[str] = []
     footnotes: list[str] = []
 
     for line in lines[idx:]:
         stripped = line.strip()
-        if re.match(r'^\*\s*\(', stripped):
+        if stripped.lower() in _CARD_END_MARKERS:
+            break
+        # Component footnote: "* (a pinch...)" or "* - (a pinch...)"
+        if re.match(r'^\*\s*-?\s*\(', stripped):
             footnotes.append(stripped)
         else:
             desc_lines.append(line)

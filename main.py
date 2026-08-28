@@ -23,8 +23,15 @@ if __name__ == "__main__":
     qdarktheme.setup_theme("dark")
     app.setStyleSheet(app.styleSheet() + get_stylesheet())
 
-    # Show setup wizard on first run (no settings.json yet)
+    # Rewrite pre-provider storage settings into the current shape before
+    # anything reads them. A no-op on a fresh profile and on an install that
+    # has already been through it; it never removes the old keys, so
+    # downgrading to a previous build still finds what it expects.
     import app.settings as settings
+    from app.config import migrate_legacy_storage
+    migrate_legacy_storage()
+
+    # Show setup wizard on first run (no settings.json yet)
     if not settings.settings_exist():
         from ui.setup_wizard import SetupWizard
         wizard = SetupWizard()

@@ -58,6 +58,11 @@ SHORTCUT_SCHEMA: list[tuple[str, list[tuple[str, str, str, str]]]] = [
     ]),
     ("App", [
         ("show_shortcuts", "Keyboard shortcuts", "F1", "This list of shortcuts"),
+        # Not F1: that has always opened this list, and settings.json stores
+        # only rebinds, so taking F1 for the docs would move a binding under
+        # everyone who never touched it. Shift+F1 is the usual "full help".
+        ("show_docs", "Documentation", "Shift+F1",
+         "The shipped guide, in a window you can leave open"),
     ]),
 ]
 

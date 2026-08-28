@@ -75,9 +75,9 @@ def _format_shop_html(shop_result: dict) -> str:
 class ShopGeneratorDialog(QDialog):
     """Dialog for generating random shop inventories from the item library."""
 
-    def __init__(self, storage_api=None, bridge_client=None, parent=None):
+    def __init__(self, storage=None, bridge_client=None, parent=None):
         super().__init__(parent)
-        self.storage_api = storage_api
+        self.storage = storage
         self.bridge_client = bridge_client
 
         self._shop_result: Optional[dict] = None
@@ -166,14 +166,14 @@ class ShopGeneratorDialog(QDialog):
 
     def _load_items(self, force: bool = False) -> None:
         """Populate self._items, fetching concurrently and caching the result."""
-        if self.storage_api is None:
+        if self.storage is None:
             self._status.showMessage("No storage configured.")
             return
         if self._items and not force:
             return  # already loaded; refetching on every click was the old bug
 
         try:
-            keys = self.storage_api.list_item_keys()
+            keys = self.storage.list_item_keys()
         except Exception as exc:
             self._status.showMessage(f"Failed to load items: {exc}")
             return
@@ -196,7 +196,7 @@ class ShopGeneratorDialog(QDialog):
 
     def _fetch_item(self, key: str):
         try:
-            return self.storage_api.get_item(key)
+            return self.storage.get_item(key)
         except Exception:
             return None
 
@@ -205,7 +205,7 @@ class ShopGeneratorDialog(QDialog):
     def _on_generate(self) -> None:
         self._load_items()
 
-        if self.storage_api is None:
+        if self.storage is None:
             self._status.showMessage("No storage configured.")
             return
 

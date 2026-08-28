@@ -17,7 +17,7 @@ class LoadEncounterWindow(QDialog):
     """
     Storage-backed 'Load/Merge Encounter' picker.
 
-    Accepts a storage object (StorageAPI or LocalStorage) from the caller
+    Accepts a storage backend (see app.storage.base) from the caller
     so it uses the same backend as the rest of the app.
     """
 
@@ -25,7 +25,7 @@ class LoadEncounterWindow(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Load/Merge Encounter")
         self.selected_file = None
-        self.storage_api = storage
+        self.storage = storage
 
         layout = QVBoxLayout(self)
 
@@ -50,7 +50,7 @@ class LoadEncounterWindow(QDialog):
 
     def _populate(self):
         try:
-            if not self.storage_api:
+            if not self.storage:
                 raise RuntimeError(
                     "Storage is not configured.\n\nGo to File → Settings to configure storage."
                 )
@@ -60,7 +60,7 @@ class LoadEncounterWindow(QDialog):
                 with open(STATUS_PATH, "r") as f:
                     encounter_status = json.load(f)
 
-            items = self.storage_api.list()
+            items = self.storage.list()
             for filename in items:
                 if (
                     isinstance(filename, str)

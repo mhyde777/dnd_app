@@ -14,13 +14,13 @@ STATUS_PATH = get_config_path("encounter_status.json")
 
 class StorageStatusWindow(QDialog):
     """
-    Toggle active/inactive for encounters stored in the Storage API.
+    Toggle active/inactive for encounters in the configured storage.
     We write flags back to the shared config directory's encounter_status.json.
     """
-    def __init__(self, storage_api, parent=None):
+    def __init__(self, storage, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Manage Encounters (Active / Inactive)")
-        self.storage_api = storage_api
+        self.storage = storage
         self.status = self._load_status()
 
         v = QVBoxLayout(self)
@@ -63,9 +63,9 @@ class StorageStatusWindow(QDialog):
 
     def _populate(self):
         try:
-            if not self.storage_api:
-                raise RuntimeError("Storage API not configured.")
-            items = self.storage_api.list()
+            if not self.storage:
+                raise RuntimeError("Storage is not configured.")
+            items = self.storage.list()
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to list encounters:\n{e}")
             self.reject()

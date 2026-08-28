@@ -132,8 +132,30 @@ module** (`foundryvtt-bridge/`). Neither end talks to the other directly.
 Foundry's conditions are the source of truth; the app derives conditions from
 snapshot effects without normalising them.
 
-A **local bridge server** starts in-process by default
-(`LOCAL_BRIDGE_ENABLED=1`), so a single-machine setup needs nothing running.
+A **local bridge server** can run in-process, which is what makes a
+single-machine setup need nothing installed or hosted. It is opt-in — *Run the
+bridge on this computer* in the settings dialog — because binding a port is
+wrong on the machine of someone who does not use Foundry at all.
+
+`LocalBridgeServer` owns three things that are easy to get wrong:
+
+- **It is the single point where configuration becomes the server's
+  environment.** `bridge_service.create_app()` reads its credentials from
+  `os.getenv`, while the app and Foundry read theirs from `settings.json`.
+  Nothing kept those in step, so a secret typed into the dialog produced 401 on
+  every request from both directions. `_export_env()` now publishes the
+  resolved values before the app is created, and `Application` points its
+  client at `local_bridge.base_url` rather than at a possibly stale
+  `BRIDGE_URL`.
+- **A busy port must not be fatal.** werkzeug's `make_server()` answers
+  EADDRINUSE by calling `sys.exit(1)`; raised inside `Application.__init__`
+  that meant no window at all, and in the `console=False` build, no message
+  either. Ports are probed first and scanned forward, and a total failure
+  becomes `local_bridge_error` for the UI to put in a banner.
+- **The secret is generated, not demanded.** `config.ensure_bridge_secret()`
+  mints one on first use and persists it, so the user's only job is to copy it
+  into Foundry. It is never regenerated — that would silently break Foundry's
+  saved copy.
 
 See [foundry-setup.md](foundry-setup.md) for the user-facing side.
 
@@ -144,17 +166,80 @@ See [foundry-setup.md](foundry-setup.md) for the user-facing side.
 Two different things in two different places:
 
 - **Settings** — `~/.dnd_tracker_config/settings.json`, written 0600 because it
-  holds the storage API key and the Foundry secret. `app/settings.py` reads and
+  holds the storage credentials and the Foundry secret. `app/settings.py` reads and
   writes it; `app/config.py` checks it first and falls back to environment
   variables for backward compatibility.
-- **Content** — encounters, statblocks, spells, items. Either `LocalStorage`
-  (a directory of JSON) or `StorageAPI` (an HTTP service). Both present the
-  same interface, and `app.storage_api` is always one of them.
+- **Your library** — encounters, statblocks, spells, items. Kept by whichever
+  *storage provider* is configured; `app.storage` is always one of them. See
+  [Storage providers](#storage-providers) below.
 
 `settings_sync.py` carries the portable half of settings between machines
 through whichever storage is configured. **`SYNCABLE_KEYS` is an allowlist on
 purpose** — settings.json holds secrets, and a denylist would leak the next one
 somebody adds and forgets about.
+
+### Storage providers
+
+Every place a library can live — a folder on disk, a folder a cloud client
+syncs, a WebDAV share, an S3 bucket, an HTTP service — is the same shape: a
+JSON blob store keyed by filename, across four collections (`encounters`,
+`statblocks`, `spells`, `items`). `StorageBackend` (`lib/app/storage/base.py`)
+makes that the whole contract. A provider implements four primitives:
+
+```python
+_list(collection)            -> ["goblin.json", ...]
+_read(collection, key)       -> dict, or None when it isn't there
+_write(collection, key, obj) -> None
+_delete(collection, key)     -> None
+```
+
+and the base class derives all sixteen methods the app actually calls
+(`list()`, `get_statblock()`, `save_spell()`, …). **A provider does not get to
+invent its own spelling of "save a spell"** — the two backends that predated
+this stayed in step only by hand, and had already drifted.
+
+`_read` returning `None` means *absent*, and only absent. A provider that
+cannot reach its storage must raise: an unreachable server that answers `None`
+reads to the app as an empty library, and the app will happily save over it.
+
+`lib/app/storage/providers.py` is the registry — id, label, the fields the
+provider needs, and how to build it. It is the single description of a
+provider:
+
+- the settings dialog renders its form from `fields` and knows nothing about
+  any individual provider;
+- `storage_factory.open_storage()` calls `build` and has no branching left.
+
+**Adding a provider is a backend class plus a registry entry.** No UI code, no
+factory branch.
+
+Dropbox, Google Drive, OneDrive and iCloud are `FolderStorage` pointed at the
+directory those services already sync (`cloud_folders.py` finds it). That is a
+deliberate choice over their native APIs: a distributed desktop app cannot hold
+an OAuth client secret, so native access would mean every user registering
+their own developer app — and Google would require a verification review. The
+synced folder needs no authorisation at all, works offline, and leaves the
+library as files the user can read without this app. The cost is that two
+machines must not run against one synced folder at once; the network providers
+exist for that case, and the registry states the caveat on each folder
+provider.
+
+**A cloud provider will not create its own sync root.** `~/Dropbox` invented on
+a machine with no Dropbox is an ordinary directory that looks synced, never
+syncs, and silently strands the library — so `providers.build()` refuses.
+
+Storage settings live under two keys: `storage_provider` (an id) and
+`storage_config` (`{provider_id: {field: value}}`). Config is per provider so
+switching from S3 to a folder and back does not lose the bucket credentials in
+between. `config.py` still reads the previous shape (`storage_mode`,
+`storage_api_base`, `storage_api_key`, `local_data_dir`, and the environment
+variables behind them), and `migrate_legacy_storage()` rewrites it on startup
+**without removing the old keys**, so a downgrade still finds what it expects.
+
+`FolderStorage` writes through a temp file and `os.replace()`. These
+directories are watched by sync clients: a plain truncating write hands Dropbox
+a half-empty file to upload, and a crash mid-write leaves the only copy
+corrupt.
 
 ---
 

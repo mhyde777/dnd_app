@@ -1,4 +1,4 @@
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 import fnmatch, json, os, re, sys, threading
 from dotenv import load_dotenv
 
@@ -15,21 +15,19 @@ from app.creature import (
 )
 from app.save_json import GameState
 from app.manager import CreatureManager
-from app.storage_api import StorageAPI
+from app.storage_factory import open_storage
 from app import settings as app_settings
 from app.config import (
     bridge_stream_enabled,
-    get_storage_api_base,
     get_config_path,
     get_local_data_dir,
     foundry_bridge_enabled,
     local_bridge_enabled,
-    use_storage_api_only,
 )
 from app.app_log import get_logger
 from app.bridge_client import BridgeClient
 from app.local_bridge_server import LocalBridgeServer
-from ui.notifications import report_error, report_warning, toast
+from ui.notifications import report_error, toast
 from ui.windows import (
     AddCombatantWindow, RemoveCombatantWindow, BuildEncounterWindow
 )
@@ -77,26 +75,26 @@ class Application:
         self._ignore_logged: set = set()  # keeps the log to one line per name
         self._last_raw_combatants: List[Dict[str, Any]] = []
 
-
-        self.boolean_fields = {
-            '_action': 'set_creature_action',
-            '_bonus_action': 'set_creature_bonus_action',
-            '_reaction': 'set_creature_reaction'
-            # '_object_interaction': 'set_creature_object_interaction'
-        }
-        
+        # The in-process bridge, for people running Foundry on this same PC.
+        # It has to come up before the client is built: the port it actually
+        # reached is where the client must point, which is not necessarily the
+        # port that was asked for.
         self.local_bridge: Optional[LocalBridgeServer] = None
+        self.local_bridge_error: Optional[str] = None
         if local_bridge_enabled():
-            if not os.getenv("BRIDGE_TOKEN"):
-                os.environ["BRIDGE_TOKEN"] = "local-dev"
-                self._log("[Bridge] BRIDGE_TOKEN not set; defaulting to 'local-dev'.")
-            if not os.getenv("BRIDGE_INGEST_SECRET"):
-                os.environ["BRIDGE_INGEST_SECRET"] = os.environ["BRIDGE_TOKEN"]
-                self._log("[Bridge] BRIDGE_INGEST_SECRET not set; using BRIDGE_TOKEN for local bridge.")
             self.local_bridge = LocalBridgeServer.from_env()
-            self.local_bridge.start()
+            if not self.local_bridge.start():
+                self.local_bridge_error = self.local_bridge.error
+                self._log(f"[ERROR] {self.local_bridge.error}")
+                self.local_bridge = None
 
         self.bridge_client = BridgeClient.from_env()
+        if self.local_bridge is not None:
+            # Whatever BRIDGE_URL says, the bridge we just started is the one
+            # this app should talk to. A stale URL left over from a hosted
+            # bridge would otherwise send every request to a dead domain.
+            self.bridge_client.base_url = self.local_bridge.base_url
+            self.bridge_client.token = self.local_bridge.token
         self.bridge_snapshot: Optional[Dict[str, Any]] = None
         self.bridge_timer: Optional[QTimer] = None
         self.bridge_stream_thread: Optional[threading.Thread] = None
@@ -106,21 +104,70 @@ class Application:
         self._initiative_reset_pending = False
 
         # --- Storage backend ---
-        self.storage_api: Optional[StorageAPI] = None
-        self.storage_api_warning: Optional[str] = None
-        if use_storage_api_only():
-            base = get_storage_api_base()
-            if not base:
-                self.storage_api_warning = (
-                    "Remote API mode is enabled, but no API URL is configured.\n\n"
-                    "Go to File → Settings to set your API URL, or switch to Local Files mode."
-                )
-            else:
-                self.storage_api = StorageAPI(base)
-        else:
-            from app.local_storage import LocalStorage
-            data_dir = get_local_data_dir() or get_config_path("data")
-            self.storage_api = LocalStorage(data_dir)
+        self.storage, self.storage_warning = open_storage()
+
+    def _refresh_table(self) -> None:
+        """Repaint the table through whichever surface this instance has.
+
+        Application is mixed into InitiativeTracker but is also used bare in
+        tests, so the refresh entry point is not guaranteed to exist.
+        """
+        if hasattr(self, "update_table") and callable(self.update_table):
+            self.update_table()
+        elif getattr(self, "ui", None) and hasattr(self.ui, "update_table"):
+            self.ui.update_table()
+        elif hasattr(self, "refresh") and callable(self.refresh):
+            self.refresh()
+
+    def _apply_combatant_ac(self, creature, combatant: Dict[str, Any]) -> None:
+        """Copy a snapshot combatant's AC onto the creature, if it has one.
+
+        Foundry's schema varies, so a non-numeric value is kept verbatim on the
+        private field rather than dropped.
+        """
+        ac_value = self._extract_combatant_ac(combatant)
+        if ac_value is None:
+            return
+        try:
+            creature.armor_class = int(ac_value)
+        except Exception:
+            setattr(creature, "_armor_class", ac_value)
+
+    def _reset_action_economy(self) -> None:
+        """Give every creature its action, bonus action and object interaction
+        back. Runs at the top of each round."""
+        for cr in self.manager.creatures.values():
+            if hasattr(cr, "action"):
+                cr.action = False
+            if hasattr(cr, "bonus_action"):
+                cr.bonus_action = False
+            if hasattr(cr, "object_interaction"):
+                cr.object_interaction = False
+
+    def _tick_status_timers(self, seconds: int) -> bool:
+        """Move every numeric status timer by `seconds`; True if any moved.
+
+        Counting down only touches timers still running, so an expired one
+        stays expired. Counting back up also picks up a timer sitting at zero,
+        which is what lets prev_turn undo the tick that expired it. Values are
+        coerced because the table may have stored a string like "3".
+        """
+        changed = False
+        for cr in self.manager.creatures.values():
+            raw = getattr(cr, "status_time", None)
+            try:
+                value = int(raw) if raw is not None else None
+            except (ValueError, TypeError):
+                value = None
+            if value is None:
+                continue
+            if seconds < 0 and value <= 0:
+                continue
+            if seconds > 0 and value < 0:
+                continue
+            cr.status_time = max(0, value + seconds)
+            changed = True
+        return changed
 
     def stop_bridge_sync(self) -> None:
         """Tear down whichever transport is running, leaving neither active."""
@@ -148,16 +195,44 @@ class Application:
         bridge address in the UI would appear to do nothing until relaunch.
         """
         self.stop_bridge_sync()
+        self._restart_local_bridge()
         try:
             self.bridge_client = BridgeClient.from_env()
         except Exception as exc:
             self._log(f"[WARN] Could not rebuild bridge client: {exc}")
+        if self.local_bridge is not None:
+            self.bridge_client.base_url = self.local_bridge.base_url
+            self.bridge_client.token = self.local_bridge.token
         self.bridge_snapshot = None
         self.start_bridge_polling()
         self._log(
             "[Bridge] Sync restarted "
             f"({'stream' if bridge_stream_enabled() else 'polling'})."
         )
+
+    def _restart_local_bridge(self) -> None:
+        """Bring the in-process bridge in line with the settings just saved.
+
+        Toggling the local bridge, the LAN switch or the port all change what
+        needs to be listening, and the old server holds the port until it is
+        told to stop -- so tear down unconditionally and start again only if
+        it is still wanted.
+        """
+        if self.local_bridge is not None:
+            try:
+                self.local_bridge.stop()
+            except Exception as exc:
+                self._log(f"[WARN] Could not stop the local bridge: {exc}")
+            self.local_bridge = None
+        self.local_bridge_error = None
+        if not local_bridge_enabled():
+            return
+        server = LocalBridgeServer.from_env()
+        if server.start():
+            self.local_bridge = server
+        else:
+            self.local_bridge_error = server.error
+            self._log(f"[ERROR] {server.error}")
 
     def start_bridge_polling(self) -> None:
         if not foundry_bridge_enabled():
@@ -461,12 +536,7 @@ class Application:
                     except (TypeError, ValueError):
                         pass
 
-            ac_value = self._extract_combatant_ac(combatant)
-            if ac_value is not None:
-                try:
-                    creature.armor_class = int(ac_value)
-                except Exception:
-                    setattr(creature, "_armor_class", ac_value)
+            self._apply_combatant_ac(creature, combatant)
 
         old_round = getattr(self, "round_counter", 1)
 
@@ -533,29 +603,9 @@ class Application:
         round_advanced = (self.round_counter > old_round)
 
         if round_advanced:
-            # Reset action/bonus_action/object_interaction for ALL creatures at top of round
-            for cr in self.manager.creatures.values():
-                if hasattr(cr, "action"):
-                    cr.action = False
-                if hasattr(cr, "bonus_action"):
-                    cr.bonus_action = False
-                if hasattr(cr, "object_interaction"):
-                    cr.object_interaction = False
-
-            # Tick status timers
-            any_tick = False
-            for cr in self.manager.creatures.values():
-                st = getattr(cr, "status_time", None)
-                try:
-                    st_int = int(st) if st is not None else None
-                except (ValueError, TypeError):
-                    st_int = None
-                if st_int is not None and st_int > 0:
-                    cr.status_time = max(0, st_int - 6)
-                    any_tick = True
-            if any_tick:
-                if hasattr(self, "update_table") and callable(self.update_table):
-                    self.update_table()
+            self._reset_action_economy()
+            if self._tick_status_timers(-6):
+                self._refresh_table()
 
         if updated_active and self.current_creature_name:
             cr = self.manager.creatures.get(self.current_creature_name)
@@ -763,13 +813,7 @@ class Application:
                     except (TypeError, ValueError):
                         pass
 
-            # AC (Foundry schema can vary; support common shapes)
-            ac_value = self._extract_combatant_ac(combatant)
-            if ac_value is not None:
-                try:
-                    creature.armor_class = int(ac_value)
-                except Exception:
-                    setattr(creature, "_armor_class", ac_value)
+            self._apply_combatant_ac(creature, combatant)
 
             effects = combatant.get("effects", [])
             if isinstance(effects, list):
@@ -1105,14 +1149,22 @@ class Application:
 
         return None
 
-    def _enqueue_bridge_set_hp(self, creature_name: str, hp: int) -> None:
-        if not self.bridge_client.enabled:
-            return
+    def _bridge_token_target(self, creature_name: str) -> Optional[Tuple[str, Optional[str]]]:
+        """The (tokenId, actorId) Foundry needs for a creature, or None to skip it.
+
+        Every token-addressed command resolves its target the same way -- prefer
+        the ids already on the creature, fall back to the latest snapshot -- so
+        this is the one place that logic lives. Returns None (having logged the
+        reason) when the command cannot be addressed: the bridge is off, the
+        creature is a lair action with no Foundry token, or nothing matched.
+        """
+        if not getattr(self, "bridge_client", None) or not self.bridge_client.enabled:
+            return None
         creature = None
         if getattr(self, "manager", None):
             creature = self.manager.creatures.get(creature_name)
         if creature and getattr(creature, "_is_lair_action", False):
-            return
+            return None
         token_id = (
             getattr(creature, "token_id", None)
             or getattr(creature, "foundry_token_id", None)
@@ -1125,77 +1177,40 @@ class Application:
             combatant = self._resolve_bridge_combatant(creature_name)
             if not combatant:
                 self._log(f"[Bridge] No combatant match for '{creature_name}', skipping.")
-                return
+                return None
             token_id = combatant.get("tokenId")
             actor_id = combatant.get("actorId")
         if not token_id:
             self._log(f"[Bridge] Missing tokenId for '{creature_name}', skipping.")
+            return None
+        return str(token_id), str(actor_id) if actor_id else None
+
+    def _enqueue_bridge_set_hp(self, creature_name: str, hp: int) -> None:
+        target = self._bridge_token_target(creature_name)
+        if target is None:
             return
+        token_id, actor_id = target
         self._log(f"[Bridge] enqueue set_hp name={creature_name!r} hp={hp}")
-        self.bridge_client.enqueue_set_hp(
-            token_id=str(token_id), hp=int(hp), actor_id=str(actor_id) if actor_id else None
-        )
+        self.bridge_client.enqueue_set_hp(token_id=token_id, hp=int(hp), actor_id=actor_id)
 
     def _enqueue_bridge_set_temp_hp(self, creature_name: str, temp_hp: int) -> None:
-        if not self.bridge_client.enabled:
+        target = self._bridge_token_target(creature_name)
+        if target is None:
             return
-        creature = None
-        if getattr(self, "manager", None):
-            creature = self.manager.creatures.get(creature_name)
-        if creature and getattr(creature, "_is_lair_action", False):
-            return
-        token_id = (
-            getattr(creature, "token_id", None)
-            or getattr(creature, "foundry_token_id", None)
-        )
-        actor_id = (
-            getattr(creature, "actor_id", None)
-            or getattr(creature, "foundry_actor_id", None)
-        )
-        if not token_id:
-            combatant = self._resolve_bridge_combatant(creature_name)
-            if not combatant:
-                return
-            token_id = combatant.get("tokenId")
-            actor_id = combatant.get("actorId")
-        if not token_id:
-            return
+        token_id, actor_id = target
         self._log(f"[Bridge] enqueue set_temp_hp name={creature_name!r} temp={temp_hp}")
         self.bridge_client.enqueue_set_temp_hp(
-            token_id=str(token_id),
-            temp_hp=int(temp_hp),
-            actor_id=str(actor_id) if actor_id else None,
+            token_id=token_id, temp_hp=int(temp_hp), actor_id=actor_id
         )
 
     def _enqueue_bridge_set_max_hp_bonus(self, creature_name: str, max_hp_bonus: int) -> None:
-        if not self.bridge_client.enabled:
+        target = self._bridge_token_target(creature_name)
+        if target is None:
             return
-        creature = None
-        if getattr(self, "manager", None):
-            creature = self.manager.creatures.get(creature_name)
-        if creature and getattr(creature, "_is_lair_action", False):
-            return
-        token_id = (
-            getattr(creature, "token_id", None)
-            or getattr(creature, "foundry_token_id", None)
-        )
-        actor_id = (
-            getattr(creature, "actor_id", None)
-            or getattr(creature, "foundry_actor_id", None)
-        )
-        if not token_id:
-            combatant = self._resolve_bridge_combatant(creature_name)
-            if not combatant:
-                return
-            token_id = combatant.get("tokenId")
-            actor_id = combatant.get("actorId")
-        if not token_id:
-            return
+        token_id, actor_id = target
         self._log(f"[Bridge] enqueue set_max_hp_bonus name={creature_name!r} bonus={max_hp_bonus}")
         self.bridge_client.enqueue_set_max_hp_bonus(
-            token_id=str(token_id),
-            max_hp_bonus=int(max_hp_bonus),
-            actor_id=str(actor_id) if actor_id else None,
+            token_id=token_id, max_hp_bonus=int(max_hp_bonus), actor_id=actor_id
         )
 
     def _enqueue_bridge_set_initiative(self, creature_name: str, initiative: int) -> None:
@@ -1416,27 +1431,19 @@ class Application:
             self.table_model.set_fields_from_sample()
             self.build_turn_order()
 
-    def save_encounter_to_storage(self, filename: str, description: str = ""):
-        if not self.storage_api:
-            raise RuntimeError("Storage is not configured. Go to File → Settings.")
-        # Prepare state
+    def _current_state_payload(self) -> dict:
+        """The whole encounter, ready to serialise. One definition, because
+        every save path has to write the same shape."""
         state = GameState()
         state.players = [c for c in self.manager.creatures.values() if isinstance(c, Player)]
         state.monsters = [c for c in self.manager.creatures.values() if isinstance(c, Monster)]
-        state.current_turn = self.current_turn
-        state.round_counter = self.round_counter
-        state.time_counter = self.time_counter
-        payload = state.to_dict()
-        # optional: add a description field for your server
-        # if description:
-            # payload["_meta"] = {"description": description}
-        if not filename.endswith(".json"):
-            filename += ".json"
-        self.storage_api.put_json(filename, payload)
-        return {"key": filename}
+        state.current_turn = getattr(self, "current_turn", 0)
+        state.round_counter = getattr(self, "round_counter", 1)
+        state.time_counter = getattr(self, "time_counter", 0)
+        return state.to_dict()
 
     def save_as_encounter(self):
-        if not getattr(self, "storage_api", None):
+        if not getattr(self, "storage", None):
             QMessageBox.critical(
                 self,
                 "Storage Not Configured",
@@ -1459,21 +1466,9 @@ class Application:
             self, "Description", "Optional description:", QLineEdit.Normal
         )
 
-        # ----- Build state payload -----
+        # ----- Save to Storage -----
         try:
-            state = GameState()
-            state.players = [c for c in self.manager.creatures.values() if isinstance(c, Player)]
-            state.monsters = [c for c in self.manager.creatures.values() if isinstance(c, Monster)]
-            state.current_turn = getattr(self, "current_turn", 0)
-            state.round_counter = getattr(self, "round_counter", 1)
-            state.time_counter = getattr(self, "time_counter", 0)
-
-            payload = state.to_dict()
-            # if description:
-                # payload["_meta"] = {"description": description}
-
-            # ----- Save to Storage -----
-            self.storage_api.put_json(filename, payload)
+            self.storage.put_json(filename, self._current_state_payload())
 
             QMessageBox.information(
                 self,
@@ -1484,21 +1479,12 @@ class Application:
             QMessageBox.critical(self, "Error", f"Failed to save: {e}")
 
     def save_state(self):
-        # --- Build current game state ---
-        state = GameState()
-        state.players = [c for c in self.manager.creatures.values() if isinstance(c, Player)]
-        state.monsters = [c for c in self.manager.creatures.values() if isinstance(c, Monster)]
-        state.current_turn = getattr(self, "current_turn", 0)
-        state.round_counter = getattr(self, "round_counter", 1)
-        state.time_counter = getattr(self, "time_counter", 0)
-
-        save_data = state.to_dict()
+        save_data = self._current_state_payload()
         filename = "last_state.json"
-        description = "Auto-saved state from initiative tracker"
 
         try:
-            if getattr(self, "storage_api", None):
-                self.storage_api.put_json(filename, save_data)
+            if getattr(self, "storage", None):
+                self.storage.put_json(filename, save_data)
             else:
                 file_path = self.get_data_path(filename)
                 with open(file_path, "w", encoding="utf-8") as f:
@@ -1519,9 +1505,9 @@ class Application:
             # --- Decide source: Storage key vs local file ---
             file_path = self.get_data_path(file_name)
 
-            if getattr(self, "storage_api", None) and not os.path.exists(file_path):
+            if getattr(self, "storage", None) and not os.path.exists(file_path):
                 # Treat file_name as a Storage key
-                raw = self.storage_api.get_json(file_name)
+                raw = self.storage.get_json(file_name)
                 if raw is None:
                     self._log(f"[WARN] Storage key not found: {file_name}")
                     return False
@@ -1691,7 +1677,7 @@ class Application:
         # Helper: map a source column index to the view column index if a proxy is in use
         def to_view_col(src_col: int) -> int:
             try:
-                from PyQt5.QtCore import QModelIndex, QAbstractProxyModel  # safe local import
+                from PyQt5.QtCore import QAbstractProxyModel  # safe local import
             except Exception:
                 QAbstractProxyModel = None  # type: ignore
             if view_model and QAbstractProxyModel and isinstance(view_model, QAbstractProxyModel):
@@ -2139,11 +2125,11 @@ class Application:
     # ================== Edit Menu Actions =====================
     def fetch_statblock_for_creature(self, name: str) -> dict | None:
         """Look up a statblock JSON by creature name. Returns dict or None."""
-        if not self.storage_api:
+        if not self.storage:
             return None
         try:
             from app.statblock_parser import statblock_key
-            return self.storage_api.get_statblock(statblock_key(name))
+            return self.storage.get_statblock(statblock_key(name))
         except Exception:
             return None
 
@@ -2291,75 +2277,62 @@ class Application:
                 self._clear_statblock()
         self.init_tracking_mode(False)
 
-    # ====================== Button Logic ======================
-    def next_turn(self):
-        # 1) Ensure we have an order
+    def _ensure_turn_order(self, what: str) -> bool:
+        """Make `turn_order` current before stepping through it.
+
+        Returns False when there is nothing to step through. The order can go
+        stale between presses -- initiative edits and Foundry snapshots both
+        reorder the manager -- so the pointer is re-anchored by name rather
+        than by index, which would silently land on a different creature.
+        """
         if not getattr(self, "turn_order", None):
             self.build_turn_order()
             if not self.turn_order:
-                self._log("[WARNING] No creatures in encounter. Cannot advance turn.")
+                self._log(f"[WARNING] No creatures in encounter. Cannot {what}.")
                 toast(self, "No combatants in the encounter", "warning")
-                return
-        else:
-            # 2) Keep it in sync with the manager's canonical order
-            try:
-                manager_names = [nm for nm, _ in self.manager.ordered_items()]
-            except AttributeError:
-                # Fallback if ordered_items() isn't present for some reason
-                manager_names = [getattr(c, "name", "") for c in self._creature_list_sorted() if getattr(c, "name", "")]
-            if self.turn_order != manager_names:
-                prev = getattr(self, "current_creature_name", None)
-                self.turn_order = manager_names
-                if prev in self.turn_order:
-                    self.current_idx = self.turn_order.index(prev)
-                else:
-                    self.current_idx = 0
-                    self.current_creature_name = self.turn_order[0] if self.turn_order else None
+                return False
+            return True
 
-        # 3) Advance pointer
+        try:
+            manager_names = [nm for nm, _ in self.manager.ordered_items()]
+        except AttributeError:
+            # Fallback if ordered_items() isn't present for some reason
+            manager_names = [
+                getattr(c, "name", "")
+                for c in self._creature_list_sorted()
+                if getattr(c, "name", "")
+            ]
+        if self.turn_order != manager_names:
+            prev = getattr(self, "current_creature_name", None)
+            self.turn_order = manager_names
+            if prev in self.turn_order:
+                self.current_idx = self.turn_order.index(prev)
+            else:
+                self.current_idx = 0
+                self.current_creature_name = self.turn_order[0] if self.turn_order else None
+        return True
+
+    # ====================== Button Logic ======================
+    def next_turn(self):
+        # 1) Ensure we have an order, in sync with the manager
+        if not self._ensure_turn_order("advance turn"):
+            return
+
+        # 2) Advance pointer
         self.current_idx += 1
         wrapped = False
         if self.current_idx >= len(self.turn_order):
             self.current_idx = 0
             wrapped = True
 
-# 4) On wrap: advance round/time, reset economy, and tick only existing numeric timers
+        # 3) On wrap: advance round/time, reset economy, and tick only existing numeric timers
         if wrapped:
             self.round_counter += 1
             self.time_counter += 6
 
-            # Reset action/bonus_action/object_interaction for ALL creatures at top of round
-            for cr in self.manager.creatures.values():
-                if hasattr(cr, "action"):
-                    cr.action = False
-                if hasattr(cr, "bonus_action"):
-                    cr.bonus_action = False
-                if hasattr(cr, "object_interaction"):
-                    cr.object_interaction = False
-
-            any_tick = False
-            for cr in self.manager.creatures.values():
-                st = getattr(cr, "status_time", None)
-                # be robust if the table stored a string like "3"
-                try:
-                    st_int = int(st) if st is not None else None
-                except (ValueError, TypeError):
-                    st_int = None
-
-                if st_int is not None and st_int > 0:
-                    # choose one semantics; most DMs prefer "rounds remaining":
-                    cr.status_time = max(0, st_int - 6)  # seconds (if that's your unit)
-                    any_tick = True
-
-            # ⬇️ make sure the table reflects the new values
-            if any_tick:
-                # call whichever refresh you have available
-                if hasattr(self, "update_table") and callable(self.update_table):
-                    self.update_table()
-                elif getattr(self, "ui", None) and hasattr(self.ui, "update_table"):
-                    self.ui.update_table()
-                elif hasattr(self, "refresh") and callable(self.refresh):
-                    self.refresh()
+            self._reset_action_economy()
+            if self._tick_status_timers(-6):
+                self._refresh_table()
 
         # 5) Update active
         self.current_creature_name = self.active_name()
@@ -2389,26 +2362,9 @@ class Application:
         self._enqueue_bridge_turn_command("next")
 
     def prev_turn(self):
-        # 1) Ensure we have an order and keep it in sync with the manager
-        if not getattr(self, "turn_order", None):
-            self.build_turn_order()
-            if not self.turn_order:
-                self._log("[WARNING] No creatures in encounter. Cannot go back.")
-                toast(self, "No combatants in the encounter", "warning")
-                return
-        else:
-            try:
-                manager_names = [nm for nm, _ in self.manager.ordered_items()]
-            except AttributeError:
-                manager_names = [getattr(c, "name", "") for c in self._creature_list_sorted() if getattr(c, "name", "")]
-            if self.turn_order != manager_names:
-                prev = getattr(self, "current_creature_name", None)
-                self.turn_order = manager_names
-                if prev in self.turn_order:
-                    self.current_idx = self.turn_order.index(prev)
-                else:
-                    self.current_idx = 0
-                    self.current_creature_name = self.turn_order[0] if self.turn_order else None
+        # 1) Ensure we have an order, in sync with the manager
+        if not self._ensure_turn_order("go back"):
+            return
 
         # 2) Hard stop at the absolute beginning of combat
         at_abs_start = (self.round_counter <= 1 and self.time_counter <= 0 and self.current_idx == 0)
@@ -2428,28 +2384,8 @@ class Application:
             self.round_counter = max(1, self.round_counter - 1)
             self.time_counter = max(0, self.time_counter - 6)
 
-            any_tick = False
-            for cr in self.manager.creatures.values():
-                st = getattr(cr, "status_time", None)
-                # Coerce robustly in case UI stored a string
-                try:
-                    st_int = int(st) if st is not None else None
-                except (ValueError, TypeError):
-                    st_int = None
-
-                if st_int is not None and st_int >= 0:
-                    cr.status_time = st_int + 6
-
-                    any_tick = True
-
-            # Ensure table reflects reverted values
-            if any_tick:
-                if hasattr(self, "update_table") and callable(self.update_table):
-                    self.update_table()
-                elif getattr(self, "ui", None) and hasattr(self.ui, "update_table"):
-                    self.ui.update_table()
-                elif hasattr(self, "refresh") and callable(self.refresh):
-                    self.refresh()
+            if self._tick_status_timers(6):
+                self._refresh_table()
 
         # 5) Update active selection and UI
         self.current_creature_name = self.active_name()
@@ -2486,64 +2422,6 @@ class Application:
             return sys._MEIPASS
         return os.path.abspath(os.path.join(self.base_dir, '../../'))
 
-    # -------------------------------
-    # Change Manager with Table Edits
-    # -------------------------------
-    def manipulate_manager(self, item):
-        row = item.row()
-        col = item.column()
-        
-        try:
-            creature_name = self.table.item(row, 1).data(0)  # Get creature name based on the row
-        except:
-            return
-
-        # Map columns to methods
-        self.column_method_mapping = {
-            2: (self.manager.set_creature_init, int),
-            3: (self.manager.set_creature_max_hp, int),
-            4: (self.manager.set_creature_curr_hp, int),
-            5: (self.manager.set_creature_armor_class, int),
-            # 6: (self.manager.set_creature_movement, int),
-            7: (self.manager.set_creature_action, bool),
-            8: (self.manager.set_creature_bonus_action, bool),
-            9: (self.manager.set_creature_reaction, bool),
-            # 10: (self.manager.set_creature_object_interaction, bool),
-            11: (self.manager.set_creature_notes, str),
-            12: (self.manager.set_creature_status_time, int)
-        }
-
-        # Handle value change
-        if creature_name in self.manager.creatures:
-            if col in self.column_method_mapping:
-                method, data_type = self.column_method_mapping[col]
-                try:
-                    if col == 12 and (item.text().strip() == "" or item.text() is None):
-                        value = ""
-                    else:
-                        value = self.get_value(item, data_type)
-                    method(creature_name, value)  # Update the creature's data
-                    if col == 4:
-                        if isinstance(value, int):
-                            self._enqueue_bridge_set_hp(creature_name, value)
-                except ValueError:
-                    return
-        
-        # Re-sort the creatures after updating any value
-        self.manager.sort_creatures()
-        # Rebuild stable order to reflect any initiative/name change
-        self.build_turn_order()
-
-        # Refresh the model and table view
-        self.table_model.refresh()
-        self.update_table()
-
-    def get_value(self, item, data_type):
-        text = item.text()
-        if data_type == bool:
-            return text.lower() in ['true', '1', 'yes']
-        return data_type(text)
-    
     # -----------
     # Image Label
     # -----------
@@ -2565,12 +2443,12 @@ class Application:
         self.resize_to_fit_screen(base_name)
 
     def resize_to_fit_screen(self, base_name):
-        if self.storage_api:
+        if self.storage:
             try:
                 from app.statblock_parser import statblock_key
-                data = self.storage_api.get_statblock(statblock_key(base_name))
+                data = self.storage.get_statblock(statblock_key(base_name))
                 if data:
-                    self.statblock_widget.set_storage_api(self.storage_api)
+                    self.statblock_widget.set_storage(self.storage)
                     self.statblock_widget.load_statblock(data)
                     self.statblock_widget.show()
                     return
@@ -2586,56 +2464,32 @@ class Application:
 
     def open_import_statblock_dialog(self):
         from ui.statblock_import_dialog import StatblockImportDialog
-        dlg = StatblockImportDialog(storage_api=self.storage_api, parent=self)
+        dlg = StatblockImportDialog(storage=self.storage, parent=self)
         dlg.exec_()
 
     def open_import_spell_dialog(self):
         from ui.spell_import_dialog import SpellImportDialog
-        dlg = SpellImportDialog(storage_api=self.storage_api, parent=self)
+        dlg = SpellImportDialog(storage=self.storage, parent=self)
         dlg.exec_()
 
     def open_bulk_item_import_dialog(self):
         from ui.bulk_item_import_dialog import BulkItemImportDialog
-        dlg = BulkItemImportDialog(storage_api=self.storage_api, parent=self)
+        dlg = BulkItemImportDialog(storage=self.storage, parent=self)
         dlg.exec_()
 
     def open_shop_generator_dialog(self):
         from ui.shop_generator_dialog import ShopGeneratorDialog
-        dlg = ShopGeneratorDialog(storage_api=self.storage_api, bridge_client=getattr(self, 'bridge_client', None), parent=self)
+        dlg = ShopGeneratorDialog(storage=self.storage, bridge_client=getattr(self, 'bridge_client', None), parent=self)
         dlg.exec_()
 
     def open_lookup_dialog(self):
         from ui.lookup_dialog import LookupDialog
         if not hasattr(self, "_lookup_dialog") or self._lookup_dialog is None:
-            self._lookup_dialog = LookupDialog(storage_api=self.storage_api, parent=self)
+            self._lookup_dialog = LookupDialog(storage=self.storage, parent=self)
         self._lookup_dialog.show()
         self._lookup_dialog.raise_()
         self._lookup_dialog.activateWindow()
         self._lookup_dialog.focus_search()
-
-    def hide_statblock(self):
-        dock = getattr(self, "statblock_dock", None)
-        if dock is not None:
-            # Remember how wide it was, so re-showing doesn't snap it back to
-            # whatever the config said at startup.
-            remember = getattr(self, "remember_dock_width", None)
-            if remember is not None:
-                remember(dock)
-            dock.hide()
-        else:
-            self.statblock_widget.hide()
-
-    def show_statblock(self):
-        dock = getattr(self, "statblock_dock", None)
-        if dock is not None:
-            dock.show()
-            dock.raise_()
-            # A dock that was hidden has no width until it is laid out again.
-            reapply = getattr(self, "_apply_dock_widths", None)
-            if reapply is not None:
-                QTimer.singleShot(0, reapply)
-        else:
-            self.statblock_widget.show()
 
 # ================= Damage/Healing ======================
     def heal_selected_creatures(self):
@@ -2782,7 +2636,7 @@ class Application:
 
     # ================= Encounter Builder =====================
     def save_encounter(self):
-        dialog = BuildEncounterWindow(self, storage_api=self.storage_api)
+        dialog = BuildEncounterWindow(self, storage=self.storage)
         if dialog.exec_() != QDialog.Accepted:
             return
 
@@ -2824,9 +2678,9 @@ class Application:
             # payload["_meta"] = {"description": description}
 
         try:
-            if not getattr(self, "storage_api", None):
+            if not getattr(self, "storage", None):
                 raise RuntimeError("Storage API is not configured.")
-            self.storage_api.put_json(filename, payload)
+            self.storage.put_json(filename, payload)
             QMessageBox.information(self, "Saved", f"Saved encounter to Storage as:\n{filename}")
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to save encounter:\n{e}")
@@ -2874,11 +2728,11 @@ class Application:
 
     def list_pc_groups(self) -> List[tuple]:
         """Return sorted list of (display_name, key) for saved PC groups."""
-        if not getattr(self, "storage_api", None):
+        if not getattr(self, "storage", None):
             return []
         out: List[tuple] = []
         try:
-            for key in self.storage_api.list():
+            for key in self.storage.list():
                 if (
                     isinstance(key, str)
                     and key.startswith(self.PC_GROUP_PREFIX)
@@ -2888,9 +2742,6 @@ class Application:
         except Exception as e:
             self._log(f"[Groups] list failed: {e}")
         return sorted(out, key=lambda t: t[0].lower())
-
-    def pc_group_exists(self, key: str) -> bool:
-        return key in {k for _, k in self.list_pc_groups()}
 
     # ---- Foundry party vs loaded group ----
     # Running the wrong group is easy to miss: the bridge adds Foundry's PCs to
@@ -3027,7 +2878,7 @@ class Application:
         to create a group and fill it in, and saving a party down to zero PCs is
         a legitimate edit.
         """
-        if not getattr(self, "storage_api", None):
+        if not getattr(self, "storage", None):
             raise RuntimeError("Storage is not configured. Go to File → Settings.")
         state = GameState()
         state.players = list(players)
@@ -3035,7 +2886,7 @@ class Application:
         state.current_turn = 0
         state.round_counter = 1
         state.time_counter = 0
-        self.storage_api.put_json(key, state.to_dict())
+        self.storage.put_json(key, state.to_dict())
         return key
 
     def save_pc_group(self, name: str) -> str:
@@ -3049,18 +2900,18 @@ class Application:
 
     def get_pc_group_players(self, key: str) -> List[Player]:
         """Return the saved roster for a group without touching the live table."""
-        if not getattr(self, "storage_api", None):
+        if not getattr(self, "storage", None):
             raise RuntimeError("Storage is not configured.")
-        raw = self.storage_api.get_json(key)
+        raw = self.storage.get_json(key)
         if raw is None:
             raise RuntimeError(f"Group not found: {key}")
         state = json.loads(json.dumps(raw), object_hook=self.custom_decoder)
         return [c for c in (state.get("players", []) or []) if isinstance(c, Player)]
 
     def delete_pc_group(self, key: str) -> None:
-        if not getattr(self, "storage_api", None):
+        if not getattr(self, "storage", None):
             raise RuntimeError("Storage is not configured.")
-        self.storage_api.delete(key)
+        self.storage.delete(key)
         if self.active_pc_group == key:
             self._set_active_pc_group(None)
 
@@ -3104,7 +2955,7 @@ class Application:
 
     # ================== Secondary Windows ======================
     def load_encounter(self):
-        dialog = LoadEncounterWindow(self, storage=self.storage_api)
+        dialog = LoadEncounterWindow(self, storage=self.storage)
         if dialog.exec_() == QDialog.Accepted and dialog.selected_file:
             self.load_file_to_manager(dialog.selected_file, self.manager, prompt_for_initiatives=True)
             # After load, use the active creature from stable order
@@ -3117,7 +2968,7 @@ class Application:
                 self.notify(f"Loaded encounter: {dialog.selected_file}", "success")
 
     def merge_encounter(self):
-        dialog = LoadEncounterWindow(self, storage=self.storage_api)
+        dialog = LoadEncounterWindow(self, storage=self.storage)
         if dialog.exec_() == QDialog.Accepted and dialog.selected_file:
             self.load_file_to_manager(dialog.selected_file, self.manager, merge=True, prompt_for_initiatives=False)
 
@@ -3132,18 +2983,18 @@ class Application:
 
     def manage_encounter_statuses(self):
         from ui.storage_status import StorageStatusWindow
-        if not getattr(self, "storage_api", None):
+        if not getattr(self, "storage", None):
             QMessageBox.information(self, "Unavailable", "Storage API not configured.")
             return
-        dlg = StorageStatusWindow(self.storage_api, self)
+        dlg = StorageStatusWindow(self.storage, self)
         dlg.exec_()
 
     def delete_encounters(self):
         from ui.delete_storage import DeleteStorageWindow
-        if not getattr(self, "storage_api", None):
+        if not getattr(self, "storage", None):
             QMessageBox.information(self, "Unavailable", "Storage API not configured.")
             return
-        dlg = DeleteStorageWindow(self.storage_api, self)
+        dlg = DeleteStorageWindow(self.storage, self)
         if dlg.exec_() == QDialog.Accepted:
             # Optional: refresh any open pickers or cached lists here
             pass
