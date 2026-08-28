@@ -13,6 +13,8 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-08-28
+
 ### Added
 
 - **Help → Documentation** (`Shift+F1`) opens the full guide in a window you
@@ -408,7 +410,8 @@ versions while editing the same encounter can quietly lose whatever the newer
 one added. If you are testing a new release, point it at a throwaway profile
 with `DND_TRACKER_CONFIG_DIR` and your real data cannot be touched at all.
 
-[Unreleased]: https://github.com/mhyde777/dnd_app/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/mhyde777/dnd_app/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/mhyde777/dnd_app/compare/v0.4.2...v0.5.0
 [0.4.2]: https://github.com/mhyde777/dnd_app/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/mhyde777/dnd_app/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/mhyde777/dnd_app/compare/v0.3.0...v0.4.0
