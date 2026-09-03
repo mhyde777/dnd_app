@@ -84,9 +84,9 @@ def _check_config_writable() -> None:
 def _check_creature_roundtrip() -> None:
     from app.creature import Monster, I_Creature
 
-    original = Monster("Goblin 1", init=14, max_hp=7, curr_hp=5, notes="bloodied")
+    original = Monster("Goblin 1", init=14, max_hp=7, curr_hp=5, dex=14, notes="bloodied")
     restored = I_Creature.from_dict(original.to_dict())
-    for field in ("name", "initiative", "max_hp", "curr_hp", "notes"):
+    for field in ("name", "initiative", "max_hp", "curr_hp", "dex", "notes"):
         if getattr(restored, field) != getattr(original, field):
             raise ValueError(
                 f"{field} did not survive a save/load round trip: "
@@ -118,6 +118,15 @@ def _check_turn_order() -> None:
     if names != ["Adept", "Archer", "Bandit"]:
         raise ValueError(
             f"turn order was {names}, expected initiative descending then name"
+        )
+
+    manager = CreatureManager()
+    manager.add_creature(Monster("Adept", init=20, dex=10))
+    manager.add_creature(Monster("Archer", init=20, dex=16))
+    names = manager.ordered_names()
+    if names != ["Archer", "Adept"]:
+        raise ValueError(
+            f"tied initiative sorted as {names}, expected the higher DEX first"
         )
 
 

@@ -104,7 +104,7 @@ tests/
 
 - **MVC**: UI layer (`lib/ui/`) talks to Application/Manager (`lib/app/`), which operates on Creature dataclasses.
 - **Creatures tracked by name** for stability across HP/state changes. CreatureManager uses natural sort (handles "Goblin 2" < "Goblin 10").
-- **Turn order**: initiative DESC, name ASC tiebreaker, computed on-the-fly.
+- **Turn order**: initiative DESC, DEX DESC, name ASC, computed on-the-fly. `_dex` is `-1` when unknown, and unknown sorts *after* every known score rather than as a 10 — a fabricated score would outrank the creatures whose real one nobody typed, and it keeps the pre-DEX name ordering for anyone who never fills the field in. Monsters take it from the statblock library only (`statblock_dex()` via `apply_statblock_slots()`) — deliberately no DEX input in Add Combatant, since a monster worth breaking a tie for has a statblock, PCs from the DEX column in Create/Update Characters (there is nowhere else a PC's score is written down), and Foundry-synced creatures from `combatant["dex"]` in the snapshot. `_dex` is a field on the creature record but **never a column**: it is in the table model's `_HIDDEN_FIELDS`, which drops it before the column list is built rather than hiding a built column, the same as `_temp_hp` and `_statblock_override`. It is a tiebreaker, not a stat the DM tracks per round.
 - **`lib/` is an editable package** (`dnd-app-lib`): installed via `pip install -e lib/` or the Pipfile entry. Imports use `from app.X` and `from ui.X`.
 - **Two-way Foundry sync**:
   - Foundry → App: combat snapshots posted to bridge, app consumes via SSE stream or polling.

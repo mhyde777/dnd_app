@@ -26,9 +26,12 @@ _COND_ABBR = {
     "Unconscious": "Unc",
 }
 
-# Creature fields the table never shows as a column: either they are internal
-# bookkeeping (Foundry ids, death-save counters) or they already have a
-# dedicated widget elsewhere (spell slots, ability uses, notes).
+# Creature fields that never become a column. This is not a list of hidden
+# columns -- a name here is dropped by _column_fields() before the column list
+# exists, so nothing is built, sized or painted for it. Either they are
+# internal bookkeeping (Foundry ids, death-save counters, the DEX used to break
+# an initiative tie) or they already have a dedicated widget elsewhere (spell
+# slots, ability uses, notes).
 _HIDDEN_FIELDS = {
     "_public_notes",
     "_player_visible",
@@ -51,6 +54,7 @@ _HIDDEN_FIELDS = {
     "_is_lair_action",
     "_lair_action_notes",
     "_statblock_override",
+    "_dex",
 }
 
 

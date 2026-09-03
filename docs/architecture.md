@@ -47,8 +47,12 @@ you go looking for where one ends and the other begins.
 references stable as HP and state change. `CreatureManager` sorts naturally, so
 "Goblin 2" comes before "Goblin 10" rather than after it.
 
-**Turn order** is initiative descending, name ascending as the tiebreaker,
-computed on the fly rather than stored.
+**Turn order** is initiative descending, Dexterity descending as the
+tiebreaker, then name ascending, computed on the fly rather than stored. A
+creature whose DEX nobody has recorded sorts after every creature that has one,
+so a tie among creatures with no scores still breaks by name. Monsters get
+their DEX from the statblock library, PCs from the DEX column in Create/Update
+Characters, and anything synced from Foundry from the actor's own score.
 
 ---
 
