@@ -160,6 +160,24 @@ TARBALL="$ROOT_DIR/dist/${STAGE_NAME}.tar.gz"
 tar -C "$ROOT_DIR/package" -czf "$TARBALL" "$STAGE_NAME"
 echo "Release artifact: $TARBALL"
 
+# ------------------------------------------------------------
+# AppImage
+# ------------------------------------------------------------
+# The primary Linux download: one file, chmod +x, double-click. The tarball
+# stays because the in-app updater unpacks it into versions/ -- an AppImage is
+# a read-only image and cannot be installed into. So: AppImage to arrive with,
+# tarball to update with, both built from the same staged payload.
+APPIMAGE_PATH="$ROOT_DIR/dist/${STAGE_NAME}.AppImage"
+if ! "$ROOT_DIR/installer/linux/build_appimage.sh" \
+        "$PAYLOAD_DIR" "$ROOT_DIR/dist/$LAUNCHER_NAME" \
+        "$VERSION" "$ARCH" "$APPIMAGE_PATH"; then
+    # Not fatal: the tarball is a complete release on its own, and failing the
+    # whole build over the convenience artifact would be the wrong trade. But
+    # it is the download most users are meant to take, so say so loudly.
+    echo "warning: the AppImage could not be built -- publishing the tarball only." >&2
+    APPIMAGE_PATH=""
+fi
+
 # Checksums are written after every artifact exists, below.
 
 # ------------------------------------------------------------
@@ -173,7 +191,9 @@ echo "Release artifact: $TARBALL"
 # Published alongside the builds so the in-app updater can check what it
 # downloaded. Written once every artifact exists, so nothing is left unlisted.
 if command -v sha256sum >/dev/null 2>&1; then
-  (cd "$ROOT_DIR/dist" && sha256sum "${STAGE_NAME}.tar.gz" "foundryvtt-bridge.zip" > SHA256SUMS)
+  SUM_FILES=("${STAGE_NAME}.tar.gz" "foundryvtt-bridge.zip")
+  [[ -n "$APPIMAGE_PATH" ]] && SUM_FILES+=("$(basename "$APPIMAGE_PATH")")
+  (cd "$ROOT_DIR/dist" && sha256sum "${SUM_FILES[@]}" > SHA256SUMS)
   echo "Checksums:        $ROOT_DIR/dist/SHA256SUMS"
 fi
 
@@ -181,8 +201,10 @@ if [[ "$PUBLISH" -eq 1 ]]; then
   # Uploading both files together, and checking afterwards that they are
   # really on the release. A release published with no assets looks finished
   # but leaves the in-app updater reporting "no build for this system".
-  "$ROOT_DIR/publish.sh" "$TARBALL" "$ROOT_DIR/dist/SHA256SUMS" \
-    "$ROOT_DIR/dist/foundryvtt-bridge.zip" "$ROOT_DIR/dist/module.json"
+  PUBLISH_FILES=("$TARBALL" "$ROOT_DIR/dist/SHA256SUMS"
+                 "$ROOT_DIR/dist/foundryvtt-bridge.zip" "$ROOT_DIR/dist/module.json")
+  [[ -n "$APPIMAGE_PATH" ]] && PUBLISH_FILES+=("$APPIMAGE_PATH")
+  "$ROOT_DIR/publish.sh" "${PUBLISH_FILES[@]}"
 fi
 
 # ------------------------------------------------------------

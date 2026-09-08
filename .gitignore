@@ -179,9 +179,19 @@ package/
 dist/
 build/
 package_win/
+# Shell scripts are source, not build artifacts. The blanket ignore is kept so
+# that scratch scripts in the working tree stay out of the way, but every
+# script the project actually needs is listed here -- a fresh clone could
+# otherwise not build a release at all: package.sh calls package_module.sh and
+# publish.sh, and neither had ever been committed.
 *.sh
 !package.sh
 !package_WIN.sh
+!package_module.sh
+!publish.sh
+!release.sh
+!installer/**/*.sh
+!scripts/**/*.sh
 *bak*
 images/*
 !images/d20_icon.png

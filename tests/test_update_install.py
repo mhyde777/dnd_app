@@ -378,3 +378,59 @@ def test_summarise_counts_each_outcome():
 
 def test_keep_defaults_to_one_now_that_the_spare_is_conditional():
     assert install_layout.DEFAULT_KEEP_VERSIONS == 1
+
+
+# ---- The Windows file-lock retry -------------------------------------------
+# Windows holds a file open while Defender scans it, and a just-extracted .exe
+# is exactly what it scans. The directory rename then fails transiently, which
+# would surface to the user as "the update just didn't work, sometimes".
+
+def test_rename_retries_through_a_transient_lock(tmp_path, monkeypatch):
+    src = tmp_path / "src"
+    src.mkdir()
+    dst = tmp_path / "dst"
+
+    calls = {"n": 0}
+    real_replace = os.replace
+
+    def flaky(a, b):
+        calls["n"] += 1
+        if calls["n"] < 3:
+            exc = PermissionError("scanning")
+            exc.winerror = 32
+            raise exc
+        return real_replace(a, b)
+
+    monkeypatch.setattr(update_install.os, "replace", flaky)
+    monkeypatch.setattr(update_install, "_RENAME_DELAY_S", 0)
+
+    update_install._replace_with_retry(str(src), str(dst))
+    assert dst.is_dir()
+    assert calls["n"] == 3
+
+
+def test_rename_gives_up_with_an_explanation(tmp_path, monkeypatch):
+    def always_locked(a, b):
+        exc = PermissionError("locked")
+        exc.winerror = 32
+        raise exc
+
+    monkeypatch.setattr(update_install.os, "replace", always_locked)
+    monkeypatch.setattr(update_install, "_RENAME_DELAY_S", 0)
+
+    with pytest.raises(OSError, match="holding a file open"):
+        update_install._replace_with_retry(str(tmp_path / "a"), str(tmp_path / "b"))
+
+
+def test_a_real_error_is_not_retried(tmp_path, monkeypatch):
+    """Retrying a genuine failure only delays the report by two seconds."""
+    calls = {"n": 0}
+
+    def missing(a, b):
+        calls["n"] += 1
+        raise FileNotFoundError("no such directory")
+
+    monkeypatch.setattr(update_install.os, "replace", missing)
+    with pytest.raises(FileNotFoundError):
+        update_install._replace_with_retry(str(tmp_path / "a"), str(tmp_path / "b"))
+    assert calls["n"] == 1

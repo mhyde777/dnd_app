@@ -31,6 +31,12 @@ runnable; going back is one line in `current`.
 
 ## What happens when you press the button
 
+The updater downloads the **archive** for this platform (`.tar.gz` or `.zip`),
+never the installer or the AppImage published beside it. Those are for arriving
+with nothing; only an archive can be unpacked into `versions/`, and choosing
+one of the others would fail at the extract step with the whole download
+already on disk.
+
 1. **Download** the asset matching this platform and architecture, streamed to
    `versions/.downloads/` with progress and a working Cancel. It writes to a
    `.part` file renamed only on success, so an interrupted download never
@@ -73,8 +79,13 @@ starts and then crashes an hour later is not an update problem.
 disabling a button with no reason:
 
 - **A source checkout** — update it with git.
+- **The Linux AppImage** — a single read-only file, so there is no `versions/`
+  directory to install a new build beside. **File → Install Combat Tracker…**
+  turns it into an ordinary install, and updates work from then on. See
+  [Installing](installing.md).
 - **An install predating this layout** — a flat folder with no launcher.
-  Download this release and unpack it once; updates after that are one button.
+  Run this release's installer or AppImage once; updates after that are one
+  button.
 - **No write permission to the install root** — install somewhere you own.
 - **No asset for this platform** in the release.
 

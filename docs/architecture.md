@@ -273,6 +273,60 @@ Full detail in [auto-update.md](auto-update.md).
 
 ---
 
+## Packaging
+
+Every release carries two artifacts per platform, and the split is deliberate:
+
+| | Windows | Linux |
+|---|---|---|
+| **To arrive with** | `…-setup.exe` (Inno Setup) | `…​.AppImage` |
+| **To update with** | `…​.zip` | `…​.tar.gz` |
+
+The installer and the AppImage exist so that getting the app is one download
+and one double-click — no unpacking, no choosing a directory, no picking
+between two similarly named binaries. The archives are what
+`update_check.asset_for_platform()` downloads, and it filters to extensions
+`update_install.extract()` understands: handing it a `setup.exe` would fail
+after the whole download had already completed.
+
+**The Windows installer is per-user by design.** `PrivilegesRequired=lowest`
+puts it in `%LOCALAPPDATA%\Programs` and means Windows never shows a UAC
+prompt — an elevation dialog on an unsigned binary reads as malware to exactly
+the person the installer is for. It also keeps the install root user-writable,
+which is what `can_self_update()` requires. The installer lays down the same
+`versions/<ver>/` + `current` + launcher tree the zip carries, so self-updating
+is unaffected by how the app arrived. It is unsigned; `/DSign` is already wired
+into the `.iss`, so adding a certificate is a flag rather than a restructuring.
+
+**The AppImage is assembled by hand, not with `appimagetool`,** for one reason:
+the runtime. `appimagetool`'s default runtime dynamically loads
+`libfuse.so.2`, which Ubuntu 22.04+ and Fedora no longer install, so a
+double-click fails with `dlopen(): error loading libfuse.so.2` for precisely
+the user who cannot diagnose it. `installer/linux/build_appimage.sh` uses the
+static `type2-runtime` build and concatenates it with a squashfs image itself —
+an AppImage is only `[runtime][squashfs]`, and that is less machinery than
+persuading `appimagetool` to use a different runtime.
+
+An AppImage is read-only, so it cannot self-update: `install_layout.detect()`
+correctly returns `None` inside one. `app/appimage.py` buys that back by
+offering, once, to copy the payload it is already carrying into
+`~/.local/opt/combat-tracker` in the ordinary layout and write a desktop entry
+— after which updates work normally. It is an **offer**, never automatic:
+writing into someone's home directory the first time they run a downloaded file
+is not something to do unasked. The payload deliberately lives at `usr/bin`
+inside the AppDir and *not* under a directory called `versions`, because that
+name is what `detect()` keys on and a read-only mount that looked updatable
+would offer a button that could only fail.
+
+**Releases are built by CI, from a tag.** `.github/workflows/release.yml` builds
+both platforms in parallel, publishes the release as a draft, attaches
+everything, makes it public last, then re-reads it from the API to confirm each
+expected asset landed. This replaced building on two machines by hand, where
+forgetting the Windows half published a release that looked finished and left
+every Windows user's updater reporting "no build for this system".
+
+---
+
 ## Invariants
 
 Things that look harmless and are not.

@@ -17,6 +17,17 @@ if __name__ == "__main__":
     # sees in a packaged build, and the app just looks unresponsive.
     install_excepthook()
 
+    # Record up front whether this copy can install its own updates, and the
+    # state behind that answer when it cannot. "Updating doesn't work" is
+    # otherwise a report with no evidence in it, and the cause is usually
+    # something invisible from inside the app -- an install extracted into a
+    # directory the user cannot write to, or a pre-launcher layout. Logged
+    # here rather than in clear_launching(), which returns early for exactly
+    # the layouts worth diagnosing.
+    from app.app_log import get_logger
+    from app.install_diagnostics import log_summary
+    log_summary(get_logger().info)
+
     qdarktheme.enable_hi_dpi()
     app = QApplication(sys.argv)
     app.setWindowIcon(QIcon(resource_path("images/d20_icon.png")))
@@ -51,5 +62,11 @@ if __name__ == "__main__":
     from PyQt5.QtCore import QTimer
     from app.install_layout import clear_launching
     QTimer.singleShot(0, clear_launching)
+
+    # An AppImage cannot update itself, so offer once to turn it into a real
+    # install that can. After the window is up, not before: the first thing a
+    # new user should see is the app, not a question about where to put it.
+    from ui.appimage_install_dialog import maybe_offer_install
+    QTimer.singleShot(0, lambda: maybe_offer_install(mainWin))
 
     sys.exit(app.exec_())

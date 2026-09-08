@@ -52,6 +52,8 @@ SECTIONS: List[tuple] = [
             "Two-way sync with a Foundry game"),
     ]),
     ("Installing and updating", [
+        Doc("installing.md", "Installing",
+            "Getting the app onto Windows or Linux"),
         Doc("auto-update.md", "In-App Updating",
             "How the app updates itself, and how to roll back"),
         Doc("updating-windows.md", "Windows",

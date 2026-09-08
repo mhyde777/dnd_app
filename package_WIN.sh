@@ -165,10 +165,67 @@ fi
 
 echo "Release artifact: $ZIP_PATH"
 
+# ------------------------------------------------------------
+# Installer
+# ------------------------------------------------------------
+# Built from the tree already staged above, so the installer and the zip ship
+# the identical build rather than two builds that merely agree.
+#
+# The zip is still published: the in-app updater unpacks it into versions/, and
+# it is the escape hatch for anyone who would rather not run an installer. The
+# installer is what a first-time user should be clicking -- see
+# installer/windows/combat-tracker.iss for why.
+ISS_FILE="$ROOT_DIR/installer/windows/combat-tracker.iss"
+INSTALLER_PATH=""
+
+find_iscc() {
+    # PATH first, then the two default install locations. Inno's compiler is
+    # not on PATH by default, and telling someone to fix their PATH to build a
+    # release is exactly the kind of friction this whole change is removing.
+    if command -v iscc >/dev/null 2>&1; then command -v iscc; return 0; fi
+    if command -v ISCC.exe >/dev/null 2>&1; then command -v ISCC.exe; return 0; fi
+    local candidate
+    for candidate in \
+        "/c/Program Files (x86)/Inno Setup 6/ISCC.exe" \
+        "/c/Program Files/Inno Setup 6/ISCC.exe"; do
+        [[ -x "$candidate" ]] && { printf '%s\n' "$candidate"; return 0; }
+    done
+    return 1
+}
+
+if ISCC="$(find_iscc)"; then
+    # ISCC is a native Windows program: every path it is handed has to be a
+    # Windows path, not the Git Bash view of one.
+    "$ISCC" \
+        "/DAppVersion=$VERSION" \
+        "/DStageDir=$(cygpath -w "$STAGE_DIR")" \
+        "/DOutputDir=$(cygpath -w "$ROOT_DIR/dist")" \
+        ${SIGN_INSTALLER:+/DSign} \
+        "$(cygpath -w "$ISS_FILE")"
+    INSTALLER_PATH="$ROOT_DIR/dist/${STAGE_NAME}-setup.exe"
+    if [[ -f "$INSTALLER_PATH" ]]; then
+        echo "Installer:        $INSTALLER_PATH"
+    else
+        echo "error: ISCC reported success but produced no installer" >&2
+        exit 1
+    fi
+else
+    # Not fatal: the zip is a complete, working release on its own. But it is
+    # the artifact most users are meant to download, so silence would be wrong.
+    echo "warning: Inno Setup (ISCC.exe) not found -- no installer built." >&2
+    echo "         Install it with: winget install JRSoftware.InnoSetup" >&2
+fi
+
+
 # Published alongside the build so the in-app updater can check what it
 # downloaded. Upload both to the GitHub release.
+# Every artifact is listed, the installer included: SHA256SUMS is what someone
+# who cares can check an unsigned .exe against, and with no code signature it
+# is the only integrity story the Windows download has.
 if command -v sha256sum >/dev/null 2>&1; then
-    (cd "$ROOT_DIR/dist" && sha256sum "${STAGE_NAME}.zip" "foundryvtt-bridge.zip" > SHA256SUMS)
+    SUM_FILES=("${STAGE_NAME}.zip" "foundryvtt-bridge.zip")
+    [[ -n "$INSTALLER_PATH" ]] && SUM_FILES+=("$(basename "$INSTALLER_PATH")")
+    (cd "$ROOT_DIR/dist" && sha256sum "${SUM_FILES[@]}" > SHA256SUMS)
     echo "Checksums:        $ROOT_DIR/dist/SHA256SUMS"
 fi
 
@@ -183,8 +240,10 @@ if [[ "$PUBLISH" -eq 1 ]]; then
     # Uploads the zip and the checksums together, then checks the release
     # really has them -- a release with no assets looks finished but leaves
     # the in-app updater reporting "no build for this system".
-    "$ROOT_DIR/publish.sh" "$ZIP_PATH" "$ROOT_DIR/dist/SHA256SUMS" \
-        "$ROOT_DIR/dist/foundryvtt-bridge.zip" "$ROOT_DIR/dist/module.json"
+    PUBLISH_FILES=("$ZIP_PATH" "$ROOT_DIR/dist/SHA256SUMS"
+                   "$ROOT_DIR/dist/foundryvtt-bridge.zip" "$ROOT_DIR/dist/module.json")
+    [[ -n "$INSTALLER_PATH" ]] && PUBLISH_FILES+=("$INSTALLER_PATH")
+    "$ROOT_DIR/publish.sh" "${PUBLISH_FILES[@]}"
 fi
 
 # ------------------------------------------------------------
