@@ -367,6 +367,54 @@ the source's mtime *in whole seconds* and its size, so changing the version to
 another string of the same length within the same second is invisible to it.
 This produced artifacts named after a version that did not exist.
 
+**A parsed description carries structure; never render it with a bare
+newline→`<br>` replace.** D&D Beyond writes tables as tab-delimited rows and
+paragraph breaks as blank lines. The parsers all find structure positionally,
+so every one of them started by dropping the blank lines, and the cards then
+joined what was left with `<br>` — where HTML's whitespace collapsing turned
+`1d100\tEffect` into `1d100 Effect`. A 1,700-item magic-item library arrived
+with 140 tables and its embedded statblocks reading as run-on prose, and no
+description at all had a paragraph break left in it.
+
+`app/text_blocks.py` holds the parser half: `split_lines()` returns both the
+compacted list the positional passes need and the raw lines behind it, each
+compacted line remembering its origin index, so `raw_slice()` can cut a
+description back out of the raw text with its blanks intact. Its per-line strip
+keeps *leading* tabs, because a statblock's ability table is written
+`\t\tMod\tSave` over `STR\t16\t+3\t+3` and stripping those empty cells slides
+the header two columns to the left.
+
+`ui/rich_text.py` holds the render half and is the only place a description
+becomes HTML. It escapes everything (descriptions are pasted text), turns a run
+of two or more tabbed lines into a real `<table>`, and bolds trait lead-ins. A
+*lone* tabbed line stays prose — it is a stray tab in a sentence far more often
+than it is a one-row table. All three callers — the spell card, the item card
+and the statblock's spell tooltip — go through `render_description()`; do not
+add a fourth copy of the logic.
+
+An **embedded statblock** — the creature a spell summons, the form an item
+turns into — is a region, not a line style. `_find_statblock()` keys on the
+size-and-type line ("Tiny Construct, Neutral") and renders everything from
+there to the end into its own bordered panel. Being inside that region is what
+makes the bare 2024 field form (`AC 13`) safe to bold; in ordinary prose only
+the colon form (`Armor Class: 20`) is, because "Speed is doubled while you wear
+the boots" is a sentence. D&D Beyond also repeats a table's header partway
+through — an ability block is two three-row groups, each with its own
+`Mod / Save` line — so rows equal to the header are dropped and the six
+abilities render as one table.
+
+Two shapes of D&D Beyond paste feed this, and both have a trap. A **card** copy
+emits the "Attack/Save" and "Damage/Effect" labels even when the spell has no
+value for them, so the line beneath is the description's opening paragraph;
+storing it as the field value ate the first paragraph of 19 spells, and
+`_is_card_tag()` now takes a value only when it reads as a short tag rather
+than a sentence. A **detail page** copy carries no title at all and runs the
+level and school together as `2nd LevelConjuration`, which used to match no
+level pattern and become the spell's name. The separator is optional now, the
+school half must name one of the eight real schools, and a line that parses as
+a level line is never taken as the name — a missing-name warning is the honest
+result when the title is not in the paste.
+
 **`CreatureTableModel._row_background()` is the single authority on a row's
 colour.** It resolves the whole row before any per-cell tint, always returns a
 colour for the active creature even when HP is untracked, and falls back to the

@@ -62,6 +62,34 @@ a MAJOR bump is the only kind that can require you to change how you work.
   Tracker" finds the application rather than a bare `combat_tracker.exe` file —
   and the entry points at the launcher, which is what lets an update swap the
   version underneath it.
+- **Tables in spells and magic items are now tables.** D&D Beyond writes them
+  as tab-separated rows, and HTML collapses tabs, so every table in the
+  reference cards read as one run-on line per row: the Bag of Beans effect
+  table, the Deck of Many Things card table, the damage-type table on Armor of
+  Resistance, Control Weather's three stage tables — 140 items and 30 spells in
+  all. They render as real tables now, with the column heading, striped rows so
+  a hundred-row table stays readable, and the title above it attached to the
+  table rather than floating off as a paragraph.
+- **Paragraph breaks survived the import.** The parsers dropped every blank
+  line before assembling a description, so *no* item or spell in the library
+  had a paragraph break left in it — a table, its caption and the prose around
+  it arrived as one undivided block. All 1,747 items and 553 spells were
+  re-imported with their structure intact.
+- **Statblocks inside a spell or item are laid out as statblocks.** The
+  creature a spell summons (Homunculus Servant) or the form an item takes
+  (Apparatus of the Crab) now renders in its own panel: name, size and type,
+  bolded fields, a single ability table rather than two half-tables with a
+  heading stranded between them, and Traits / Actions / Reactions as headings.
+- **Nineteen spells were missing their opening paragraph.** D&D Beyond prints
+  the "Damage/Effect" heading even when a spell has nothing under it, and the
+  first paragraph of the description was being stored as that field's value
+  instead. Homunculus Servant, Create Magen, Iron Body and sixteen others have
+  their full text back.
+- **A spell copied from a spell's own page could arrive named
+  "2nd LevelConjuration".** That page does not include the spell's title in
+  what you copy, and runs the level and school together; the level and school
+  are now read correctly, and a paste with no title is reported as missing a
+  name instead of being given that one.
 - **Windows: "Update and Restart" was unavailable more often than it should
   have been.** The usual cause was an install extracted somewhere your account
   cannot write to, such as `C:\Program Files`; the installer puts the app under

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Iterable
 
 from app.spell_parser import parse_spell, spell_key, validate_spell
+from app.text_blocks import SourceLine, raw_slice, split_lines
 
 
 _LEVEL_TOKEN_RE = re.compile(r"^(?:cantrip|[1-9](?:st|nd|rd|th))$", re.IGNORECASE)
@@ -21,9 +22,15 @@ class ParsedSpellBlock:
 
 
 
-def _normalize_lines(text: str) -> list[str]:
-    lines = [line.strip() for line in text.splitlines()]
-    return [line for line in lines if line]
+def _normalize_lines(text: str) -> tuple[list[SourceLine], list[str]]:
+    """Compacted lines for the block detection, plus the raw paste behind them.
+
+    Spell blocks are found positionally, so the detection needs the blanks
+    gone; the raw list is what the per-spell text is rebuilt from, and is why
+    a table inside a spell description still has its paragraph breaks when it
+    reaches parse_spell().
+    """
+    return split_lines(text)
 
 
 
@@ -55,15 +62,18 @@ def _find_spell_starts(lines: list[str]) -> list[int]:
 
 
 
-def _cut_block_metadata(block_lines: list[str]) -> list[str]:
-    for idx, line in enumerate(block_lines):
-        if line.strip().lower() in _BLOCK_BREAK_MARKERS:
-            return block_lines[:idx]
-    return block_lines
+def _cut_block_index(block_lines: list[str], start: int) -> int:
+    """Index of the trailing site furniture, or the end of the block."""
+    for idx in range(start, len(block_lines)):
+        if block_lines[idx].strip().lower() in _BLOCK_BREAK_MARKERS:
+            return idx
+    return len(block_lines)
 
 
 
-def _extract_parseable_spell_text(segment: list[str]) -> tuple[str, bool] | None:
+def _extract_parseable_spell_text(
+    segment: list[SourceLine], raw: list[str]
+) -> tuple[str, bool] | None:
     if len(segment) < 3:
         return None
 
@@ -79,14 +89,15 @@ def _extract_parseable_spell_text(segment: list[str]) -> tuple[str, bool] | None
     if level_idx < 0:
         return None
 
-    block = _cut_block_metadata(segment[level_idx:])
+    end = _cut_block_index(segment, level_idx)
+    block = raw_slice(raw, segment, level_idx, end)
     parse_text = "\n".join([name] + block)
     return parse_text, is_legacy
 
 
 
 def parse_bulk_spells(text: str, *, include_legacy: bool = False) -> list[ParsedSpellBlock]:
-    lines = _normalize_lines(text)
+    lines, raw = _normalize_lines(text)
     if not lines:
         return []
 
@@ -99,7 +110,7 @@ def parse_bulk_spells(text: str, *, include_legacy: bool = False) -> list[Parsed
 
     for start, end in zip(boundaries, boundaries[1:]):
         segment = lines[start:end]
-        built = _extract_parseable_spell_text(segment)
+        built = _extract_parseable_spell_text(segment, raw)
         if built is None:
             continue
 

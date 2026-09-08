@@ -17,6 +17,7 @@ from PyQt5.QtWidgets import QTextBrowser, QToolTip
 from app import settings as app_settings
 from app.conditions import get_condition
 from app.spell_parser import spell_key as _spell_key
+from ui.rich_text import render_description
 
 # Only px sizes: the statblock markup uses no other unit, and matching pt/em
 # would silently rescale anything a future template borrows from elsewhere.
@@ -341,7 +342,10 @@ class StatblockWidget(QTextBrowser):
 
         desc = data.get("description", "")
         if desc:
-            parts.append("<br>" + desc.replace("\n", "<br>"))
+            # Shares the description renderer with the lookup card so a spell
+            # whose text carries a table (Control Weather's stage tables) is
+            # not flattened into prose here either.
+            parts.append("<br>" + render_description(desc, accent=_RED, rule=_ORANGE))
 
         return "<br>".join(parts)
 

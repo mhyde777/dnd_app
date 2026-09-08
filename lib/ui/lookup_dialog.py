@@ -19,6 +19,7 @@ from PyQt5.QtWidgets import (
 )
 
 from app.conditions import CONDITIONS
+from ui.rich_text import render_description
 from ui.statblock_widget import StatblockWidget
 
 # ── Colour palette (matches statblock_widget.py) ────────────────────────────
@@ -112,10 +113,7 @@ def _build_spell_html(data: dict) -> str:
     desc = data.get("description", "")
     if desc:
         p.append(f'<hr style="border:1px solid {_ORANGE}; margin:6px 0;">')
-        p.append(
-            f'<p style="margin:4px 0; line-height:1.5;">'
-            f'{desc.replace(chr(10), "<br>")}</p>'
-        )
+        p.append(render_description(desc, accent=_RED, rule=_ORANGE))
 
     for fn in data.get("footnotes", []):
         p.append(
@@ -218,10 +216,7 @@ def _build_item_html(data: dict) -> str:
 
     if desc:
         p.append(f'<hr style="border:1px solid {_ORANGE}; margin:6px 0;">')
-        p.append(
-            f'<p style="margin:4px 0; line-height:1.5;">'
-            f'{desc.replace(chr(10), "<br>")}</p>'
-        )
+        p.append(render_description(desc, accent=_RED, rule=_ORANGE))
 
     p.append('</body></html>')
     return "".join(p)

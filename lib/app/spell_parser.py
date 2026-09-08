@@ -20,6 +20,8 @@ from __future__ import annotations
 
 import re
 
+from app.text_blocks import SourceLine, join_paragraphs, raw_slice, split_lines
+
 
 # ── Key helper ────────────────────────────────────────────────────────────────
 
@@ -62,6 +64,25 @@ _HEADER_NOISE = {"concentration", "legacy", "ritual"}
 # Trailing site furniture D&D Beyond includes in a card copy
 _CARD_END_MARKERS = {"view details page", "tags:", "available for:"}
 
+# "Attack/Save" and "Damage/Effect" are the last two labels of a card copy, and
+# D&D Beyond emits the label even when the spell has no value for it -- so the
+# line after it is the opening paragraph of the description, not a value. Real
+# values are short tags ("None", "DEX Save", "Cold (...)"): the 95th percentile
+# is 17 characters and none is a sentence. Without this the first paragraph of
+# 19 spells, Homunculus Servant among them, vanished into damage_effect.
+_CARD_TAG_FIELDS = frozenset({"attack_save", "damage_effect"})
+_CARD_TAG_MAX = 70
+
+
+def _is_card_tag(field: str, value: str) -> bool:
+    """True when the line after a label really is that label's value."""
+    if field not in _CARD_TAG_FIELDS:
+        return True
+    value = value.strip()
+    if not value or len(value) > _CARD_TAG_MAX:
+        return False
+    return not value.endswith((".", "!", "?"))
+
 # Inline-format "Label: value" patterns
 _INLINE_LABEL_PATTERNS = [
     (re.compile(r'^casting\s*time\s*[:\u2014]\s*(.+)$', re.IGNORECASE), "casting_time"),
@@ -73,13 +94,38 @@ _INLINE_LABEL_PATTERNS = [
     (re.compile(r'^damage(?:/effect|/type)?\s*[:\u2014]\s*(.+)$', re.IGNORECASE), "damage_effect"),
 ]
 
-# Level-line patterns for inline format
+# The eight schools. A level line is only accepted when its second half names
+# one, so "Level 2 spell slots or higher" cannot pose as "2nd-level Slots".
+_SCHOOLS = frozenset({
+    "abjuration", "conjuration", "divination", "enchantment",
+    "evocation", "illusion", "necromancy", "transmutation",
+})
+
+# Level-line patterns for inline format. The separator between "level" and the
+# school is optional throughout: D&D Beyond's spell *detail* page renders the
+# two in adjacent elements, and copying it yields them run together --
+# "2nd LevelConjuration" -- which used to match nothing and be taken as the
+# spell's name.
 _LEVEL_LINE_PATTERNS = [
-    (re.compile(r'^level\s+(\d+)\s+(\w+)', re.IGNORECASE), "level_school"),
-    (re.compile(r'^(\d+)(?:st|nd|rd|th)[- ]level\s+(\w+)', re.IGNORECASE), "level_school"),
-    (re.compile(r'^(\w+)\s+cantrip', re.IGNORECASE), "school_cantrip"),
+    (re.compile(r'^level\s*(\d+)\s*([A-Za-z]+)', re.IGNORECASE), "level_school"),
+    (re.compile(r'^(\d+)(?:st|nd|rd|th)[-\s]*level\s*([A-Za-z]+)', re.IGNORECASE), "level_school"),
+    (re.compile(r'^([A-Za-z]+)\s*cantrip', re.IGNORECASE), "school_cantrip"),
     (re.compile(r'^cantrip$', re.IGNORECASE), "cantrip"),
 ]
+
+
+def _match_level_line(line: str) -> tuple[str, re.Match] | None:
+    """The level-line pattern this line matches, if its school is a real one."""
+    for pattern, kind in _LEVEL_LINE_PATTERNS:
+        m = pattern.match(line)
+        if not m:
+            continue
+        if kind == "level_school" and m.group(2).lower() not in _SCHOOLS:
+            continue
+        if kind == "school_cantrip" and m.group(1).lower() not in _SCHOOLS:
+            continue
+        return kind, m
+    return None
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -178,7 +224,7 @@ def _name_from_header(header: list[str]) -> tuple[str, bool]:
     return name, concentration
 
 
-def _parse_card_format(lines: list[str]) -> dict:
+def _parse_card_format(lines: list[SourceLine], raw: list[str]) -> dict:
     """Parse the label-per-line D&D Beyond card paste format."""
     result = _empty_result()
 
@@ -205,6 +251,11 @@ def _parse_card_format(lines: list[str]) -> dict:
         if label in _CARD_LABEL_MAP:
             field = _CARD_LABEL_MAP[label]
             value = lines[idx + 1].strip()
+            if not _is_card_tag(field, value):
+                # The label was emitted with no value; the description starts
+                # on the next line. Drop the label, keep the prose.
+                idx += 1
+                break
             if field == "level_str":
                 result["level"] = _parse_level_value(value)
                 saw_level_label = True
@@ -219,24 +270,26 @@ def _parse_card_format(lines: list[str]) -> dict:
 
     # Remaining lines: description + footnotes, minus the site furniture
     # ("View Details Page", "Tags:" and the tag list) that trails a card copy.
-    desc_lines: list[str] = []
-    footnotes: list[str] = []
+    end = next(
+        (i for i in range(idx, len(lines))
+         if lines[i].strip().lower() in _CARD_END_MARKERS),
+        len(lines),
+    )
 
-    for line in lines[idx:]:
+    # Cut the description out of the raw paste so its blank lines -- the
+    # paragraph breaks, and what sets a table apart from the prose above it --
+    # are still there. Footnotes are pulled out of that slice, not out of the
+    # compacted list, for the same reason.
+    footnotes: list[str] = []
+    desc_lines: list[str] = []
+    for line in raw_slice(raw, lines, idx, end):
         stripped = line.strip()
-        if stripped.lower() in _CARD_END_MARKERS:
-            break
-        # Component footnote: "* (a pinch...)" or "* - (a pinch...)"
         if re.match(r'^\*\s*-?\s*\(', stripped):
             footnotes.append(stripped)
         else:
             desc_lines.append(line)
 
-    result["description"] = "\n\n".join(
-        para.strip()
-        for para in "\n".join(desc_lines).split("\n\n")
-        if para.strip()
-    )
+    result["description"] = join_paragraphs(desc_lines)
     result["footnotes"] = footnotes
 
     return _postprocess(result)
@@ -244,67 +297,64 @@ def _parse_card_format(lines: list[str]) -> dict:
 
 # ── Inline-format parser ──────────────────────────────────────────────────────
 
-def _parse_inline_format(lines: list[str]) -> dict:
+def _parse_inline_format(lines: list[SourceLine], raw: list[str]) -> dict:
     """Parse the older 'Label: Value' inline format."""
     result = _empty_result()
-    result["name"] = lines[0].strip()
 
-    idx = 1
+    # A paste that opens on its level line carries no name -- D&D Beyond's
+    # detail page keeps the title outside the copied region. Taking line 0
+    # regardless is how a spell called "2nd LevelConjuration" got into the
+    # library; leaving it empty lets validate_spell() say so instead.
+    idx = 0
+    if _match_level_line(lines[0]) is None:
+        result["name"] = lines[0].strip()
+        idx = 1
+
     if idx >= len(lines):
         return result
 
     # Try to read a level+school line
-    level_line = lines[idx]
-    for pattern, kind in _LEVEL_LINE_PATTERNS:
-        m = pattern.match(level_line)
-        if m:
-            if kind == "level_school":
-                result["level"] = int(m.group(1))
-                result["school"] = m.group(2).capitalize()
-            elif kind == "school_cantrip":
-                result["school"] = m.group(1).capitalize()
-            # cantrip: level stays 0
-            idx += 1
-            break
+    matched = _match_level_line(lines[idx])
+    if matched is not None:
+        kind, m = matched
+        if kind == "level_school":
+            result["level"] = int(m.group(1))
+            result["school"] = m.group(2).capitalize()
+        elif kind == "school_cantrip":
+            result["school"] = m.group(1).capitalize()
+        # cantrip: level stays 0
+        idx += 1
 
     # Labeled property lines
-    desc_lines: list[str] = []
-    in_description = False
+    desc_start = len(lines)
 
     while idx < len(lines):
         line = lines[idx]
-        if not in_description:
-            matched = False
-            for pattern, field in _INLINE_LABEL_PATTERNS:
-                m = pattern.match(line)
-                if m:
-                    if field == "school" and result["school"]:
-                        matched = True
-                        break
-                    result[field] = m.group(1).strip()
+        matched = False
+        for pattern, field in _INLINE_LABEL_PATTERNS:
+            m = pattern.match(line)
+            if m:
+                if field == "school" and result["school"]:
                     matched = True
                     break
-            if not matched:
-                # An unrecognised property header ("Attack/Save: ...") is a
-                # short label. The length bound matters: without it, a first
-                # description line whose opening clause ends in a colon --
-                # "You touch a creature and remove one of the following
-                # effects from it: ..." -- matches too, and the whole spell
-                # description is silently dropped.
-                if re.match(r'^[A-Z][A-Za-z /]{0,24}:\s*\S', line) and not desc_lines:
-                    pass  # unrecognised property header, skip
-                else:
-                    in_description = True
-                    desc_lines.append(line)
-        else:
-            desc_lines.append(line)
+                result[field] = m.group(1).strip()
+                matched = True
+                break
+        if not matched:
+            # An unrecognised property header ("Attack/Save: ...") is a
+            # short label. The length bound matters: without it, a first
+            # description line whose opening clause ends in a colon --
+            # "You touch a creature and remove one of the following
+            # effects from it: ..." -- matches too, and the whole spell
+            # description is silently dropped.
+            if re.match(r'^[A-Z][A-Za-z /]{0,24}:\s*\S', line):
+                pass  # unrecognised property header, skip
+            else:
+                desc_start = idx
+                break
         idx += 1
 
-    result["description"] = "\n\n".join(
-        para.strip()
-        for para in "\n".join(desc_lines).split("\n\n")
-        if para.strip()
-    )
+    result["description"] = join_paragraphs(raw_slice(raw, lines, desc_start))
 
     return _postprocess(result)
 
@@ -314,15 +364,14 @@ def _parse_inline_format(lines: list[str]) -> dict:
 def parse_spell(text: str) -> dict:
     """Parse D&D Beyond spell text (card or inline format) into a spell dict."""
     text = _normalize(text)
-    lines = [l.strip() for l in text.strip().splitlines()]
-    lines = [l for l in lines if l]
+    lines, raw = split_lines(text)
 
     if not lines:
         raise ValueError("Empty text — nothing to parse.")
 
     if _is_card_format(lines):
-        return _parse_card_format(lines)
-    return _parse_inline_format(lines)
+        return _parse_card_format(lines, raw)
+    return _parse_inline_format(lines, raw)
 
 
 # ── Validator ─────────────────────────────────────────────────────────────────
