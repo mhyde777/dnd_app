@@ -88,7 +88,7 @@ starts by deleting `build/`, `dist/` and `package_win/`, which would take an
 installed copy with it.
 
 `package_WIN.sh` also builds the installer,
-`dist/combat-tracker-<version>-windows-x64-setup.exe`, when it can find Inno
+`dist/combat-tracker-<version>-x64-setup.exe`, when it can find Inno
 Setup's compiler:
 
 ```bash

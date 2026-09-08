@@ -211,7 +211,12 @@ if ISCC="$(find_iscc)"; then
         "/DOutputDir=$(cygpath -w "$ROOT_DIR/dist")" \
         ${SIGN_INSTALLER:+/DSign} \
         "$(cygpath -w "$ISS_FILE")"
-    INSTALLER_PATH="$ROOT_DIR/dist/${STAGE_NAME}-setup.exe"
+    # Not ${STAGE_NAME}-setup.exe: that name contains "windows", and every
+    # updater released before 0.6.0 picks by platform token with no suffix
+    # filter, so it would choose the installer over the zip and fail to
+    # unpack it. Keep "win" out of this name entirely -- the old token list
+    # matches the bare substring.
+    INSTALLER_PATH="$ROOT_DIR/dist/${DIST_NAME}-${VERSION}-x64-setup.exe"
     if [[ -f "$INSTALLER_PATH" ]]; then
         echo "Installer:        $INSTALLER_PATH"
     else

@@ -18,10 +18,10 @@ a MAJOR bump is the only kind that can require you to change how you work.
 ### Added
 
 - **Getting the app is now one download and one double-click.** Windows gets a
-  proper **installer** (`…-windows-x64-setup.exe`): it installs for you only,
+  proper **installer** (`…-x64-setup.exe`): it installs for you only,
   so it never asks for an administrator password, adds a Start Menu entry,
   offers a desktop shortcut, and registers an uninstaller in Add/Remove
-  Programs. Linux gets an **AppImage** (`…-linux-x86_64.AppImage`) — one file,
+  Programs. Linux gets an **AppImage** (`…-x86_64.AppImage`) — one file,
   mark it executable, open it. Neither asks you to unpack anything, choose a
   directory, or pick between two similarly named binaries.
 
@@ -69,6 +69,15 @@ a MAJOR bump is the only kind that can require you to change how you work.
   Tracker" finds the application rather than a bare `combat_tracker.exe` file —
   and the entry points at the launcher, which is what lets an update swap the
   version underneath it.
+- **Updating from 0.5.1 or earlier now works.** This release is the first to
+  publish an installer and an AppImage alongside the archives, and every
+  updater built before it picks a download by looking for its platform in the
+  filename — with no check that the file is one it can actually unpack. Those
+  clients chose the AppImage on Linux and the installer on Windows, downloaded
+  the whole thing, and stopped with "unsupported archive type". The two
+  first-download artifacts are named `combat-tracker-<version>-x86_64.AppImage`
+  and `combat-tracker-<version>-x64-setup.exe`, without a platform word, so an
+  older updater cannot mistake them for the archive it wants.
 - **Tables in spells and magic items are now tables.** D&D Beyond writes them
   as tab-separated rows, and HTML collapses tabs, so every table in the
   reference cards read as one run-on line per row: the Bag of Beans effect

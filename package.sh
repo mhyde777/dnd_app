@@ -167,7 +167,14 @@ echo "Release artifact: $TARBALL"
 # stays because the in-app updater unpacks it into versions/ -- an AppImage is
 # a read-only image and cannot be installed into. So: AppImage to arrive with,
 # tarball to update with, both built from the same staged payload.
-APPIMAGE_PATH="$ROOT_DIR/dist/${STAGE_NAME}.AppImage"
+# Deliberately NOT ${STAGE_NAME}: that carries the "linux" token, and every
+# updater released before 0.6.0 selects an asset by platform token alone with
+# no filter on the suffix. With "linux" in its name the AppImage outranks the
+# tarball for those clients, they download 68MB and then fail on "unsupported
+# archive type" -- self-update broken for everyone still on an older build.
+# The suffix filter in update_check protects new clients; the *name* is what
+# has to keep the old ones safe, because they are the ones choosing.
+APPIMAGE_PATH="$ROOT_DIR/dist/${DIST_NAME}-${VERSION}-${ARCH}.AppImage"
 if ! "$ROOT_DIR/installer/linux/build_appimage.sh" \
         "$PAYLOAD_DIR" "$ROOT_DIR/dist/$LAUNCHER_NAME" \
         "$VERSION" "$ARCH" "$APPIMAGE_PATH"; then

@@ -114,7 +114,7 @@ jobs:
         run: |
           VERSION="${{ needs.verify.outputs.version }}"
           for f in "dist/combat-tracker-$VERSION-linux-x86_64.tar.gz" \
-                   "dist/combat-tracker-$VERSION-linux-x86_64.AppImage" \
+                   "dist/combat-tracker-$VERSION-x86_64.AppImage" \
                    "dist/foundryvtt-bridge.zip" "dist/module.json"; do
             [ -s "$f" ] || { echo "::error::missing or empty: $f"; exit 1; }
           done
@@ -122,7 +122,7 @@ jobs:
           # upload artifact does not preserve the bit -- the release job sets
           # it again after download. Checked here so a build that produced a
           # non-executable file is still caught.
-          [ -x "dist/combat-tracker-$VERSION-linux-x86_64.AppImage" ] \
+          [ -x "dist/combat-tracker-$VERSION-x86_64.AppImage" ] \
             || { echo "::error::AppImage is not executable"; exit 1; }
 
       - uses: actions/upload-artifact@v4
@@ -171,7 +171,7 @@ jobs:
         run: |
           VERSION="${{ needs.verify.outputs.version }}"
           for f in "dist/combat-tracker-$VERSION-windows-x64.zip" \
-                   "dist/combat-tracker-$VERSION-windows-x64-setup.exe"; do
+                   "dist/combat-tracker-$VERSION-x64-setup.exe"; do
             [ -s "$f" ] || { echo "::error::missing or empty: $f"; exit 1; }
           done
 
@@ -265,9 +265,9 @@ jobs:
           echo "$NAMES"
           for expected in \
             "combat-tracker-$VERSION-linux-x86_64.tar.gz" \
-            "combat-tracker-$VERSION-linux-x86_64.AppImage" \
+            "combat-tracker-$VERSION-x86_64.AppImage" \
             "combat-tracker-$VERSION-windows-x64.zip" \
-            "combat-tracker-$VERSION-windows-x64-setup.exe" \
+            "combat-tracker-$VERSION-x64-setup.exe" \
             "foundryvtt-bridge.zip" "module.json" "SHA256SUMS"; do
             echo "$NAMES" | grep -qx "$expected" \
               || { echo "::error::$expected did not attach to $TAG"; exit 1; }

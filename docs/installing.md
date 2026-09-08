@@ -5,8 +5,8 @@ Nothing to unpack, nothing to configure, and no administrator password.
 
 | Your system | Download | Then |
 |---|---|---|
-| **Windows** | `combat-tracker-…-windows-x64-setup.exe` | Run it |
-| **Linux** | `combat-tracker-…-linux-x86_64.AppImage` | Make it executable, then open it |
+| **Windows** | `combat-tracker-…-x64-setup.exe` | Run it |
+| **Linux** | `combat-tracker-…-x86_64.AppImage` | Make it executable, then open it |
 
 Your encounters, characters and settings live in `~/.dnd_tracker_config`
 (`%USERPROFILE%\.dnd_tracker_config` on Windows) and are never touched by
@@ -36,7 +36,7 @@ file listing a fingerprint for each download. In PowerShell, in your Downloads
 folder:
 
 ```powershell
-Get-FileHash .\combat-tracker-0.5.1-windows-x64-setup.exe -Algorithm SHA256
+Get-FileHash .\combat-tracker-0.6.0-x64-setup.exe -Algorithm SHA256
 ```
 
 Compare the result with the line for that filename in `SHA256SUMS`. If they
@@ -64,8 +64,8 @@ applies to anything downloaded from the web.
 **Or in a terminal:**
 
 ```bash
-chmod +x combat-tracker-*-linux-x86_64.AppImage
-./combat-tracker-*-linux-x86_64.AppImage
+chmod +x combat-tracker-*-x86_64.AppImage
+./combat-tracker-*-x86_64.AppImage
 ```
 
 ### Installing it properly

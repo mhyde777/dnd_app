@@ -18,8 +18,8 @@ it. There is nothing to unpack and nothing to configure.
 
 | | | |
 |---|---|---|
-| **Windows** | `combat-tracker-…-windows-x64-setup.exe` | Run it. Installs for you only, so it never asks for an administrator password. |
-| **Linux** | `combat-tracker-…-linux-x86_64.AppImage` | Right-click → *Properties* → tick **Allow executing file as program**, then double-click. |
+| **Windows** | `combat-tracker-…-x64-setup.exe` | Run it. Installs for you only, so it never asks for an administrator password. |
+| **Linux** | `combat-tracker-…-x86_64.AppImage` | Right-click → *Properties* → tick **Allow executing file as program**, then double-click. |
 | **macOS** | — | No build yet. See [docs/packaging-macos.md](docs/packaging-macos.md). |
 
 <details>
@@ -33,7 +33,7 @@ it, not that anything is wrong with it. If you would rather check for yourself,
 every release publishes a `SHA256SUMS` file; in PowerShell:
 
 ```powershell
-Get-FileHash .\combat-tracker-0.5.1-windows-x64-setup.exe -Algorithm SHA256
+Get-FileHash .\combat-tracker-0.6.0-x64-setup.exe -Algorithm SHA256
 ```
 
 and compare it with the line for that filename in `SHA256SUMS`.
@@ -156,8 +156,8 @@ the in-app updater:
 
 | Artifact | For |
 |---|---|
-| `…-windows-x64-setup.exe` | Windows, first install ([Inno Setup](installer/windows/combat-tracker.iss)) |
-| `…-linux-x86_64.AppImage` | Linux, first install ([build script](installer/linux/build_appimage.sh)) |
+| `…-x64-setup.exe` | Windows, first install ([Inno Setup](installer/windows/combat-tracker.iss)) |
+| `…-x86_64.AppImage` | Linux, first install ([build script](installer/linux/build_appimage.sh)) |
 | `…-windows-x64.zip`, `…-linux-x86_64.tar.gz` | Help → Check for Updates |
 | `foundryvtt-bridge.zip`, `module.json` | the Foundry module |
 | `SHA256SUMS` | every artifact above |

@@ -69,7 +69,10 @@ ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0
 
 OutputDir={#OutputDir}
-OutputBaseFilename=combat-tracker-{#AppVersion}-windows-x64-setup
+; No "windows" in this name: updaters released before 0.6.0 choose a
+; release asset by platform token with no filter on the suffix, and would
+; pick the installer over the .zip and fail to unpack it.
+OutputBaseFilename=combat-tracker-{#AppVersion}-x64-setup
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
