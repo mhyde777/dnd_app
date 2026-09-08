@@ -155,7 +155,12 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip pipenv
-          pipenv install --dev --deploy
+          # No --deploy here: pyqt5-qt5 publishes a Windows wheel for 5.15.2
+          # only, while every version the lock can pin (5.15.14+) is Linux and
+          # macOS alone. One pinned version cannot satisfy both platforms, so
+          # Windows resolves per platform the way package_WIN.sh does locally.
+          # Linux keeps --deploy, and with it the lockfile's guarantee.
+          pipenv install --dev --skip-lock
 
       - name: Build
         shell: bash
