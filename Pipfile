@@ -15,6 +15,7 @@ markdown = "*"
 
 [dev-packages]
 pyinstaller = "*"
+pytest = "*"
 
 [scripts]
 package = "./package.sh"
