@@ -226,6 +226,14 @@ else
 fi
 
 
+# The Foundry module ships with every release; its manifest URL points at
+# /releases/latest/download/, so a release without it breaks installs.
+# It is built before the checksums, not after, because SHA256SUMS lists
+# foundryvtt-bridge.zip -- package.sh has always had this order, and having it
+# the other way round here meant sha256sum was asked to hash a file that did
+# not exist yet.
+"$ROOT_DIR/package_module.sh"
+
 # Published alongside the build so the in-app updater can check what it
 # downloaded. Upload both to the GitHub release.
 # Every artifact is listed, the installer included: SHA256SUMS is what someone
@@ -241,9 +249,6 @@ fi
 # ------------------------------------------------------------
 # Publish (opt-in)
 # ------------------------------------------------------------
-# The Foundry module ships with every release; its manifest URL points at
-# /releases/latest/download/, so a release without it breaks installs.
-"$ROOT_DIR/package_module.sh"
 
 if [[ "$PUBLISH" -eq 1 ]]; then
     # Uploads the zip and the checksums together, then checks the release
