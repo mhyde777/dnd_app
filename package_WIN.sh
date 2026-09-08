@@ -196,6 +196,15 @@ find_iscc() {
 if ISCC="$(find_iscc)"; then
     # ISCC is a native Windows program: every path it is handed has to be a
     # Windows path, not the Git Bash view of one.
+    #
+    # MSYS2_ARG_CONV_EXCL is what keeps it that way. Git Bash rewrites any
+    # argument that looks like a POSIX path before a native program sees it,
+    # and "/DAppVersion=0.6.0" looks exactly like one -- it arrives mangled
+    # into something ISCC reads as a second script filename, and the compiler
+    # stops with "You may not specify more than one script filename". The
+    # switches are already correct; conversion has to be turned off, not
+    # worked around.
+    MSYS2_ARG_CONV_EXCL="*" MSYS_NO_PATHCONV=1 \
     "$ISCC" \
         "/DAppVersion=$VERSION" \
         "/DStageDir=$(cygpath -w "$STAGE_DIR")" \
