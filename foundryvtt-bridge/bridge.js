@@ -47,6 +47,8 @@ function buildCombatSnapshot() {
     const actor = c.actor;
     const hp = actor?.system?.attributes?.hp ?? {};
     const acData = actor?.system?.attributes?.ac;
+    // DEX is only used by the tracker to break initiative ties.
+    const dexValue = actor?.system?.abilities?.dex?.value ?? null;
     let acValue = null;
     if (acData && typeof acData === "object") {
       acValue = acData.value ?? null;
@@ -79,6 +81,7 @@ function buildCombatSnapshot() {
         tempmax: hp.tempmax ?? 0,
       },
       ac: acValue,
+      dex: dexValue,
       effects,
       excludeFromSync: Boolean(tokenFlag || actorFlag),
     };

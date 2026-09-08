@@ -807,6 +807,24 @@ def extract_limited_abilities(data: dict) -> dict[str, int]:
     return result
 
 
+
+def statblock_dex(data: dict) -> int:
+    """The DEX score a statblock records, or -1 when it doesn't have one.
+
+    Initiative ties are broken on DEX, so an absent or unparseable score has
+    to read as "unknown" rather than as a 10 — a fabricated 10 would outrank
+    every creature whose score nobody has entered.
+    """
+    scores = data.get("ability_scores") if isinstance(data, dict) else None
+    if not isinstance(scores, dict):
+        return -1
+    try:
+        dex = int(scores.get("dex"))
+    except (TypeError, ValueError):
+        return -1
+    return dex if dex > 0 else -1
+
+
 # ── Validation ──────────────────────────────────────────────────────
 
 _REQUIRED_FIELDS = ["name", "size", "type", "armor_class", "hit_points", "ability_scores"]

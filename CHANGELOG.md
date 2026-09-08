@@ -13,6 +13,128 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ## [Unreleased]
 
+### Added
+
+- **Getting the app is now one download and one double-click.** Windows gets a
+  proper **installer** (`…-windows-x64-setup.exe`): it installs for you only,
+  so it never asks for an administrator password, adds a Start Menu entry,
+  offers a desktop shortcut, and registers an uninstaller in Add/Remove
+  Programs. Linux gets an **AppImage** (`…-linux-x86_64.AppImage`) — one file,
+  mark it executable, open it. Neither asks you to unpack anything, choose a
+  directory, or pick between two similarly named binaries.
+
+  The `.zip` and `.tar.gz` are still published: they are what **Help → Check
+  for Updates** downloads, and they remain the right choice for a portable
+  copy. See [Installing](docs/installing.md).
+
+  The Windows installer is **not code-signed**, so SmartScreen still warns that
+  the publisher is unrecognized — *More info* → *Run anyway*. Every release
+  publishes `SHA256SUMS` for anyone who would rather check the download
+  themselves.
+- **The Linux AppImage offers to install itself.** An AppImage is a single
+  read-only file, which is what makes it easy to download but also means it
+  cannot update itself. The first time you run it, it offers to install into
+  `~/.local/opt/combat-tracker` and add itself to your applications menu, after
+  which Help → Check for Updates works normally. Declining is a real answer and
+  is remembered; **File → Install Combat Tracker…** is there if you change your
+  mind. Nothing outside your home directory is written either way.
+- **Help → Documentation** (`Shift+F1`) opens the full guide in a window you
+  can leave open beside the tracker while you work — set Foundry up with the
+  Foundry page in view, work through storage with the storage page in view. It
+  is the same documentation that is published with the project, shipped inside
+  the build, so it works offline and describes the version you are actually
+  running rather than whatever is currently on the web. Contents down the side,
+  links between pages, and Find (`Ctrl+F`) within a page.
+- **Storage is now a choice of provider rather than "local or API".** Alongside
+  a folder on this computer you can keep your library in **Dropbox, Google
+  Drive, OneDrive or iCloud Drive** — the app finds the folder those apps
+  already sync and says which ones it can see, with nothing to authorise and no
+  account to connect — or in a **WebDAV** share (Nextcloud, ownCloud, Box, a
+  NAS) or an **S3-compatible** bucket (S3, Cloudflare R2, Backblaze B2, MinIO),
+  where several machines can share one library at once. Every provider has a
+  **Test Connection** button that tells you what is wrong before you commit to
+  it.
+- **Help → Installation Details…** shows where this copy is installed and
+  whether it can update itself — and when it cannot, which specific check
+  failed, with a **Copy** button for a bug report. The same summary goes into
+  the log at every start, so a report about updating arrives with the answer
+  already in it.
+
+### Fixed
+
+- **Windows: the app now appears as an app.** Installing with the new
+  `setup.exe` creates a real Start Menu entry, so searching for "Combat
+  Tracker" finds the application rather than a bare `combat_tracker.exe` file —
+  and the entry points at the launcher, which is what lets an update swap the
+  version underneath it.
+- **Tables in spells and magic items are now tables.** D&D Beyond writes them
+  as tab-separated rows, and HTML collapses tabs, so every table in the
+  reference cards read as one run-on line per row: the Bag of Beans effect
+  table, the Deck of Many Things card table, the damage-type table on Armor of
+  Resistance, Control Weather's three stage tables — 140 items and 30 spells in
+  all. They render as real tables now, with the column heading, striped rows so
+  a hundred-row table stays readable, and the title above it attached to the
+  table rather than floating off as a paragraph.
+- **Paragraph breaks survived the import.** The parsers dropped every blank
+  line before assembling a description, so *no* item or spell in the library
+  had a paragraph break left in it — a table, its caption and the prose around
+  it arrived as one undivided block. All 1,747 items and 553 spells were
+  re-imported with their structure intact.
+- **Statblocks inside a spell or item are laid out as statblocks.** The
+  creature a spell summons (Homunculus Servant) or the form an item takes
+  (Apparatus of the Crab) now renders in its own panel: name, size and type,
+  bolded fields, a single ability table rather than two half-tables with a
+  heading stranded between them, and Traits / Actions / Reactions as headings.
+- **Nineteen spells were missing their opening paragraph.** D&D Beyond prints
+  the "Damage/Effect" heading even when a spell has nothing under it, and the
+  first paragraph of the description was being stored as that field's value
+  instead. Homunculus Servant, Create Magen, Iron Body and sixteen others have
+  their full text back.
+- **A spell copied from a spell's own page could arrive named
+  "2nd LevelConjuration".** That page does not include the spell's title in
+  what you copy, and runs the level and school together; the level and school
+  are now read correctly, and a paste with no title is reported as missing a
+  name instead of being given that one.
+- **Windows: "Update and Restart" was unavailable more often than it should
+  have been.** The usual cause was an install extracted somewhere your account
+  cannot write to, such as `C:\Program Files`; the installer puts the app under
+  your own user account instead, which is always writable. Installing over an
+  old pre-launcher layout now removes it rather than leaving a stale
+  `combat_tracker.exe` behind for a shortcut to keep finding.
+- **Windows: an update could fail intermittently while antivirus was scanning
+  it.** Moving the freshly unpacked version into place could hit a transient
+  file lock from Windows Defender and fail with a permission error. It is now
+  retried briefly, so the scan finishes and the update proceeds.
+- **The documentation was wrong about which binary to run.** It said starting
+  `versions\...\combat_tracker.exe` produced a copy that "cannot update
+  itself" — it does not; the launcher runs that same binary anyway, and updating
+  works from either. Running the launcher is still preferable, because only it
+  can fall back to the previous version when a new one fails to start.
+
+### Changed
+
+- **Releases are built and published automatically from a tag**, both platforms
+  at once, instead of by hand on two machines. A release is created as a draft,
+  every artifact is attached, and only then is it made public — so a release can
+  no longer appear with its downloads missing. Previously a release cut on the
+  Linux machine went out with no Windows build until someone remembered to
+  build it separately, and until they did, Windows users pressing **Check for
+  Updates** were told "no build for this system".
+- The Storage settings tab is a provider list with a form for whichever one you
+  pick, replacing the two radio buttons and the always-visible API fields.
+  Settings you have entered for a provider are kept when you switch away and
+  back, so you can compare two without retyping credentials.
+- "API" is gone as a name for this: it described one of the ways to store a
+  library, not the thing itself, and it was also the name of the object the app
+  used even when your data was in a plain folder.
+
+### Upgrading
+
+Nothing to do. **Local Files** becomes **This computer** and **Remote API
+Server** becomes **HTTP server**, with your folder or URL and key already
+filled in. `.env` variables are still read, and the previous settings keys are
+left in place, so going back to an older build also works.
+
 ## [0.5.1] — 2026-08-28
 
 ### Fixed

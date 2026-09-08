@@ -1297,6 +1297,20 @@ class InitiativeTracker(QMainWindow, Application):
         self.settings_action.triggered.connect(self.open_settings)
         self.file_menu.addAction(self.settings_action)
 
+        # Only when running as an AppImage, which is the only case where it
+        # does anything. A permanently greyed-out entry would leave everyone
+        # else wondering what they were missing.
+        from ui import appimage_install_dialog
+        if appimage_install_dialog.available():
+            self.install_appimage_action = QAction("Install Combat Tracker…", self)
+            self.install_appimage_action.setToolTip(
+                "Add to your applications menu and enable one-click updates"
+            )
+            self.install_appimage_action.triggered.connect(
+                lambda: appimage_install_dialog.run_install(self)
+            )
+            self.file_menu.addAction(self.install_appimage_action)
+
         # Built here, but added to View only (_setup_view_menu). They used to
         # sit in both menus; View is where the other customizers are, and where
         # anyone looks for them.
@@ -1560,6 +1574,13 @@ class InitiativeTracker(QMainWindow, Application):
         self.check_updates_action.triggered.connect(self.check_for_updates_now)
         self.help_menu.addAction(self.check_updates_action)
 
+        self.install_details_action = QAction("Installation Details…", self)
+        self.install_details_action.setToolTip(
+            "Where this copy is installed, and whether it can update itself"
+        )
+        self.install_details_action.triggered.connect(self.show_install_details)
+        self.help_menu.addAction(self.install_details_action)
+
         self.help_menu.addSeparator()
 
         # Carries the CC-BY-4.0 notice for the bundled SRD library, which has
@@ -1567,6 +1588,12 @@ class InitiativeTracker(QMainWindow, Application):
         self.about_action = QAction("About", self)
         self.about_action.triggered.connect(self.show_about)
         self.help_menu.addAction(self.about_action)
+
+    def show_install_details(self):
+        """Help → Installation Details. The state behind "can this update?"."""
+        from ui.install_details_dialog import InstallDetailsDialog
+
+        InstallDetailsDialog(self).exec_()
 
     def show_docs(self, filename: str = ""):
         """Help → Documentation. Non-modal, and one window however often asked.

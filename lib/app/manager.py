@@ -41,6 +41,11 @@ class CreatureManager:
         Canonical order:
         - WITH initiative (positive integer) first, initiative DESC
         - WITHOUT initiative (None, empty, 0, or -1) after, name (natural/human) ASC
+
+        Ties on initiative are broken by Dexterity score DESC, the usual table
+        ruling. A creature whose DEX nobody has recorded (-1) can't be ranked
+        that way, so it sorts after every creature that has one and falls back
+        to the natural-name order the tracker used before DEX existed.
         """
         def _normalized_initiative(c: I_Creature) -> Optional[int]:
             init = getattr(c, "initiative", None)
@@ -54,11 +59,26 @@ class CreatureManager:
                 return None
             return init_value
 
-        def _sort_key(kv: Tuple[str, I_Creature]) -> Tuple[int, int, List[Any]]:
+        def _normalized_dex(c: I_Creature) -> Optional[int]:
+            dex = getattr(c, "dex", None)
+            if dex in (None, "", -1):
+                return None
+            try:
+                dex_value = int(dex)
+            except (TypeError, ValueError):
+                return None
+            if dex_value <= 0:
+                return None
+            return dex_value
+
+        def _sort_key(kv: Tuple[str, I_Creature]) -> Tuple[int, int, int, int, List[Any]]:
             init_value = _normalized_initiative(kv[1])
+            dex_value = _normalized_dex(kv[1])
             return (
                 0 if init_value is not None else 1,  # bucket
                 -(init_value or 0),                  # init DESC
+                0 if dex_value is not None else 1,   # known DEX first
+                -(dex_value or 0),                   # DEX DESC
                 self._natural_key(kv[0]),            # name ASC
             )
 

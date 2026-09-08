@@ -47,8 +47,12 @@ you go looking for where one ends and the other begins.
 references stable as HP and state change. `CreatureManager` sorts naturally, so
 "Goblin 2" comes before "Goblin 10" rather than after it.
 
-**Turn order** is initiative descending, name ascending as the tiebreaker,
-computed on the fly rather than stored.
+**Turn order** is initiative descending, Dexterity descending as the
+tiebreaker, then name ascending, computed on the fly rather than stored. A
+creature whose DEX nobody has recorded sorts after every creature that has one,
+so a tie among creatures with no scores still breaks by name. Monsters get
+their DEX from the statblock library, PCs from the DEX column in Create/Update
+Characters, and anything synced from Foundry from the actor's own score.
 
 ---
 
@@ -269,6 +273,60 @@ Full detail in [auto-update.md](auto-update.md).
 
 ---
 
+## Packaging
+
+Every release carries two artifacts per platform, and the split is deliberate:
+
+| | Windows | Linux |
+|---|---|---|
+| **To arrive with** | `…-setup.exe` (Inno Setup) | `…​.AppImage` |
+| **To update with** | `…​.zip` | `…​.tar.gz` |
+
+The installer and the AppImage exist so that getting the app is one download
+and one double-click — no unpacking, no choosing a directory, no picking
+between two similarly named binaries. The archives are what
+`update_check.asset_for_platform()` downloads, and it filters to extensions
+`update_install.extract()` understands: handing it a `setup.exe` would fail
+after the whole download had already completed.
+
+**The Windows installer is per-user by design.** `PrivilegesRequired=lowest`
+puts it in `%LOCALAPPDATA%\Programs` and means Windows never shows a UAC
+prompt — an elevation dialog on an unsigned binary reads as malware to exactly
+the person the installer is for. It also keeps the install root user-writable,
+which is what `can_self_update()` requires. The installer lays down the same
+`versions/<ver>/` + `current` + launcher tree the zip carries, so self-updating
+is unaffected by how the app arrived. It is unsigned; `/DSign` is already wired
+into the `.iss`, so adding a certificate is a flag rather than a restructuring.
+
+**The AppImage is assembled by hand, not with `appimagetool`,** for one reason:
+the runtime. `appimagetool`'s default runtime dynamically loads
+`libfuse.so.2`, which Ubuntu 22.04+ and Fedora no longer install, so a
+double-click fails with `dlopen(): error loading libfuse.so.2` for precisely
+the user who cannot diagnose it. `installer/linux/build_appimage.sh` uses the
+static `type2-runtime` build and concatenates it with a squashfs image itself —
+an AppImage is only `[runtime][squashfs]`, and that is less machinery than
+persuading `appimagetool` to use a different runtime.
+
+An AppImage is read-only, so it cannot self-update: `install_layout.detect()`
+correctly returns `None` inside one. `app/appimage.py` buys that back by
+offering, once, to copy the payload it is already carrying into
+`~/.local/opt/combat-tracker` in the ordinary layout and write a desktop entry
+— after which updates work normally. It is an **offer**, never automatic:
+writing into someone's home directory the first time they run a downloaded file
+is not something to do unasked. The payload deliberately lives at `usr/bin`
+inside the AppDir and *not* under a directory called `versions`, because that
+name is what `detect()` keys on and a read-only mount that looked updatable
+would offer a button that could only fail.
+
+**Releases are built by CI, from a tag.** `.github/workflows/release.yml` builds
+both platforms in parallel, publishes the release as a draft, attaches
+everything, makes it public last, then re-reads it from the API to confirm each
+expected asset landed. This replaced building on two machines by hand, where
+forgetting the Windows half published a release that looked finished and left
+every Windows user's updater reporting "no build for this system".
+
+---
+
 ## Invariants
 
 Things that look harmless and are not.
@@ -308,6 +366,54 @@ can be served from a stale `__pycache__` entry: Python validates bytecode on
 the source's mtime *in whole seconds* and its size, so changing the version to
 another string of the same length within the same second is invisible to it.
 This produced artifacts named after a version that did not exist.
+
+**A parsed description carries structure; never render it with a bare
+newline→`<br>` replace.** D&D Beyond writes tables as tab-delimited rows and
+paragraph breaks as blank lines. The parsers all find structure positionally,
+so every one of them started by dropping the blank lines, and the cards then
+joined what was left with `<br>` — where HTML's whitespace collapsing turned
+`1d100\tEffect` into `1d100 Effect`. A 1,700-item magic-item library arrived
+with 140 tables and its embedded statblocks reading as run-on prose, and no
+description at all had a paragraph break left in it.
+
+`app/text_blocks.py` holds the parser half: `split_lines()` returns both the
+compacted list the positional passes need and the raw lines behind it, each
+compacted line remembering its origin index, so `raw_slice()` can cut a
+description back out of the raw text with its blanks intact. Its per-line strip
+keeps *leading* tabs, because a statblock's ability table is written
+`\t\tMod\tSave` over `STR\t16\t+3\t+3` and stripping those empty cells slides
+the header two columns to the left.
+
+`ui/rich_text.py` holds the render half and is the only place a description
+becomes HTML. It escapes everything (descriptions are pasted text), turns a run
+of two or more tabbed lines into a real `<table>`, and bolds trait lead-ins. A
+*lone* tabbed line stays prose — it is a stray tab in a sentence far more often
+than it is a one-row table. All three callers — the spell card, the item card
+and the statblock's spell tooltip — go through `render_description()`; do not
+add a fourth copy of the logic.
+
+An **embedded statblock** — the creature a spell summons, the form an item
+turns into — is a region, not a line style. `_find_statblock()` keys on the
+size-and-type line ("Tiny Construct, Neutral") and renders everything from
+there to the end into its own bordered panel. Being inside that region is what
+makes the bare 2024 field form (`AC 13`) safe to bold; in ordinary prose only
+the colon form (`Armor Class: 20`) is, because "Speed is doubled while you wear
+the boots" is a sentence. D&D Beyond also repeats a table's header partway
+through — an ability block is two three-row groups, each with its own
+`Mod / Save` line — so rows equal to the header are dropped and the six
+abilities render as one table.
+
+Two shapes of D&D Beyond paste feed this, and both have a trap. A **card** copy
+emits the "Attack/Save" and "Damage/Effect" labels even when the spell has no
+value for them, so the line beneath is the description's opening paragraph;
+storing it as the field value ate the first paragraph of 19 spells, and
+`_is_card_tag()` now takes a value only when it reads as a short tag rather
+than a sentence. A **detail page** copy carries no title at all and runs the
+level and school together as `2nd LevelConjuration`, which used to match no
+level pattern and become the spell's name. The separator is optional now, the
+school half must name one of the eight real schools, and a line that parses as
+a level line is never taken as the name — a missing-name warning is the honest
+result when the title is not in the paste.
 
 **`CreatureTableModel._row_background()` is the single authority on a row's
 colour.** It resolves the whole row before any per-cell tint, always returns a

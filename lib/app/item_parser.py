@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import re
 
+from app.text_blocks import SourceLine, join_paragraphs, raw_slice, split_lines
+
 
 # ── Key helper ────────────────────────────────────────────────────────────────
 
@@ -323,7 +325,7 @@ def _is_card_format(lines: list[str]) -> bool:
 
 # ── Card-format parser ────────────────────────────────────────────────────────
 
-def _parse_card_format(lines: list[str]) -> dict:
+def _parse_card_format(lines: list[SourceLine], raw: list[str]) -> dict:
     result = _empty_result()
     result["name"] = lines[0].strip()
 
@@ -357,13 +359,10 @@ def _parse_card_format(lines: list[str]) -> dict:
         else:
             break
 
-    # Remaining lines: description
-    desc_lines = [l for l in lines[idx:]]
-    result["description"] = "\n\n".join(
-        para.strip()
-        for para in "\n".join(desc_lines).split("\n\n")
-        if para.strip()
-    )
+    # Remaining lines: description. Cut from the raw paste rather than from
+    # the compacted list, so its blank lines -- the paragraph breaks, and what
+    # separates a table from the prose introducing it -- survive.
+    result["description"] = join_paragraphs(raw_slice(raw, lines, idx))
 
     result["tags"] = _build_tags(result["item_type"], result["rarity"], result["subtype"])
     return result
@@ -371,7 +370,7 @@ def _parse_card_format(lines: list[str]) -> dict:
 
 # ── Inline-format parser ──────────────────────────────────────────────────────
 
-def _parse_inline_format(lines: list[str]) -> dict:
+def _parse_inline_format(lines: list[SourceLine], raw: list[str]) -> dict:
     result = _empty_result()
     result["name"] = lines[0].strip()
 
@@ -394,31 +393,23 @@ def _parse_inline_format(lines: list[str]) -> dict:
             idx += 1
 
     # Inline label lines, then description
-    desc_lines: list[str] = []
-    in_description = False
+    desc_start = len(lines)
 
     while idx < len(lines):
         line = lines[idx]
-        if not in_description:
-            matched = False
-            for pattern, field in _INLINE_LABEL_PATTERNS:
-                m = pattern.match(line)
-                if m:
-                    _apply_field(result, field, m.group(1).strip())
-                    matched = True
-                    break
-            if not matched:
-                in_description = True
-                desc_lines.append(line)
-        else:
-            desc_lines.append(line)
+        matched = False
+        for pattern, field in _INLINE_LABEL_PATTERNS:
+            m = pattern.match(line)
+            if m:
+                _apply_field(result, field, m.group(1).strip())
+                matched = True
+                break
+        if not matched:
+            desc_start = idx
+            break
         idx += 1
 
-    result["description"] = "\n\n".join(
-        para.strip()
-        for para in "\n".join(desc_lines).split("\n\n")
-        if para.strip()
-    )
+    result["description"] = join_paragraphs(raw_slice(raw, lines, desc_start))
 
     result["tags"] = _build_tags(result["item_type"], result["rarity"], result["subtype"])
     return result
@@ -446,15 +437,14 @@ def _apply_field(result: dict, field: str, value: str) -> None:
 
 def parse_item(text: str) -> dict:
     text = _normalize(text)
-    lines = [l.strip() for l in text.strip().splitlines()]
-    lines = [l for l in lines if l]
+    lines, raw = split_lines(text)
 
     if not lines:
         raise ValueError("Empty text — nothing to parse.")
 
     if _is_card_format(lines):
-        return _parse_card_format(lines)
-    return _parse_inline_format(lines)
+        return _parse_card_format(lines, raw)
+    return _parse_inline_format(lines, raw)
 
 
 # ── Validator ─────────────────────────────────────────────────────────────────

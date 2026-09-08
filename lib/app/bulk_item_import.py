@@ -50,6 +50,7 @@ from app.item_parser import (
     item_key, validate_item,
     _parse_type_line, _parse_cost_gp, _parse_weight, _build_tags, _normalize,
 )
+from app.text_blocks import SourceLine, join_paragraphs, raw_slice, split_lines
 
 
 # ── Constants ─────────────────────────────────────────────────────────────────
@@ -116,10 +117,14 @@ def _is_source_line(line: str) -> bool:
     return bool(re.search(r"[\s'\(\)\:\&0-9]", line.strip()))
 
 
-def _normalize_lines(text: str) -> list[str]:
-    text = _normalize(text)
-    lines = [line.strip() for line in text.splitlines()]
-    return [line for line in lines if line]
+def _normalize_lines(text: str) -> tuple[list[SourceLine], list[str]]:
+    """The compacted lines the block detection needs, plus the raw paste.
+
+    Block boundaries are found positionally, so the detection passes still see
+    a list with no blanks in it; the raw list is what a description is cut from
+    once its bounds are known, and is the only reason paragraph breaks survive.
+    """
+    return split_lines(_normalize(text))
 
 
 # ── Block boundary detection ──────────────────────────────────────────────────
@@ -216,7 +221,9 @@ class ParsedItemBlock:
     is_legacy: bool
 
 
-def _parse_item_segment(segment: list[str]) -> tuple[dict, bool] | None:
+def _parse_item_segment(
+    segment: list[SourceLine], raw: list[str]
+) -> tuple[dict, bool] | None:
     """
     Parse a single item block (lines starting at the name).
     Returns (item_dict, is_legacy) or None if the block is incomplete.
@@ -276,11 +283,8 @@ def _parse_item_segment(segment: list[str]) -> tuple[dict, bool] | None:
                 dnd_tags = [p.lower() for p in parts if p]
                 desc_start = 1
 
-    desc_lines = remaining[desc_start:vdp_idx]
-    desc_text = "\n\n".join(
-        para.strip()
-        for para in "\n".join(desc_lines).split("\n\n")
-        if para.strip()
+    desc_text = join_paragraphs(
+        raw_slice(raw, remaining, desc_start, vdp_idx)
     )
 
     # Parse source and canonical tags from after "View Details Page"
@@ -405,7 +409,9 @@ def _split_notes(value: str) -> list[str]:
     return [part.strip().lower() for part in value.split(",") if part.strip()]
 
 
-def _parse_magic_item_segment(segment: list[str]) -> tuple[dict, bool] | None:
+def _parse_magic_item_segment(
+    segment: list[SourceLine], raw: list[str]
+) -> tuple[dict, bool] | None:
     """Parse one magic-item block. None when the item is not owned."""
     if not segment:
         return None
@@ -452,18 +458,14 @@ def _parse_magic_item_segment(segment: list[str]) -> tuple[dict, bool] | None:
     # is not part of the prose.
     note_tags: list[str] = []
     body: list[str] = []
-    for line in segment[body_start:vdp_idx]:
+    for line in raw_slice(raw, segment, body_start, vdp_idx):
         m = _NOTES_PREFIX_RE.match(line.strip())
         if m:
             note_tags.extend(_split_notes(m.group(1)))
         else:
             body.append(line)
 
-    description = "\n\n".join(
-        para.strip()
-        for para in "\n".join(body).split("\n\n")
-        if para.strip()
-    )
+    description = join_paragraphs(body)
 
     # After the details link: an optional "Tags:" list, then the source book.
     # "Partnered Content" is a marketplace badge, not part of either.
@@ -503,7 +505,7 @@ def _parse_magic_item_segment(segment: list[str]) -> tuple[dict, bool] | None:
 
 
 def _parse_magic_item_listing(
-    lines: list[str],
+    lines: list[SourceLine], raw: list[str],
 ) -> tuple[list[ParsedItemBlock], list[str]]:
     starts = _find_magic_item_starts(lines)
     if not starts:
@@ -514,7 +516,7 @@ def _parse_magic_item_listing(
     boundaries = starts + [len(lines)]
     for start, end in zip(boundaries, boundaries[1:]):
         segment = lines[start:end]
-        result = _parse_magic_item_segment(segment)
+        result = _parse_magic_item_segment(segment, raw)
         if result is None:
             unowned.append(segment[0].strip())
             continue
@@ -559,12 +561,12 @@ def parse_bulk_items_report(
     description should be, so there is nothing to import -- but silently
     dropping a third of a paste is alarming, so the caller gets to say so.
     """
-    lines = _normalize_lines(text)
+    lines, raw = _normalize_lines(text)
     if not lines:
         return [], []
 
     if is_magic_item_listing(lines):
-        parsed, unowned = _parse_magic_item_listing(lines)
+        parsed, unowned = _parse_magic_item_listing(lines, raw)
         if not include_legacy:
             parsed = [item for item in parsed if not item.is_legacy]
         return parsed, unowned
@@ -579,7 +581,7 @@ def parse_bulk_items_report(
 
     for start, end in zip(boundaries, boundaries[1:]):
         segment = lines[start:end]
-        result = _parse_item_segment(segment)
+        result = _parse_item_segment(segment, raw)
         if result is None:
             unowned.append(segment[0].strip())
             continue

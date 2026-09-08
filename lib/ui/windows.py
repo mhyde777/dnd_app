@@ -228,10 +228,17 @@ class AddCombatantWindow(QDialog):
                 if innate_spells:
                     creature["_innate_slots"] = innate_spells
 
-            from app.statblock_parser import extract_limited_abilities
-            ability_uses = extract_limited_abilities(row.get("_statblock_data") or {})
+            from app.statblock_parser import extract_limited_abilities, statblock_dex
+            statblock_data = row.get("_statblock_data") or {}
+            ability_uses = extract_limited_abilities(statblock_data)
             if ability_uses:
                 creature["_ability_uses"] = ability_uses
+
+            # DEX breaks initiative ties; the statblock is its only source
+            # here, and add_combatant() re-looks it up if this row had none.
+            dex = statblock_dex(statblock_data)
+            if dex > 0:
+                creature["_dex"] = dex
 
             data.append(creature)
 
@@ -441,7 +448,7 @@ class BuildEncounterWindow(QDialog):
         remove_btn.clicked.connect(_remove)
 
     def get_data(self) -> list:
-        from app.statblock_parser import extract_limited_abilities
+        from app.statblock_parser import extract_limited_abilities, statblock_dex
         monsters = []
         for row in self.roster_rows:
             data = row["statblock_data"] or {}
@@ -451,6 +458,7 @@ class BuildEncounterWindow(QDialog):
                 max_hp=row["hp"].value(),
                 curr_hp=row["hp"].value(),
                 armor_class=row["ac"].value(),
+                dex=statblock_dex(data),
             )
             sc = data.get("spellcasting")
             if sc:

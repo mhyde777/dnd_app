@@ -34,6 +34,9 @@ class I_Creature:
     _curr_hp: int = field(default=-1)
     _temp_hp: int = field(default=0)
     _armor_class: int = field(default=-1)
+    # Dexterity score, used only to break initiative ties. -1 means "unknown",
+    # which is the normal state for a PC nobody has typed a score for.
+    _dex: int = field(default=-1)
     _movement: int = field(default=-1)
     _action: bool = field(default=False)
     _bonus_action: bool = field(default=False)
@@ -87,6 +90,7 @@ class I_Creature:
             "_curr_hp": self.curr_hp,
             "_temp_hp": self.temp_hp,
             "_armor_class": self.armor_class,
+            "_dex": self.dex,
             "_movement": self.movement,
             "_action": self.action,
             "_bonus_action": self.bonus_action,
@@ -141,6 +145,7 @@ class I_Creature:
         ability_uses = data.get("_ability_uses", {})
         ability_uses_used = data.get("_ability_uses_used", {})
         statblock_override = data.get("_statblock_override", "")
+        dex = data.get("_dex", -1)
         if creature_type == CreatureType.PLAYER:
             if player_visible is None:
                 player_visible = True
@@ -152,6 +157,7 @@ class I_Creature:
                 curr_hp=data["_curr_hp"],
                 temp_hp=temp_hp,
                 armor_class=data["_armor_class"],
+                dex=dex,
                 movement=data["_movement"],
                 action=data["_action"],
                 bonus_action=data["_bonus_action"],
@@ -185,6 +191,7 @@ class I_Creature:
                 curr_hp=data["_curr_hp"],
                 temp_hp=temp_hp,
                 armor_class=data["_armor_class"],
+                dex=dex,
                 movement=data["_movement"],
                 action=data["_action"],
                 bonus_action=data["_bonus_action"],
@@ -268,6 +275,23 @@ class I_Creature:
     def armor_class(self) -> int: return self._armor_class
     @armor_class.setter
     def armor_class(self, value: int): self._armor_class = value
+
+    @property
+    def dex(self) -> int:
+        """Dexterity score, or -1 when it isn't known."""
+        try:
+            return int(self._dex)
+        except (TypeError, ValueError):
+            return -1
+    @dex.setter
+    def dex(self, value):
+        if value in (None, ""):
+            self._dex = -1
+            return
+        try:
+            self._dex = int(value)
+        except (TypeError, ValueError):
+            self._dex = -1
 
     @property
     def movement(self) -> int: return self._movement
@@ -357,7 +381,7 @@ class I_Creature:
 
 class Monster(I_Creature):
     def __init__(self, name, init=0, max_hp=0, max_hp_bonus=0, curr_hp=0, temp_hp=0, armor_class=0,
-                 movement=0, action=False, bonus_action=False, reaction=False,
+                 dex=-1, movement=0, action=False, bonus_action=False, reaction=False,
                  notes='', public_notes='', player_visible=True, conditions=None, status_time='',
                  spell_slots=None, innate_slots=None, spell_slots_used=None,
                  innate_slots_used=None, death_saves_prompt=False, active=True,
@@ -373,6 +397,7 @@ class Monster(I_Creature):
             _curr_hp=curr_hp,
             _temp_hp=temp_hp,
             _armor_class=armor_class,
+            _dex=dex,
             _movement=movement,
             _action=action,
             _bonus_action=bonus_action,
@@ -401,7 +426,7 @@ class Monster(I_Creature):
 
 class Player(I_Creature):
     def __init__(self, name, init=0, max_hp=0, max_hp_bonus=0, curr_hp=0, temp_hp=0, armor_class=0,
-                 movement=0, action=False, bonus_action=False, reaction=False,
+                 dex=-1, movement=0, action=False, bonus_action=False, reaction=False,
                  object_interaction=False, notes='', public_notes='', player_visible=True,
                  conditions=None, status_time='',
                  spell_slots=None, innate_slots=None, spell_slots_used=None,
@@ -416,6 +441,7 @@ class Player(I_Creature):
             _curr_hp=curr_hp,
             _temp_hp=temp_hp,
             _armor_class=armor_class,
+            _dex=dex,
             _movement=movement,
             _action=action,
             _bonus_action=bonus_action,

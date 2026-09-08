@@ -2,7 +2,7 @@
   "id": "foundryvtt-bridge",
   "title": "D&D Combat Tracker Bridge",
   "description": "Two-way sync between Foundry VTT and the D&D Combat Tracker desktop app: posts combat snapshots out, and applies HP, initiative and condition changes coming back.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "authors": [
     {
       "name": "mhyde777",

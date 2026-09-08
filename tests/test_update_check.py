@@ -102,3 +102,62 @@ def test_check_thread_is_daemon(monkeypatch):
     # It must never hold the app open at shutdown.
     monkeypatch.setattr(update_check, "fetch_latest_version", lambda url=None: None)
     assert update_check.check_in_background(lambda v: None).daemon is True
+
+
+# ---- Picking the right download -------------------------------------------
+# A release carries both a self-update archive and a human-facing installer per
+# platform. The updater must never choose the installer: update_install.extract
+# () handles .tar.gz and .zip only, so a setup.exe or an AppImage fails after
+# the whole download has already completed.
+
+def _release(*names):
+    return {"assets": [{"name": n, "browser_download_url": f"https://x/{n}"} for n in names]}
+
+
+def test_prefers_the_archive_over_the_windows_installer(monkeypatch):
+    monkeypatch.setattr(update_check.sys, "platform", "win32")
+    monkeypatch.setattr(update_check.platform, "machine", lambda: "AMD64")
+    # Installer first, so a "return the first platform match" implementation fails.
+    release = _release(
+        "combat-tracker-0.6.0-windows-x64-setup.exe",
+        "combat-tracker-0.6.0-windows-x64.zip",
+    )
+    assert update_check.asset_for_platform(release)["name"].endswith(".zip")
+
+
+def test_prefers_the_tarball_over_the_appimage(monkeypatch):
+    monkeypatch.setattr(update_check.sys, "platform", "linux")
+    monkeypatch.setattr(update_check.platform, "machine", lambda: "x86_64")
+    release = _release(
+        "combat-tracker-0.6.0-linux-x86_64.AppImage",
+        "combat-tracker-0.6.0-linux-x86_64.tar.gz",
+    )
+    assert update_check.asset_for_platform(release)["name"].endswith(".tar.gz")
+
+
+def test_installer_only_release_offers_nothing_to_extract(monkeypatch):
+    """Better to report 'no build for this system' than to download 40MB and
+    fail at the extract step."""
+    monkeypatch.setattr(update_check.sys, "platform", "win32")
+    monkeypatch.setattr(update_check.platform, "machine", lambda: "AMD64")
+    assert update_check.asset_for_platform(
+        _release("combat-tracker-0.6.0-windows-x64-setup.exe")
+    ) is None
+
+
+def test_other_platforms_are_not_offered(monkeypatch):
+    monkeypatch.setattr(update_check.sys, "platform", "linux")
+    monkeypatch.setattr(update_check.platform, "machine", lambda: "x86_64")
+    assert update_check.asset_for_platform(
+        _release("combat-tracker-0.6.0-windows-x64.zip", "SHA256SUMS")
+    ) is None
+
+
+def test_architecture_is_preferred_when_several_match(monkeypatch):
+    monkeypatch.setattr(update_check.sys, "platform", "linux")
+    monkeypatch.setattr(update_check.platform, "machine", lambda: "aarch64")
+    release = _release(
+        "combat-tracker-0.6.0-linux-x86_64.tar.gz",
+        "combat-tracker-0.6.0-linux-aarch64.tar.gz",
+    )
+    assert "aarch64" in update_check.asset_for_platform(release)["name"]

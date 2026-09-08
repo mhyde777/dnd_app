@@ -380,6 +380,19 @@ def can_self_update() -> tuple:
         )
     layout = detect()
     if layout is None:
+        # An AppImage is read-only by construction, so this is not a broken
+        # install and telling the user to "unpack this release once" would be
+        # wrong advice. It has its own one-click route: install itself to
+        # ~/.local/opt, after which updates work like any other install.
+        from app import appimage
+
+        if appimage.running_as_appimage():
+            return False, (
+                "You are running the AppImage, which is a single read-only "
+                "file and cannot update itself. Use File → Install Combat "
+                "Tracker… to install it properly, and updates after that are "
+                "a single button."
+            )
         return False, (
             "This copy was installed before one-click updates existed. Download "
             "this release and unpack it once; updates after that are a single "

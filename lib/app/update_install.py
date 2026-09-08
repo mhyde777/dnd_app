@@ -163,6 +163,43 @@ def find_app_payload(unpacked: str, binary: str, depth: int = 3) -> Optional[str
     return None
 
 
+# Windows holds a file open while Defender scans it, and a freshly extracted
+# .exe is exactly what it wants to scan. Renaming a directory containing one
+# then fails with a sharing violation or access-denied -- transiently, for a
+# fraction of a second, and only sometimes, which is the worst way for an
+# updater to fail. Retrying briefly turns that into a non-event.
+#
+# POSIX has no equivalent (an open file does not block a rename there), so this
+# costs nothing on Linux: the first attempt always succeeds.
+_RENAME_ATTEMPTS = 20
+_RENAME_DELAY_S = 0.1
+
+
+def _replace_with_retry(src: str, dst: str) -> None:
+    """os.replace, but tolerant of a transient Windows file lock."""
+    import time
+
+    last: Optional[OSError] = None
+    for attempt in range(_RENAME_ATTEMPTS):
+        try:
+            os.replace(src, dst)
+            return
+        except PermissionError as exc:      # WinError 5, and WinError 32
+            last = exc
+        except OSError as exc:
+            # Anything that is not "something else is holding this" is a real
+            # failure and must not be retried into a timeout.
+            if getattr(exc, "winerror", None) not in (5, 32, 145):
+                raise
+            last = exc
+        time.sleep(_RENAME_DELAY_S)
+    raise OSError(
+        f"could not move {src} into place after "
+        f"{_RENAME_ATTEMPTS * _RENAME_DELAY_S:.0f}s -- something else is "
+        f"holding a file open in it (antivirus, or the app already running)"
+    ) from last
+
+
 def install_release(archive: str, version: str, layout, binary: str) -> str:
     """Unpack `archive` into versions/<version>/ and return that path.
 
@@ -187,7 +224,7 @@ def install_release(archive: str, version: str, layout, binary: str) -> str:
             raise FileNotFoundError(
                 f"the downloaded build has no {binary} in it"
             )
-        os.replace(payload, target)
+        _replace_with_retry(payload, target)
     except Exception:
         shutil.rmtree(staging, ignore_errors=True)
         shutil.rmtree(target, ignore_errors=True)

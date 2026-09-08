@@ -133,6 +133,28 @@ class Application:
         except Exception:
             setattr(creature, "_armor_class", ac_value)
 
+    def _apply_combatant_dex(self, creature, combatant: Dict[str, Any]) -> bool:
+        """Copy a snapshot combatant's DEX score onto the creature.
+
+        The app has no other source for a PC's DEX, and it is what breaks a
+        tied initiative. Older bridge modules don't send the field at all, so
+        an absent value leaves whatever the creature already has alone rather
+        than clearing it.
+
+        Returns True when the score changed, since that can reorder a tie.
+        """
+        dex_value = combatant.get("dex")
+        if dex_value is None:
+            return False
+        try:
+            dex_int = int(dex_value)
+        except (TypeError, ValueError):
+            return False
+        if dex_int <= 0 or dex_int == creature.dex:
+            return False
+        creature.dex = dex_int
+        return True
+
     def _reset_action_economy(self) -> None:
         """Give every creature its action, bonus action and object interaction
         back. Runs at the top of each round."""
@@ -537,6 +559,8 @@ class Application:
                         pass
 
             self._apply_combatant_ac(creature, combatant)
+            if self._apply_combatant_dex(creature, combatant):
+                updated_initiative = True
 
         old_round = getattr(self, "round_counter", 1)
 
@@ -814,6 +838,7 @@ class Application:
                         pass
 
             self._apply_combatant_ac(creature, combatant)
+            self._apply_combatant_dex(creature, combatant)
 
             effects = combatant.get("effects", [])
             if isinstance(effects, list):
@@ -2134,15 +2159,25 @@ class Application:
             return None
 
     def apply_statblock_slots(self, creature, statblock_name: str) -> bool:
-        """Pull spell/innate slots from a statblock onto the creature.
+        """Pull spell/innate slots, limited abilities and DEX from a statblock.
 
-        Only populates if the creature has no slots configured yet.
-        Returns True if any slots were applied.
+        Only populates what the creature doesn't already have.
+        Returns True if anything was applied.
         """
         data = self.fetch_statblock_for_creature(statblock_name)
         if not data:
             return False
         applied = False
+
+        # DEX only breaks initiative ties, but it has to come from somewhere:
+        # the statblock library is the only place a monster's score is written
+        # down outside Foundry.
+        if creature.dex < 0:
+            from app.statblock_parser import statblock_dex
+            dex = statblock_dex(data)
+            if dex > 0:
+                creature.dex = dex
+                applied = True
 
         # Limited-use martial abilities (X/Day, Recharge, Legendary Actions).
         # Independent of spellcasting so pure-martial statblocks populate too.
@@ -2197,13 +2232,15 @@ class Application:
                     max_hp=creature_data['HP'],
                     curr_hp=creature_data['HP'],
                     armor_class=creature_data['AC'],
+                    dex=creature_data.get("_dex", -1),
                     spell_slots=creature_data.get("_spell_slots", {}),
                     innate_slots=creature_data.get("_innate_slots", {}),
                     ability_uses=creature_data.get("_ability_uses", {}),
                 )
-                # If the dialog didn't pick up spell slots (e.g. editingFinished didn't fire),
-                # fall back to pulling them from the statblock library.
-                if not creature._spell_slots and not creature._innate_slots:
+                # If the dialog didn't pick up spell slots or DEX (e.g.
+                # editingFinished didn't fire), fall back to pulling them from
+                # the statblock library.
+                if (not creature._spell_slots and not creature._innate_slots) or creature.dex < 0:
                     self.apply_statblock_slots(creature, creature.name)
                 self.manager.add_creature(creature)
 
@@ -2659,6 +2696,7 @@ class Application:
                 max_hp=creature_data["_max_hp"],
                 curr_hp=creature_data["_curr_hp"],
                 armor_class=creature_data["_armor_class"],
+                dex=creature_data.get("_dex", -1),
                 death_saves_prompt=creature_data.get("_death_saves_prompt", False),
                 spell_slots=creature_data.get("_spell_slots", {}),
                 innate_slots=creature_data.get("_innate_slots", {}),

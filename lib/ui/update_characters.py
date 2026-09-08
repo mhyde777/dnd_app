@@ -71,8 +71,12 @@ class UpdateCharactersWindow(QDialog):
         self.roster_combo.currentIndexChanged.connect(self._on_roster_changed)
 
         self.table = QTableWidget()
-        self.table.setColumnCount(5)
-        self.table.setHorizontalHeaderLabels(["Name", "Max HP", "AC", "Active", "Public Notes"])
+        self.table.setColumnCount(6)
+        # DEX is optional and only breaks initiative ties; a blank cell means
+        # "unknown", which sorts a tie the way it always did — by name.
+        self.table.setHorizontalHeaderLabels(
+            ["Name", "Max HP", "AC", "DEX", "Active", "Public Notes"]
+        )
         self.layout.addWidget(self.table)
 
         # Buttons row: Add Character (left) + Save/Cancel (right)
@@ -312,6 +316,7 @@ class UpdateCharactersWindow(QDialog):
         max_hp = d.get("_max_hp", d.get("max_hp", 0)) or 0
         ac = d.get("_armor_class", d.get("armor_class", 0)) or 0
         active = d.get("_active", d.get("active", True))
+        dex = d.get("_dex", d.get("dex", -1))
         try:
             max_hp = int(max_hp)
         except Exception:
@@ -320,6 +325,10 @@ class UpdateCharactersWindow(QDialog):
             ac = int(ac)
         except Exception:
             ac = 0
+        try:
+            dex = int(dex)
+        except Exception:
+            dex = -1
         active = bool(active)
         public_notes = d.get("_public_notes", d.get("public_notes", "")) or ""
         player_visible = d.get("_player_visible", True)
@@ -328,6 +337,7 @@ class UpdateCharactersWindow(QDialog):
             max_hp=max_hp,
             curr_hp=max_hp,
             armor_class=ac,
+            dex=dex,
             active=active,
             public_notes=public_notes,
             player_visible=player_visible,
@@ -343,28 +353,33 @@ class UpdateCharactersWindow(QDialog):
         # AC
         self.table.setItem(row, 2, QTableWidgetItem(str(int(getattr(pl, "armor_class", 0) or 0))))
 
+        # DEX — blank when unknown
+        dex = int(getattr(pl, "dex", -1) or -1)
+        self.table.setItem(row, 3, QTableWidgetItem(str(dex) if dex > 0 else ""))
+
         # Active checkbox
         active_item = QTableWidgetItem()
         active_item.setFlags(active_item.flags() | Qt.ItemIsUserCheckable)
         active_item.setCheckState(Qt.Checked if bool(getattr(pl, "active", True)) else Qt.Unchecked)
-        self.table.setItem(row, 3, active_item)
+        self.table.setItem(row, 4, active_item)
 
         # Public Notes
         self.table.setItem(
-            row, 4, QTableWidgetItem(str(getattr(pl, "public_notes", "") or ""))
+            row, 5, QTableWidgetItem(str(getattr(pl, "public_notes", "") or ""))
         )
 
     def _init_row(self, row: int):
         self.table.setItem(row, 0, QTableWidgetItem(""))
         self.table.setItem(row, 1, QTableWidgetItem(""))
         self.table.setItem(row, 2, QTableWidgetItem(""))
+        self.table.setItem(row, 3, QTableWidgetItem(""))
 
         active_item = QTableWidgetItem()
         active_item.setFlags(active_item.flags() | Qt.ItemIsUserCheckable)
         active_item.setCheckState(Qt.Checked)
-        self.table.setItem(row, 3, active_item)
+        self.table.setItem(row, 4, active_item)
 
-        self.table.setItem(row, 4, QTableWidgetItem(""))
+        self.table.setItem(row, 5, QTableWidgetItem(""))
 
     def save_players(self):
         players_out: List[Dict[str, Any]] = []
@@ -378,8 +393,9 @@ class UpdateCharactersWindow(QDialog):
 
             max_hp_item = self.table.item(row, 1)
             ac_item = self.table.item(row, 2)
-            active_item = self.table.item(row, 3)
-            public_notes_item = self.table.item(row, 4)
+            dex_item = self.table.item(row, 3)
+            active_item = self.table.item(row, 4)
+            public_notes_item = self.table.item(row, 5)
 
             try:
                 max_hp = int((max_hp_item.text().strip() if max_hp_item else "0") or 0)
@@ -389,6 +405,11 @@ class UpdateCharactersWindow(QDialog):
                 ac = int((ac_item.text().strip() if ac_item else "0") or 0)
             except Exception:
                 ac = 0
+            # Blank (or nonsense) stays -1: unknown, not a score of zero.
+            try:
+                dex = int((dex_item.text().strip() if dex_item else "") or -1)
+            except Exception:
+                dex = -1
 
             active = True
             if active_item is not None:
@@ -400,6 +421,7 @@ class UpdateCharactersWindow(QDialog):
                 max_hp=max_hp,
                 curr_hp=max_hp,
                 armor_class=ac,
+                dex=dex,
                 active=active,
                 public_notes=public_notes,
             )

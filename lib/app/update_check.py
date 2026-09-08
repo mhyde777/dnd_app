@@ -146,9 +146,18 @@ def fetch_latest_version(url: str = RELEASES_API) -> Optional[str]:
 
 # ---- Picking the right download -------------------------------------------
 # Asset names come from package.sh / package_WIN.sh:
-#   combat-tracker-<version>-linux-<arch>.tar.gz
-#   combat-tracker-<version>-windows-x64.zip
+#   combat-tracker-<version>-linux-<arch>.tar.gz          <- self-update
+#   combat-tracker-<version>-windows-x64.zip              <- self-update
+#   combat-tracker-<version>-linux-<arch>.AppImage        <- first download only
+#   combat-tracker-<version>-windows-x64-setup.exe        <- first download only
 #   combat-tracker-<version>-macos-<arch>.zip   (documented, not yet built)
+#
+# A release carries two artifacts per platform: an archive the in-app updater
+# unpacks into versions/, and a human-facing installer/AppImage for someone
+# arriving with nothing. Only the archives are candidates here -- update_install
+# .extract() understands .tar.gz and .zip and nothing else, so handing it a
+# setup.exe or an AppImage fails after the download has already happened.
+_UPDATABLE_SUFFIXES = (".tar.gz", ".tgz", ".zip")
 
 _PLATFORM_TOKENS = {
     "linux": ("linux",),
@@ -167,6 +176,11 @@ _ARCH_ALIASES = {
 def asset_for_platform(release: Optional[dict]) -> Optional[dict]:
     """The asset this machine should download, or None if the release has none.
 
+    Only archives the updater can unpack are considered; the installer and the
+    AppImage published beside them are for a first download by hand, and
+    picking one here would fail at the extract step with the bytes already on
+    disk.
+
     Prefers a name matching both the platform and this machine's architecture,
     and settles for the platform alone -- a Windows build is named win64 with
     no arch of its own. Returning None is normal: a release published without
@@ -182,6 +196,7 @@ def asset_for_platform(release: Optional[dict]) -> Optional[dict]:
     platform_matches = [
         a for a in assets
         if isinstance(a, dict)
+        and str(a.get("name", "")).lower().endswith(_UPDATABLE_SUFFIXES)
         and any(t in str(a.get("name", "")).lower() for t in tokens)
     ]
     if not platform_matches:

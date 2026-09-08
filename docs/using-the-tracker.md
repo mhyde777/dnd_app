@@ -42,6 +42,27 @@ contents, and the colours. **View → Reset Panel Layout** undoes any of it.
 
 ---
 
+## Turn order and ties
+
+The order is initiative first, and a tie is broken by the higher Dexterity
+score. Where the score comes from depends on the combatant:
+
+- **Monsters** — from the statblock, whenever one is attached: added from the
+  library, built into an encounter, matched by name in Add Combatant, or set
+  from the right-click menu. A monster with no statblock has no score, and
+  ties for it break by name.
+- **Players** — the **DEX** column in **Characters → Create/Update
+  Characters**. This is the only place a PC's Dexterity is recorded, so it is
+  worth filling in once per character; it is saved with the roster.
+- **Anything synced from Foundry** — from the actor, automatically. This needs
+  the current version of the bridge module, so re-install it in Foundry if your
+  copy predates this feature.
+
+Leave DEX blank and nothing changes: creatures with no score sort after the
+ones that have one, and a tie between them still breaks by name.
+
+---
+
 ## Damage and healing
 
 Two ways, and they suit different moments.
