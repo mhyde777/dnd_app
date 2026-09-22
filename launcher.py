@@ -38,6 +38,14 @@ _VERSION_RE = re.compile(r"^(\d+(?:\.\d+)*)(?:[-+](.+))?$")
 _WAIT_TIMEOUT = 30.0
 _WAIT_STEP = 0.2
 
+# Windows-only creation flags; 0 everywhere else so the call site stays one
+# branch. getattr, not a win32 guard, because these names do not exist in
+# subprocess on other platforms and this module has to import anywhere.
+_DETACHED_FLAGS = (
+    getattr(subprocess, "DETACHED_PROCESS", 0)
+    | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+)
+
 
 def root_dir() -> str:
     if getattr(sys, "frozen", False):
@@ -212,8 +220,24 @@ def main(argv: list) -> int:
         # Replace this process where we can, so no launcher lingers in the
         # process list or the taskbar for the whole session.
         if sys.platform == "win32":
-            completed = subprocess.run([target] + passthrough)
-            return completed.returncode
+            # Windows has no usable execv -- it returns to the caller while the
+            # child runs on, which breaks the process tree. So: start it and
+            # exit. subprocess.run() blocked here instead, parking
+            # combat-tracker.exe beside combat_tracker.exe for the whole
+            # session: two processes for one app, and any window tooling
+            # (taskbar pinning, Stream Deck) finding the child down in
+            # versions\<ver>\, at a path that moves with every update.
+            #
+            # Nothing reads the return code, and the app clears `launching`
+            # itself once its window is up, so the launcher has nothing left to
+            # wait for. Detached and in its own process group so closing a
+            # console the launcher was started from cannot take the app with it.
+            subprocess.Popen(
+                [target] + passthrough,
+                close_fds=True,
+                creationflags=_DETACHED_FLAGS,
+            )
+            return 0
         os.execv(target, [target] + passthrough)
     except OSError as exc:
         log(root, f"could not start {target}: {exc}")
