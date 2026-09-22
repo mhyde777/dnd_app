@@ -1212,6 +1212,20 @@ class InitiativeTracker(QMainWindow, Application):
             self.bridge_status_label.setText("● Bridge: Connected")
             self.bridge_status_label.setStyleSheet("padding: 0 8px; color: #2ecc71;")
             self.clear_banner(self.BRIDGE_BANNER_KEY)
+        elif state == "waiting":
+            # The bridge answered but Foundry has never posted to it. Amber, not
+            # green: the old green here meant "reachable", which since the local
+            # bridge became the default is true from launch and told you nothing.
+            self.bridge_status_label.setText("● Bridge: Waiting for Foundry")
+            self.bridge_status_label.setStyleSheet("padding: 0 8px; color: #f39c12;")
+            self.show_banner(
+                self.BRIDGE_BANNER_KEY,
+                "Bridge running, but Foundry has not sent anything yet — check "
+                "the Combat Tracker module is enabled in this world.",
+                "warning",
+                action_label="Show Log",
+                action=self.show_log,
+            )
         elif state == "error":
             self.bridge_status_label.setText("● Bridge: Disconnected")
             self.bridge_status_label.setStyleSheet("padding: 0 8px; color: #e74c3c;")

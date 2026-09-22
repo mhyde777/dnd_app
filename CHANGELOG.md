@@ -13,6 +13,18 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The bridge indicator no longer reads "Connected" when Foundry isn't
+  there.** It went green on any answer from the bridge at all — including the
+  empty one served before Foundry has posted anything — so the usual way sync
+  dies, starting a new world without re-enabling the Combat Tracker module,
+  looked identical to a working setup. Since the in-process bridge became the
+  default it is always reachable, which made green true from launch and useless
+  as a signal. There is now a third state: amber **"Waiting for Foundry"**,
+  with a banner naming the module check, until a snapshot actually arrives. A
+  world that is open with no encounter running still counts as connected.
+
 ## [0.6.0] — 2026-09-08
 
 ### Added

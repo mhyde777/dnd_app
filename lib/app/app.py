@@ -292,7 +292,11 @@ class Application:
             self.bridge_snapshot_received.emit(snapshot)
 
         def on_stream_connect() -> None:
-            self.bridge_status_changed.emit("connected")
+            # Only that the stream opened. The bridge replays its current
+            # snapshot immediately on connect, so this settles to "connected"
+            # within a tick when Foundry is really there -- and stays amber
+            # when it is not.
+            self.bridge_status_changed.emit("waiting")
 
         def on_stream_disconnect() -> None:
             self.bridge_status_changed.emit("error")
@@ -353,8 +357,27 @@ class Application:
         else:
             self._set_bridge_snapshot(snapshot)
 
+    @staticmethod
+    def _snapshot_is_from_foundry(snapshot: Dict[str, Any]) -> bool:
+        """True once Foundry has actually posted, not merely that the bridge answered.
+
+        `/state` returns `{}` with a 200 until the first post, which is
+        indistinguishable from a healthy sync unless something looks inside --
+        and since the local bridge became the default it is always reachable,
+        so the indicator was green from launch whether or not Foundry was
+        there. Any key bridge.js sends counts; the *values* deliberately do
+        not, so an open world with no combat is still connected.
+        """
+        return any(key in snapshot for key in ("world", "combat", "combatants"))
+
     def _set_bridge_snapshot(self, snapshot: Optional[Dict[str, Any]]) -> None:
         if snapshot is None or not isinstance(snapshot, dict):
+            return
+        # Reachable is not the same as syncing. Nothing to apply either way, so
+        # this returns before the mid-edit stash.
+        if not self._snapshot_is_from_foundry(snapshot):
+            if hasattr(self, "set_bridge_status"):
+                self.set_bridge_status("waiting")
             return
         # If the user is mid-edit in a table cell (e.g. typing a note), applying
         # the snapshot now fires layoutChanged and Qt discards the uncommitted
