@@ -206,3 +206,4 @@ images/*
 /spells/
 /items/
 /magic_items/
+.claude/
