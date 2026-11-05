@@ -22,6 +22,20 @@ a MAJOR bump is the only kind that can require you to change how you work.
   restart" just looked like it closed the app, and the old version offered the
   same broken update straight back.
 
+### Fixed
+
+- **Conditions reach Foundry again on Foundry v14.** Adding or removing a
+  condition in the app did nothing in a v14 world. dnd5e on v14 stores its
+  status effects differently, so the Foundry module could not find any of
+  them, and the fallback it then tried no longer exists in v14. Conditions
+  also no longer need the token to be on the scene you are viewing.
+- **The "Exclude from bridge sync" checkbox is back on actor sheets** on v14,
+  where the new-style sheets never showed it.
+- **Effect icons come through in Foundry v14 snapshots.**
+
+  These need the **Foundry module** from this release; the module now lists
+  v14 as verified. v12 and v13 keep working.
+
 ## [0.6.3] — 2026-11-05
 
 ### Fixed

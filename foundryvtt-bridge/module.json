@@ -11,7 +11,7 @@
   ],
   "compatibility": {
     "minimum": "10",
-    "verified": "12"
+    "verified": "14"
   },
   "scripts": [
     "bridge.js"

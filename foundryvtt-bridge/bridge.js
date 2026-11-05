@@ -57,8 +57,8 @@ function buildCombatSnapshot() {
     }
     const effects = (actor?.effects ?? []).map((effect) => ({
       id: effect.id,
-      label: effect.label ?? effect.name ?? "",
-      icon: effect.icon ?? null,
+      label: effect.name ?? effect.label ?? "",
+      icon: effect.img ?? effect.icon ?? null,
       disabled: Boolean(effect.disabled),
       origin: effect.origin ?? null,
     }));
@@ -241,9 +241,12 @@ function resolveCombatant(payload) {
 }
 
 function getStatusEffects() {
-  if (Array.isArray(CONFIG?.statusEffects)) {
-    return CONFIG.statusEffects;
-  }
+  // A list in core through v13; dnd5e on v14 replaces it with an object keyed
+  // by status id. Accepting only the list found nothing on v14, so every
+  // condition from the app was silently dropped.
+  const statuses = CONFIG?.statusEffects;
+  if (Array.isArray(statuses)) return statuses;
+  if (statuses && typeof statuses === "object") return Object.values(statuses);
   return [];
 }
 
@@ -257,7 +260,7 @@ function resolveStatusEffectByLabel(label) {
   const normalized = String(label).trim().toLowerCase();
   return (
     getStatusEffects().find((effect) => {
-      const candidate = effect?.label ?? effect?.name ?? "";
+      const candidate = effect?.name ?? effect?.label ?? "";
       if (!candidate) return false;
       return String(candidate).trim().toLowerCase() === normalized;
     }) ?? null
@@ -493,6 +496,29 @@ async function applyPrevTurn() {
 }
 
 // --- UPDATED: conditions now flip D&D5e sheet Conditions + token icon ----
+// Apply or clear a status on an actor (and its token).
+// Actor#toggleStatusEffect is the API from v12 on, and the only one in v14 --
+// Token#toggleEffect is gone. It works on the actor, so a token that is not on
+// the current canvas (another scene, another level) no longer blocks it.
+async function setStatus(actor, payload, active) {
+  const template = resolveConditionTemplate(payload);
+  if (template?.id && typeof actor?.toggleStatusEffect === "function") {
+    await actor.toggleStatusEffect(template.id, { active });
+    return true;
+  }
+  // v10-v11: no Actor#toggleStatusEffect, only the token method.
+  const token = payload?.tokenId ? canvas?.tokens?.get(payload.tokenId) ?? null : null;
+  if (token && typeof token.toggleEffect === "function") {
+    await token.toggleEffect(template ?? { label: payload?.label }, { active });
+    return true;
+  }
+  console.warn(`${LOG_PREFIX} ${active ? "add" : "remove"}_condition: no status matches`, {
+    label: payload?.label ?? null,
+    effectId: payload?.effectId ?? null,
+  });
+  return false;
+}
+
 async function applyAddCondition(payload) {
   const actor = resolveActor(payload);
   if (!actor) {
@@ -509,29 +535,10 @@ async function applyAddCondition(payload) {
     await actor.update({ [`system.attributes.conditions.${dnd5eKey}`]: true });
   }
 
-  // (B) Token status icon
-  if (payload?.tokenId) {
-    const token = canvas?.tokens?.get(payload.tokenId) ?? null;
-    if (!token) {
-      console.warn(`${LOG_PREFIX} add_condition token not found`, { tokenId: payload.tokenId });
-    } else {
-      const template = resolveConditionTemplate(payload);
-      if (template) {
-        await token.toggleEffect(template, { active: true });
-      } else if (payload?.label) {
-        await token.toggleEffect({ label: payload.label }, { active: true });
-      } else {
-        console.warn(`${LOG_PREFIX} add_condition missing label/effectId`);
-      }
-    }
-  }
+  // (B) Status effect -- the token icon and the actor's condition
+  const statusApplied = await setStatus(actor, payload, true);
 
-  // Consider applied if either path ran
-  if (!dnd5eKey && !payload?.tokenId) {
-    console.warn(`${LOG_PREFIX} add_condition no-op (no dnd5eKey and no tokenId)`);
-    return false;
-  }
-  return true;
+  return Boolean(dnd5eKey) || statusApplied;
 }
 
 async function applyCreateJournal(payload) {
@@ -554,7 +561,7 @@ async function applyCreateJournal(payload) {
       }
       existing.sheet?.render(true);
     } else {
-      const entry = await JournalEntry.create({
+      const entry = await CONFIG.JournalEntry.documentClass.create({
         name,
         pages: [{ name: "Inventory", type: "text", "text.content": content }],
       });
@@ -583,28 +590,10 @@ async function applyRemoveCondition(payload) {
     await actor.update({ [`system.attributes.conditions.${dnd5eKey}`]: false });
   }
 
-  // (B) Token status icon
-  if (payload?.tokenId) {
-    const token = canvas?.tokens?.get(payload.tokenId) ?? null;
-    if (!token) {
-      console.warn(`${LOG_PREFIX} remove_condition token not found`, { tokenId: payload.tokenId });
-    } else {
-      const template = resolveConditionTemplate(payload);
-      if (template) {
-        await token.toggleEffect(template, { active: false });
-      } else if (payload?.label) {
-        await token.toggleEffect({ label: payload.label }, { active: false });
-      } else {
-        console.warn(`${LOG_PREFIX} remove_condition missing label/effectId`);
-      }
-    }
-  }
+  // (B) Status effect -- the token icon and the actor's condition
+  const statusApplied = await setStatus(actor, payload, false);
 
-  if (!dnd5eKey && !payload?.tokenId) {
-    console.warn(`${LOG_PREFIX} remove_condition no-op (no dnd5eKey and no tokenId)`);
-    return false;
-  }
-  return true;
+  return Boolean(dnd5eKey) || statusApplied;
 }
 // ------------------------------------------------------------------------
 
@@ -903,31 +892,39 @@ Hooks.on("updateActiveEffect", () => { if (game.user?.isGM) scheduleSnapshot("up
 
 Hooks.on("controlToken", () => { if (game.user?.isGM) scheduleSnapshot("controlToken"); });
 
-Hooks.on("renderActorSheet", (app, html) => {
-  const actor = app?.actor;
-  if (!actor) return;
-
-  if (html.find(`[data-bridge-exclude="true"]`).length) return;
+// "Exclude from bridge sync" on the actor sheet.
+// Plain DOM, no jQuery: v14 no longer ships it, and its sheets (dnd5e's
+// included) are ApplicationV2, which fires renderActorSheetV2 with an
+// HTMLElement. The old renderActorSheet hook passes jQuery; both end up here.
+function addExcludeToggle(app, root) {
+  const actor = app?.actor ?? app?.document;
+  if (!actor || !(root instanceof HTMLElement)) return;
+  if (root.querySelector('[data-bridge-exclude="true"]')) return;
 
   const isExcluded = Boolean(actor.getFlag(MODULE_ID, "excludeFromSync"));
-  const checkbox = $(`
-    <div class="form-group" data-bridge-exclude="true">
-      <label>Exclude from bridge sync</label>
-      <input type="checkbox" name="excludeFromSync" ${isExcluded ? "checked" : ""} />
-      <p class="notes">Hide this actor's tokens from auto-added initiative sync.</p>
-    </div>
-  `);
-
-  const target = html.find(".sheet-body, .tab[data-tab], .sheet-header").first();
-  if (target.length) {
-    target.prepend(checkbox);
-  } else {
-    html.find("form").first().prepend(checkbox);
-  }
-
-  checkbox.find("input").on("change", async (event) => {
-    const checked = Boolean(event.currentTarget.checked);
-    await actor.setFlag(MODULE_ID, "excludeFromSync", checked);
+  const group = document.createElement("div");
+  group.className = "form-group";
+  group.dataset.bridgeExclude = "true";
+  group.innerHTML = `
+    <label>Exclude from bridge sync</label>
+    <input type="checkbox" ${isExcluded ? "checked" : ""} />
+    <p class="notes">Hide this actor's tokens from auto-added initiative sync.</p>
+  `;
+  const input = group.querySelector("input");
+  // No `name`, so a V1 sheet's own form submit does not try to save it.
+  input.addEventListener("change", async (event) => {
+    event.stopPropagation();
+    await actor.setFlag(MODULE_ID, "excludeFromSync", Boolean(input.checked));
     scheduleSnapshot("actorExcludeToggle");
   });
-});
+
+  const target =
+    root.querySelector(".sheet-body, .tab[data-tab], .sheet-header") ??
+    root.querySelector(".window-content") ??
+    root.querySelector("form") ??
+    root;
+  target.prepend(group);
+}
+
+Hooks.on("renderActorSheetV2", (app, element) => addExcludeToggle(app, element));
+Hooks.on("renderActorSheet", (app, html) => addExcludeToggle(app, html?.[0] ?? html));
