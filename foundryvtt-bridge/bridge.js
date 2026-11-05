@@ -355,7 +355,30 @@ async function applySetHp(payload) {
     });
     return false;
   }
-  await actor.update({ "system.attributes.hp.value": hpValue });
+  // The app sends the HP it believed it was changing as `expected`. If
+  // Foundry's value has moved since -- a player healed, a long rest, or the
+  // app was working from last session's save -- an absolute write would
+  // throw that away. Apply the app's *change* to Foundry's real value instead.
+  const hp = actor.system?.attributes?.hp ?? {};
+  const current = Number(hp.value);
+  const expected = Number(payload.expected);
+  let target = hpValue;
+  if (payload.expected !== undefined && Number.isFinite(expected) && Number.isFinite(current)
+      && current !== expected) {
+    target = current + (hpValue - expected);
+    console.warn(
+      `${LOG_PREFIX} set_hp for ${actor.name}: app expected ${expected} but Foundry has ${current}; ` +
+      `applying the change (${hpValue - expected >= 0 ? "+" : ""}${hpValue - expected}) -> ${target}`
+    );
+  }
+  const max = Number(hp.max);
+  if (Number.isFinite(max) && max > 0) {
+    const tempmax = Number(hp.tempmax) || 0;
+    target = Math.min(target, max + tempmax);
+  }
+  target = Math.max(0, target);
+  if (Number.isFinite(current) && target === current) return true;
+  await actor.update({ "system.attributes.hp.value": target });
   return true;
 }
 
@@ -397,6 +420,17 @@ async function applySetMaxHpBonus(payload) {
       tokenId: payload.tokenId ?? null,
       actorId: payload.actorId ?? null,
     });
+    return false;
+  }
+  // Refuse rather than merge: a max-HP bonus is set, not accumulated, and
+  // the app's next snapshot will show the DM what Foundry really has.
+  const expected = Number(payload.expected);
+  const currentTempmax = Number(actor.system?.attributes?.hp?.tempmax) || 0;
+  if (payload.expected !== undefined && Number.isFinite(expected) && currentTempmax !== expected) {
+    console.warn(
+      `${LOG_PREFIX} set_max_hp_bonus for ${actor.name} refused: app expected ${expected} ` +
+      `but Foundry has ${currentTempmax}`
+    );
     return false;
   }
   console.log(`${LOG_PREFIX} set_max_hp_bonus applying to actor=${actor.name} value=${tempmaxValue}`);

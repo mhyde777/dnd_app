@@ -13,6 +13,26 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The app can no longer reset a PC's HP in Foundry to an old value.**
+  Coming back to a session, PC tokens could have their HP overwritten. The app
+  sent Foundry *absolute* HP ("HP is now 12") computed from its own numbers,
+  and those could be a session old: Foundry ids are saved with the game state,
+  so a creature loaded from last time could push HP before Foundry had sent a
+  single update. Three guards now:
+  - The app sends no HP, temp HP or max-HP-bonus change for a creature until
+    Foundry has synced that creature's HP this session (it says so in the log).
+  - Each HP change carries the value the app thought it was changing. If
+    Foundry's differs, the Foundry module applies the *difference* to its real
+    value instead — a 5-damage hit stays a 5-damage hit. A max-HP-bonus change
+    that disagrees with Foundry is refused outright.
+  - The bridge never delivers a command past its TTL (60s). Before, it cleared
+    one expired command every 5 seconds while Foundry, on reconnecting,
+    received the whole backlog at once.
+
+  The second guard needs the **Foundry module updated to 0.3.2**.
+
 ## [0.6.1] — 2026-09-22
 
 ### Fixed

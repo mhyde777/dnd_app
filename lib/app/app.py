@@ -557,6 +557,7 @@ class Application:
                         new_hp = int(hp_value)
                         if new_hp != getattr(creature, "curr_hp", None):
                             creature.curr_hp = new_hp
+                        self._bridge_hp_synced_names().add(creature_name)
                     except (TypeError, ValueError):
                         pass
                 if hp_max is not None:
@@ -1233,17 +1234,65 @@ class Application:
             return None
         return str(token_id), str(actor_id) if actor_id else None
 
-    def _enqueue_bridge_set_hp(self, creature_name: str, hp: int) -> None:
+    def _bridge_hp_synced_names(self) -> set:
+        """Creatures whose HP has come *from* Foundry since this app started.
+
+        Session-scoped on purpose, and never saved: Foundry token/actor ids
+        are persisted with the game state, so a creature loaded from last
+        session's save is addressable before the app has seen a single number
+        from Foundry -- and its HP is whatever it was when that save was
+        written. Foundry's resolveActor() falls back to the world actor, so
+        a PC need not even be on the canvas for the overwrite to land.
+        """
+        names = getattr(self, "_bridge_hp_synced", None)
+        if names is None:
+            names = set()
+            self._bridge_hp_synced = names
+        return names
+
+    def _bridge_hp_push_allowed(self, creature_name: str, what: str) -> bool:
+        """Never write HP to Foundry for a creature Foundry hasn't told us about.
+
+        Every HP command carries a value the app computed from its own numbers.
+        Until a snapshot has synced this creature's HP, those numbers can be a
+        session old, and sending them is how a PC's HP in Foundry got reset
+        to some earlier fight's value.
+        """
+        if creature_name in self._bridge_hp_synced_names():
+            return True
+        self._log(
+            f"[Bridge][WARN] Not sending {what} for {creature_name!r}: its HP has "
+            f"not been synced from Foundry this session, so the app's value may be stale."
+        )
+        return False
+
+    def _enqueue_bridge_set_hp(
+        self, creature_name: str, hp: int, expected_hp: Optional[int] = None
+    ) -> None:
+        """Push a new current HP, with the HP the app believed it was changing.
+
+        Pass ``expected_hp`` whenever the caller knows it (it nearly always
+        does): bridge.js then applies the *difference* to Foundry's real value
+        if the two have drifted, rather than overwriting it.
+        """
         target = self._bridge_token_target(creature_name)
         if target is None:
             return
+        if not self._bridge_hp_push_allowed(creature_name, "set_hp"):
+            return
         token_id, actor_id = target
-        self._log(f"[Bridge] enqueue set_hp name={creature_name!r} hp={hp}")
-        self.bridge_client.enqueue_set_hp(token_id=token_id, hp=int(hp), actor_id=actor_id)
+        self._log(
+            f"[Bridge] enqueue set_hp name={creature_name!r} hp={hp} expected={expected_hp}"
+        )
+        self.bridge_client.enqueue_set_hp(
+            token_id=token_id, hp=int(hp), actor_id=actor_id, expected_hp=expected_hp
+        )
 
     def _enqueue_bridge_set_temp_hp(self, creature_name: str, temp_hp: int) -> None:
         target = self._bridge_token_target(creature_name)
         if target is None:
+            return
+        if not self._bridge_hp_push_allowed(creature_name, "set_temp_hp"):
             return
         token_id, actor_id = target
         self._log(f"[Bridge] enqueue set_temp_hp name={creature_name!r} temp={temp_hp}")
@@ -1251,14 +1300,22 @@ class Application:
             token_id=token_id, temp_hp=int(temp_hp), actor_id=actor_id
         )
 
-    def _enqueue_bridge_set_max_hp_bonus(self, creature_name: str, max_hp_bonus: int) -> None:
+    def _enqueue_bridge_set_max_hp_bonus(
+        self, creature_name: str, max_hp_bonus: int, expected_bonus: Optional[int] = None
+    ) -> None:
         target = self._bridge_token_target(creature_name)
         if target is None:
             return
+        if not self._bridge_hp_push_allowed(creature_name, "set_max_hp_bonus"):
+            return
         token_id, actor_id = target
-        self._log(f"[Bridge] enqueue set_max_hp_bonus name={creature_name!r} bonus={max_hp_bonus}")
+        self._log(
+            f"[Bridge] enqueue set_max_hp_bonus name={creature_name!r} "
+            f"bonus={max_hp_bonus} expected={expected_bonus}"
+        )
         self.bridge_client.enqueue_set_max_hp_bonus(
-            token_id=token_id, max_hp_bonus=int(max_hp_bonus), actor_id=actor_id
+            token_id=token_id, max_hp_bonus=int(max_hp_bonus), actor_id=actor_id,
+            expected_tempmax=expected_bonus,
         )
 
     def _enqueue_bridge_set_initiative(self, creature_name: str, initiative: int) -> None:
@@ -2633,7 +2690,7 @@ class Application:
                         self._break_concentration(creature)
 
         if creature.curr_hp != pre_hp:
-            self._enqueue_bridge_set_hp(creature_name, creature.curr_hp)
+            self._enqueue_bridge_set_hp(creature_name, creature.curr_hp, expected_hp=pre_hp)
         return True
 
     def apply_to_selected_creatures(self, positive: bool):

@@ -338,7 +338,9 @@ class CreatureTableModel(QAbstractTableModel):
                 try:
                     # HP: only push if you're actually editing via the cell
                     if attr in ("_curr_hp", "curr_hp") and hasattr(self.view, "_enqueue_bridge_set_hp"):
-                        self.view._enqueue_bridge_set_hp(name, int(getattr(creature, attr)))
+                        self.view._enqueue_bridge_set_hp(
+                            name, int(getattr(creature, attr)), expected_hp=current
+                        )
 
                     # Initiative: push on initiative cell edits
                     elif attr in ("_init", "init"):

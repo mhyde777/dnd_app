@@ -2098,6 +2098,7 @@ class InitiativeTracker(QMainWindow, Application):
         """Apply temp HP and max HP bonus, cap curr_hp, and sync to Foundry."""
         old_temp = int(getattr(creature, "temp_hp", 0) or 0)
         old_bonus = int(getattr(creature, "max_hp_bonus", 0) or 0)
+        old_hp = int(getattr(creature, "curr_hp", 0) or 0)
 
         creature.temp_hp = temp_hp
         creature.max_hp_bonus = max_hp_bonus
@@ -2109,8 +2110,9 @@ class InitiativeTracker(QMainWindow, Application):
         if temp_hp != old_temp:
             self._enqueue_bridge_set_temp_hp(name, temp_hp)
         if max_hp_bonus != old_bonus:
-            self._enqueue_bridge_set_max_hp_bonus(name, max_hp_bonus)
-            self._enqueue_bridge_set_hp(name, creature.curr_hp)
+            self._enqueue_bridge_set_max_hp_bonus(name, max_hp_bonus, expected_bonus=old_bonus)
+            if creature.curr_hp != old_hp:
+                self._enqueue_bridge_set_hp(name, creature.curr_hp, expected_hp=old_hp)
 
         self.update_table()
 

@@ -168,10 +168,19 @@ class BridgeClient:
         token_id: str,
         actor_id: Optional[str],
         command_id: Optional[str],
+        expected: Optional[int] = None,
     ) -> bool:
         """Send one integer against a token. The HP-ish commands differ only in
-        the command name and the payload key they carry it under."""
+        the command name and the payload key they carry it under.
+
+        ``expected`` is the value the app believed Foundry held before this
+        change. bridge.js compares it with the actor's real value, so a change
+        computed from stale numbers cannot overwrite Foundry -- see
+        ``applySetHp`` / ``applySetMaxHpBonus``.
+        """
         payload: Dict[str, Any] = {"tokenId": token_id, value_key: int(value)}
+        if expected is not None:
+            payload["expected"] = int(expected)
         if actor_id:
             payload["actorId"] = actor_id
         return self._post_command(
@@ -188,9 +197,10 @@ class BridgeClient:
         hp: int,
         actor_id: Optional[str] = None,
         command_id: Optional[str] = None,
+        expected_hp: Optional[int] = None,
     ) -> bool:
         return self._enqueue_token_value(
-            "set_hp", "hp", hp, token_id, actor_id, command_id
+            "set_hp", "hp", hp, token_id, actor_id, command_id, expected_hp
         )
 
     def enqueue_set_temp_hp(
@@ -210,9 +220,11 @@ class BridgeClient:
         max_hp_bonus: int,
         actor_id: Optional[str] = None,
         command_id: Optional[str] = None,
+        expected_tempmax: Optional[int] = None,
     ) -> bool:
         return self._enqueue_token_value(
-            "set_max_hp_bonus", "tempmax", max_hp_bonus, token_id, actor_id, command_id
+            "set_max_hp_bonus", "tempmax", max_hp_bonus, token_id, actor_id,
+            command_id, expected_tempmax,
         )
 
     def send_set_initiative(

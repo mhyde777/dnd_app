@@ -109,24 +109,21 @@ def _is_private_origin(origin: Optional[str]) -> bool:
 def create_app() -> Flask:
     app = Flask(__name__)
     store = SnapshotStore()
-    commands = CommandQueue(persist_path=_load_env("BRIDGE_COMMANDS_PATH") or None)
-    commands.load()
     command_ttl_seconds = _load_float_env("COMMAND_TTL_SECONDS", 60)
+    commands = CommandQueue(
+        persist_path=_load_env("BRIDGE_COMMANDS_PATH") or None,
+        max_age_seconds=command_ttl_seconds,
+    )
+    commands.load()
     command_sweep_interval_seconds = _load_float_env("COMMAND_SWEEP_INTERVAL_SECONDS", 5)
 
     def sweep_commands() -> None:
         while True:
             time.sleep(command_sweep_interval_seconds)
-            swept = commands.sweep_head_if_expired(command_ttl_seconds)
-            if swept:
-                cmd, age_seconds = swept
-                cmd_id = cmd.get("id")
-                cmd_type = cmd.get("type")
+            for cmd in commands.sweep_expired():
                 print(
-                    "[Bridge] Command swept id={!r} type={!r} age_seconds={:.2f}".format(
-                        cmd_id,
-                        cmd_type,
-                        age_seconds,
+                    "[Bridge] Command expired undelivered id={!r} type={!r}".format(
+                        cmd.get("id"), cmd.get("type")
                     )
                 )
 

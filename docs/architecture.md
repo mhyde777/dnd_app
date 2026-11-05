@@ -357,6 +357,21 @@ the bridge keeps serving its last snapshot (`active: false`, `round: 0`), so
 before touching `round_counter`. `max(1, round_value)` silently rewound the
 tracker to round 1 on every poll.
 
+**The app never writes HP to Foundry from numbers Foundry didn't give it.**
+Foundry ids are saved with the game state, so a creature loaded from last
+session's save is addressable before any snapshot has arrived, with whatever HP
+that save held — and `resolveActor()` in `bridge.js` falls back to the world
+actor, so a PC need not be on the canvas for an overwrite to land. Three
+guards: `_bridge_hp_push_allowed()` withholds every HP-family command for a
+creature until a snapshot has synced its HP *this session* (the set is never
+saved); every `set_hp` / `set_max_hp_bonus` carries `expected`, the value the
+app believed it was changing, and `bridge.js` applies the *difference* to
+Foundry's real HP on a mismatch (refuses, for the max-HP bonus); and
+`CommandQueue` never hands out a command older than `COMMAND_TTL_SECONDS` —
+the sweeper used to remove one expired command per tick while the stream sent
+Foundry the entire backlog on reconnect. **Pass `expected_hp` to
+`_enqueue_bridge_set_hp()`** from any new caller.
+
 **Colours must be used by attribute access** — `colors.HP_LOW_ACTIVE`, never
 `from ui.colors import HP_LOW_ACTIVE`. `colors.apply()` rebinds module globals,
 and a name imported once binds to the old value forever.
