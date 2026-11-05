@@ -33,7 +33,7 @@ a MAJOR bump is the only kind that can require you to change how you work.
     one expired command every 5 seconds while Foundry, on reconnecting,
     received the whole backlog at once.
 
-  The second guard needs the **Foundry module updated to 0.3.2**.
+  The second guard needs the **Foundry module updated to 0.6.2**.
 
 - **On Windows, the app is one process again, not two.** The launcher
   (`combat-tracker.exe`) used to stay running in the background for the whole
