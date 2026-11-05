@@ -33,6 +33,15 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
   The second guard needs the **Foundry module updated to 0.3.2**.
 
+- **On Windows, the app is one process again, not two.** The launcher
+  (`combat-tracker.exe`) used to stay running in the background for the whole
+  session, alongside the app (`combat_tracker.exe`). That doubled the taskbar
+  entry and confused anything that finds the app by its process, like taskbar
+  pinning or Stream Deck window actions. The launcher now starts the app and
+  exits, the same as it already did on Linux. The in-app updater installs only
+  the app, never the launcher, so **this fix arrives only with a fresh install
+  from the new `setup.exe`**.
+
 ## [0.6.1] — 2026-09-22
 
 ### Fixed
