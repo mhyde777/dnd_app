@@ -13,6 +13,8 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ## [Unreleased]
 
+## [0.6.4] — 2026-11-05
+
 ### Added
 
 - **A failed update now tells you so.** If a new version closes before its
@@ -638,7 +640,8 @@ versions while editing the same encounter can quietly lose whatever the newer
 one added. If you are testing a new release, point it at a throwaway profile
 with `DND_TRACKER_CONFIG_DIR` and your real data cannot be touched at all.
 
-[Unreleased]: https://github.com/mhyde777/dnd_app/compare/v0.6.3...HEAD
+[Unreleased]: https://github.com/mhyde777/dnd_app/compare/v0.6.4...HEAD
+[0.6.4]: https://github.com/mhyde777/dnd_app/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/mhyde777/dnd_app/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/mhyde777/dnd_app/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/mhyde777/dnd_app/compare/v0.6.0...v0.6.1
