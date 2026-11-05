@@ -13,6 +13,18 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The Linux build starts again.** 0.6.2's Linux download closed the moment
+  it launched, on every distribution older than Ubuntu 26.04 (Ubuntu 24.04,
+  Debian 12, Mint 22 and so on), and wrote nothing to the log. The updater
+  then quietly fell back to 0.6.1, so "Update and restart" looked like it just
+  closed the app. The build machine had moved to a newer Ubuntu, and the build
+  picked up a system library that needs a newer C library than those
+  distributions ship. Linux builds are now made on Ubuntu 24.04 again, and a
+  release that would need anything newer now fails to publish instead of
+  going out. Windows was not affected.
+
 ## [0.6.2] — 2026-11-05
 
 ### Fixed

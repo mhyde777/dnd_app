@@ -79,7 +79,13 @@ jobs:
 
   build-linux:
     needs: verify
-    runs-on: ubuntu-latest
+    # Pinned, never ubuntu-latest. PyInstaller bundles the build machine's own
+    # system libraries, so the runner's glibc is the *oldest* glibc the build
+    # will start on. ubuntu-latest moved to 26.04 (glibc 2.43) between 0.6.1
+    # and 0.6.2, and 0.6.2 died on launch on every older distro -- an Ubuntu
+    # 24.04 machine included -- with nothing in the app's log, because it
+    # never got far enough to write one. See "Check the glibc floor" below.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -124,6 +130,27 @@ jobs:
           # non-executable file is still caught.
           [ -x "dist/combat-tracker-$VERSION-x86_64.AppImage" ] \
             || { echo "::error::AppImage is not executable"; exit 1; }
+
+      # The runner pin above is what keeps this passing; this is what notices
+      # if it stops. Every ELF file in the payload is checked, since one
+      # bundled library is enough to stop the app starting.
+      - name: Check the glibc floor
+        env:
+          MAX_GLIBC: "2.39"   # Ubuntu 24.04. Raise only on purpose.
+        run: |
+          VERSION="${{ needs.verify.outputs.version }}"
+          WORK="$(mktemp -d)"
+          tar -xzf "dist/combat-tracker-$VERSION-linux-x86_64.tar.gz" -C "$WORK"
+          NEEDED="$(find "$WORK" -type f -exec sh -c \
+                      'head -c4 "$1" | grep -q "ELF" && objdump -T "$1" 2>/dev/null' _ {} \; \
+                    | grep -o 'GLIBC_[0-9][0-9.]*' | sed 's/GLIBC_//' | sort -uV | tail -1)"
+          echo "highest glibc symbol required: ${NEEDED:-none}"
+          if [ -n "$NEEDED" ] && [ "$(printf '%s\n%s\n' "$MAX_GLIBC" "$NEEDED" | sort -V | tail -1)" != "$MAX_GLIBC" ]; then
+            echo "::error::the build needs glibc $NEEDED, newer than $MAX_GLIBC -- it will not start on older distros"
+            find "$WORK" -type f -exec sh -c \
+              'head -c4 "$1" | grep -q "ELF" && objdump -T "$1" 2>/dev/null | grep -q "GLIBC_$2" && echo "  $1"' _ {} "$NEEDED" \;
+            exit 1
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
