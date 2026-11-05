@@ -70,6 +70,20 @@ notes it in `launcher.log`.
 Without this a bad build relaunches itself forever and the only fix is a file
 manager. It is the difference between one-click update and one-click brick.
 
+The version the app falls back *to* then says so. `install_layout.detect_fallback()`
+reads the last two lines of `launcher.log`, and when they are the fallback line
+followed by `starting <this version>` the app shows a banner and records the
+failed version under `failed_update_version`, so `update_check.failed_here()`
+stops offering exactly that release (a newer one is still offered). Without
+both, a failed update looked like "Update and restart" just closed the app, and
+the old version offered the same broken release straight back.
+
+**The fallback line's wording is an interface — never change it.** Self-update
+never replaces the launcher, so most installs run whatever launcher their first
+install laid down. The app can only learn about a fallback from text that
+launcher already writes. `tests/test_update_fallback.py` produces the log with
+the real `launcher.choose_version()`, so a reworded line fails there.
+
 The check is "did it get a window up", not "did it exit cleanly" — a build that
 starts and then crashes an hour later is not an update problem.
 

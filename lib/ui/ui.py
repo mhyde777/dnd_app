@@ -150,9 +150,43 @@ class InitiativeTracker(QMainWindow, Application):
         )
         self.start_bridge_polling()
         self.report_local_bridge_failure()
+        # Before the update check: it reads the failed version this records.
+        self.report_update_fallback()
         self.check_for_updates()
         self.start_version_housekeeping()
         self.verify_new_version()
+
+    UPDATE_FALLBACK_BANNER_KEY = "update-fallback"
+
+    def report_update_fallback(self) -> None:
+        """Say so when the launcher gave up on a new version and ran this one.
+
+        Without this a failed update was indistinguishable from the app simply
+        quitting: "Update and restart" closed the window, the new build died
+        before it could log anything, and the launcher quietly started the old
+        one -- which then offered the same update again.
+        """
+        from app import install_layout
+        from app.version import __version__
+
+        try:
+            failed = install_layout.detect_fallback()
+        except Exception as exc:
+            self._log(f"[DBG] Could not read the launcher log: {exc}")
+            return
+        if not failed:
+            return
+        app_settings.set(install_layout.FAILED_VERSION_KEY, failed)
+        self._log(
+            f"[ERROR] [Update] {failed} closed before its window opened; "
+            f"the launcher went back to {__version__}"
+        )
+        self.show_banner(
+            self.UPDATE_FALLBACK_BANNER_KEY,
+            f"Version {failed} closed before its window opened, so you're back "
+            f"on {__version__}. It won't be offered again — the next release will.",
+            "warning",
+        )
 
     def check_for_updates(self):
         """Tell the user when a newer release exists. Never blocks, never nags.
@@ -214,7 +248,13 @@ class InitiativeTracker(QMainWindow, Application):
             return
 
         tag = release.get("tag_name") or release.get("name") or ""
-        if tag and update_check.is_newer(tag):
+        if tag and update_check.is_newer(tag) and update_check.failed_here(tag):
+            self.notify(
+                f"{tag} is the latest, but it failed to start on this machine — "
+                f"staying on {__version__} until a newer release",
+                "warning",
+            )
+        elif tag and update_check.is_newer(tag):
             self._show_update_banner(tag)
             self.open_update_dialog(tag, release)
         else:

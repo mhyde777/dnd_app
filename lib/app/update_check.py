@@ -293,6 +293,21 @@ def downloads_dir() -> str:
     return candidate if os.path.isdir(candidate) else os.path.expanduser("~")
 
 
+def failed_here(version: str) -> bool:
+    """True if `version` is the build that last failed to start on this machine.
+
+    Offering it again is how "Update and restart" became a loop: the launcher
+    fell back, the app came up on the old version, offered the same broken
+    one, and the user -- reasonably -- clicked it again. Only that exact
+    version is held back; anything newer is offered as usual.
+    """
+    from app import settings
+    from app.install_layout import FAILED_VERSION_KEY
+
+    failed = str(settings.get(FAILED_VERSION_KEY) or "").lstrip("v")
+    return bool(failed) and str(version or "").lstrip("v") == failed
+
+
 def check_in_background(
     on_update: Callable[[str], None],
     url: str = RELEASES_API,
@@ -305,7 +320,7 @@ def check_in_background(
 
     def run() -> None:
         latest = fetch_latest_version(url)
-        if latest and is_newer(latest):
+        if latest and is_newer(latest) and not failed_here(latest):
             try:
                 on_update(latest)
             except Exception:

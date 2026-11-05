@@ -40,6 +40,7 @@ LAUNCHER_BINARY = "combat-tracker"
 VERSIONS_DIRNAME = "versions"
 CURRENT_FILE = "current"
 LAUNCHING_FILE = "launching"
+LAUNCHER_LOG = "launcher.log"
 
 _VERSION_DIR_RE = re.compile(r"^\d+(?:\.\d+)*(?:[-+].+)?$")
 
@@ -162,6 +163,48 @@ KEEP_VERSIONS_KEY = "keep_versions"
 # exists exactly while it is useful, rather than permanently. Older ones are
 # re-downloaded on demand instead of being stored forever.
 DEFAULT_KEEP_VERSIONS = 1
+
+
+FAILED_VERSION_KEY = "failed_update_version"
+
+_FALLBACK_LINE = re.compile(
+    r"^(?P<failed>\S+) did not start last time; falling back to (?P<to>\S+)$"
+)
+
+
+def _launcher_log_messages(layout: Layout, tail: int = 2) -> List[str]:
+    """The last `tail` messages in launcher.log, timestamps stripped."""
+    try:
+        with open(os.path.join(layout.root, LAUNCHER_LOG), "r", encoding="utf-8") as handle:
+            lines = [line.rstrip("\n") for line in handle if line.strip()]
+    except OSError:
+        return []
+    # Each line is "YYYY-mm-dd HH:MM:SS  message" -- two spaces before the message.
+    return [line.split("  ", 1)[-1] for line in lines[-tail:]]
+
+
+def detect_fallback(layout: Optional[Layout] = None) -> Optional[str]:
+    """The version the launcher just gave up on to start this one, if any.
+
+    Read from launcher.log rather than a marker the launcher writes, because
+    self-update never replaces the launcher: the one on most machines is
+    whatever the first install laid down, and this has to work with it. The
+    fallback line has been the same since the launcher existed.
+
+    Only the launch that *followed* the fallback matches -- the log then ends
+    "<failed> did not start ...; falling back to <us>" / "starting <us>" --
+    so the answer goes away by itself on the next start.
+    """
+    layout = layout or detect()
+    if layout is None or not layout.version:
+        return None
+    messages = _launcher_log_messages(layout)
+    if len(messages) < 2 or messages[-1] != f"starting {layout.version}":
+        return None
+    match = _FALLBACK_LINE.match(messages[-2])
+    if not match or match.group("to") != layout.version:
+        return None
+    return match.group("failed")
 
 
 def record_started(layout: Optional[Layout] = None) -> None:

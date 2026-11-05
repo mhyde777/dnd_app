@@ -13,6 +13,15 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ## [Unreleased]
 
+### Added
+
+- **A failed update now tells you so.** If a new version closes before its
+  window opens, the app falls back to the version you had, as before. It now
+  also shows a banner naming the version that failed, and stops offering that
+  version as an update; a newer release is still offered. Before, "Update and
+  restart" just looked like it closed the app, and the old version offered the
+  same broken update straight back.
+
 ## [0.6.3] — 2026-11-05
 
 ### Fixed
