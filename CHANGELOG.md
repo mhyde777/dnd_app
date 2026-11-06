@@ -13,6 +13,23 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ## [Unreleased]
 
+### Added
+
+- **Foundry tells the GM when it can't reach the bridge.** A warning stays up
+  on the GM's screen while the Foundry module can't talk to the bridge, saying
+  why and where to fix it: a Bridge URL that starts with `http://` on an
+  `https://` Foundry (which the browser blocks), a URL still on the default,
+  a rejected shared secret, or a bridge that isn't answering. It clears itself
+  once the bridge answers, and changing either setting re-checks straight
+  away. Before, each of these failed silently, visible only in the browser
+  console. A single dropped request stays quiet.
+
+### Security
+
+- **The Foundry module no longer writes the bridge secret to the browser
+  console** when it starts the command stream. Console output gets pasted
+  into bug reports.
+
 ### Fixed
 
 - **Updating the Foundry module no longer silently disconnects it.** Module

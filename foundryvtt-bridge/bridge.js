@@ -133,6 +133,120 @@ const MAX_PROCESSED_IDS = 200;
 // Optional: cap how many commands we process per poll tick
 const MAX_COMMANDS_PER_TICK = 25;
 
+// ---- Connection banner -------------------------------------------------
+// A GM-facing notice while the bridge can't be reached. Every way this broke
+// so far failed silently in the browser console: posting to the default URL
+// after a module update, and an http:// bridge URL on an https:// Foundry,
+// which the browser blocks outright. The app could only say "Foundry has not
+// sent anything yet"; this says why, on the GM's screen, and clears itself.
+const BRIDGE_FAILURES_BEFORE_NOTICE = 2;   // one blip is not worth a banner
+const bridgeHealth = { failures: 0, notice: null, message: "", wasDown: false };
+
+function isLoopbackHost(hostname) {
+  return ["localhost", "127.0.0.1", "::1", "[::1]"].includes(String(hostname).toLowerCase());
+}
+
+// A setting that can never work from this page, known before any request.
+function bridgeConfigProblem() {
+  const url = getBridgeUrl();
+  let target;
+  try {
+    target = new URL(url);
+  } catch (_err) {
+    return `the Bridge URL "${url}" is not a valid address`;
+  }
+  const page = window.location;
+  if (page.protocol === "https:" && target.protocol === "http:" && !isLoopbackHost(target.hostname)) {
+    return (
+      `the Bridge URL starts with http:// but Foundry is on https://, so your browser ` +
+      `blocks it. Change it to https://${target.host}`
+    );
+  }
+  if (url === DEFAULT_BRIDGE_URL && !isLoopbackHost(page.hostname)) {
+    return (
+      `the Bridge URL is still the default (${DEFAULT_BRIDGE_URL}), which only works ` +
+      `when the bridge runs on this computer`
+    );
+  }
+  return "";
+}
+
+const FIX_IN_SETTINGS = "Fix it under Configure Settings → D&D Combat Tracker Bridge.";
+const FIX_THE_SERVICE = "Check that the bridge service is running and reachable.";
+
+// What went wrong, and where to fix it -- a settings problem and a bridge that
+// is simply down need different advice.
+function describeBridgeFailure({ status = null, error = null } = {}) {
+  const problem = bridgeConfigProblem();
+  if (problem) return { reason: problem, fix: FIX_IN_SETTINGS };
+  if (status === 401 || status === 403) {
+    return {
+      reason: "the bridge rejected the shared secret -- check it matches the bridge's",
+      fix: FIX_IN_SETTINGS,
+    };
+  }
+  if (status) return { reason: `the bridge answered HTTP ${status}`, fix: FIX_THE_SERVICE };
+  return {
+    reason: `could not reach ${getBridgeUrl()}${error?.message ? ` (${error.message})` : ""}`,
+    fix: FIX_THE_SERVICE,
+  };
+}
+
+function showBridgeNotice({ reason, fix = FIX_IN_SETTINGS }) {
+  if (!game.user?.isGM || !ui?.notifications) return;
+  const message =
+    `Combat Tracker bridge is not connected: ${reason}. HP, initiative and ` +
+    `conditions are not syncing with the app. ${fix}`;
+  const stillShown =
+    bridgeHealth.notice !== null &&
+    (typeof ui.notifications.has !== "function" || ui.notifications.has(bridgeHealth.notice));
+  if (stillShown && message === bridgeHealth.message) return;
+  clearBridgeNotice();
+  bridgeHealth.notice = ui.notifications.warn(message, { permanent: true });
+  bridgeHealth.message = message;
+  bridgeHealth.wasDown = true;
+}
+
+function clearBridgeNotice() {
+  if (bridgeHealth.notice !== null) {
+    try {
+      ui.notifications.remove(bridgeHealth.notice);
+    } catch (_err) {
+      /* already dismissed by the GM */
+    }
+  }
+  bridgeHealth.notice = null;
+  bridgeHealth.message = "";
+}
+
+function reportBridgeOk() {
+  bridgeHealth.failures = 0;
+  if (!bridgeHealth.wasDown) return;
+  bridgeHealth.wasDown = false;
+  clearBridgeNotice();
+  ui.notifications?.info("Combat Tracker bridge connected.");
+}
+
+function reportBridgeFailure(details = {}) {
+  bridgeHealth.failures += 1;
+  // A setting that cannot work is reported at once; anything else only once
+  // it has failed twice running, so a single dropped request stays quiet.
+  if (bridgeConfigProblem() || bridgeHealth.failures >= BRIDGE_FAILURES_BEFORE_NOTICE) {
+    showBridgeNotice(describeBridgeFailure(details));
+  }
+}
+
+// Re-check as soon as the GM edits a setting, rather than at the next poll.
+function onBridgeSettingChanged() {
+  if (!game.user?.isGM) return;   // only the GM's browser syncs
+  bridgeHealth.failures = 0;
+  const problem = bridgeConfigProblem();
+  if (problem) showBridgeNotice({ reason: problem });
+  else clearBridgeNotice();
+  scheduleSnapshot("settingsChanged");
+}
+// --------------------------------------------------------------------------
+
 function scheduleSnapshot(reason) {
   if (snapshotTimer) {
     clearTimeout(snapshotTimer);
@@ -144,7 +258,15 @@ function scheduleSnapshot(reason) {
 }
 
 async function postSnapshot(reason) {
-  const snapshot = buildCombatSnapshot();
+  let snapshot;
+  try {
+    snapshot = buildCombatSnapshot();
+  } catch (err) {
+    // A Foundry/system change that breaks the snapshot is a module bug, not
+    // a connection problem -- log it loudly, but no bridge banner.
+    console.error(`[${MODULE_ID}] Could not build the combat snapshot`, err);
+    return;
+  }
   const bridgeUrl = getBridgeUrl();
   console.log(`[${MODULE_ID}] bridgeUrl=${bridgeUrl}`);
   const endpoint = `${bridgeUrl}/foundry/snapshot`;
@@ -167,11 +289,14 @@ async function postSnapshot(reason) {
         `[${MODULE_ID}] Snapshot post failed (${response.status})`,
         await response.text()
       );
+      reportBridgeFailure({ status: response.status });
       return;
     }
     console.log(`[${MODULE_ID}] Snapshot posted (${reason}).`);
+    reportBridgeOk();
   } catch (err) {
     console.error(`[${MODULE_ID}] Snapshot post error`, err);
+    reportBridgeFailure({ error: err });
   }
 }
 
@@ -678,8 +803,10 @@ async function pollCommands() {
         `${LOG_PREFIX} Commands poll failed (${response.status})`,
         await response.text()
       );
+      reportBridgeFailure({ status: response.status });
       return;
     }
+    reportBridgeOk();
 
     const data = await response.json();
     const commands = Array.isArray(data?.commands) ? data.commands : [];
@@ -693,6 +820,7 @@ async function pollCommands() {
     }
   } catch (err) {
     console.error(`${LOG_PREFIX} Commands poll error`, err);
+    reportBridgeFailure({ error: err });
   } finally {
     commandPollInFlight = false;
   }
@@ -748,10 +876,13 @@ function startCommandStream() {
   }
 
   const endpoint = buildCommandStreamUrl();
-  console.log(`${LOG_PREFIX} Starting command stream ${endpoint}`);
+  // The secret rides in the query string (EventSource cannot send headers);
+  // keep it out of the console, which people copy into bug reports.
+  console.log(`${LOG_PREFIX} Starting command stream ${endpoint.replace(/([?&]secret=)[^&]*/, "$1<redacted>")}`);
   stopCommandPolling();
 
   commandStream = new EventSource(endpoint);
+  commandStream.addEventListener("open", () => reportBridgeOk());
 
   commandStream.addEventListener("commands", async (event) => {
     if (!event?.data) return;
@@ -794,6 +925,7 @@ Hooks.once("init", () => {
     config: true,
     type: String,
     default: DEFAULT_BRIDGE_URL,
+    onChange: () => onBridgeSettingChanged(),
   });
 
   game.settings.register(MODULE_ID, "bridgeSecret", {
@@ -803,6 +935,7 @@ Hooks.once("init", () => {
     config: true,
     type: String,
     default: "",
+    onChange: () => onBridgeSettingChanged(),
   });
 
   game.settings.register(MODULE_ID, "useCommandStream", {
@@ -858,12 +991,10 @@ Hooks.once("ready", async () => {
   } catch (err) {
     console.warn(`${LOG_PREFIX} Could not read the old world settings`, err);
   }
-  if (getBridgeUrl() === DEFAULT_BRIDGE_URL) {
-    // The default only works with the app's local bridge on this machine.
-    console.warn(
-      `${LOG_PREFIX} Bridge URL is the default (${DEFAULT_BRIDGE_URL}). ` +
-      `If your bridge runs elsewhere, set it in Configure Settings.`
-    );
+  const problem = bridgeConfigProblem();
+  if (problem) {
+    console.warn(`${LOG_PREFIX} ${problem}`);
+    showBridgeNotice({ reason: problem });
   }
 
   scheduleSnapshot("ready");
