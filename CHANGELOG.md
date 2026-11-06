@@ -13,6 +13,20 @@ a MAJOR bump is the only kind that can require you to change how you work.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Updating the Foundry module no longer silently disconnects it.** Module
+  0.3.0 and earlier saved the bridge URL and secret per *world*; they are per
+  *browser* now, and nothing carried the old values over, so after updating,
+  Foundry posted to the default address and the app sat on "Foundry has not
+  sent anything yet". The module now copies a value saved in the world into
+  the browser the first time it loads, and says in the browser console when
+  it is still using the default URL. If yours did not come across, set
+  **Bridge URL** and **Bridge shared secret** again under Configure Settings.
+- **"Exclude from bridge sync" is available again on Foundry v13 and v14**,
+  in the actor sheet's header menu (the ⋮ button). It is only shown to the
+  GM. The checkbox in the sheet body is still there on older Foundry versions.
+
 ## [0.6.4] — 2026-11-05
 
 ### Added

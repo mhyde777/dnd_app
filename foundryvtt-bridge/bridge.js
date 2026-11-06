@@ -815,7 +815,35 @@ Hooks.once("init", () => {
   });
 });
 
-Hooks.once("ready", () => {
+// Module 0.3.0 and earlier stored the bridge URL and secret per *world*; they
+// are per *client* now, so they follow a GM across worlds. Nothing carried the
+// old values over, so updating the module left every GM posting to the
+// default URL with no secret -- the app then sat on "Foundry has not sent
+// anything yet". Copy a saved world value across, once, when the client one
+// was never set.
+function readLegacyWorldSetting(key) {
+  const world = game.settings?.storage?.get?.("world");
+  const setting = world?.getSetting?.(`${MODULE_ID}.${key}`);
+  let value = setting?.value ?? setting?._source?.value;
+  if (typeof value === "string") {
+    try { value = JSON.parse(value); } catch (_err) { /* stored unquoted */ }
+  }
+  return typeof value === "string" ? value.trim() : "";
+}
+
+async function migrateLegacyWorldSettings() {
+  for (const key of ["bridgeUrl", "bridgeSecret"]) {
+    const current = String(game.settings.get(MODULE_ID, key) ?? "").trim();
+    const unset = !current || (key === "bridgeUrl" && current === DEFAULT_BRIDGE_URL);
+    if (!unset) continue;
+    const legacy = readLegacyWorldSetting(key);
+    if (!legacy || (key === "bridgeUrl" && legacy === DEFAULT_BRIDGE_URL)) continue;
+    await game.settings.set(MODULE_ID, key, legacy);
+    console.log(`${LOG_PREFIX} Copied ${key} from this world's old setting to this browser`);
+  }
+}
+
+Hooks.once("ready", async () => {
   console.log(`${LOG_PREFIX} bridge.js loaded version=${BRIDGE_JS_VERSION}`);
   // Only the GM client should send snapshots and process commands.
   // Player clients don't have permission to modify other actors or advance
@@ -823,6 +851,19 @@ Hooks.once("ready", () => {
   if (!game.user?.isGM) {
     console.log(`${LOG_PREFIX} Non-GM user; bridge sync disabled for this client.`);
     return;
+  }
+
+  try {
+    await migrateLegacyWorldSettings();
+  } catch (err) {
+    console.warn(`${LOG_PREFIX} Could not read the old world settings`, err);
+  }
+  if (getBridgeUrl() === DEFAULT_BRIDGE_URL) {
+    // The default only works with the app's local bridge on this machine.
+    console.warn(
+      `${LOG_PREFIX} Bridge URL is the default (${DEFAULT_BRIDGE_URL}). ` +
+      `If your bridge runs elsewhere, set it in Configure Settings.`
+    );
   }
 
   scheduleSnapshot("ready");
@@ -892,10 +933,9 @@ Hooks.on("updateActiveEffect", () => { if (game.user?.isGM) scheduleSnapshot("up
 
 Hooks.on("controlToken", () => { if (game.user?.isGM) scheduleSnapshot("controlToken"); });
 
-// "Exclude from bridge sync" on the actor sheet.
-// Plain DOM, no jQuery: v14 no longer ships it, and its sheets (dnd5e's
-// included) are ApplicationV2, which fires renderActorSheetV2 with an
-// HTMLElement. The old renderActorSheet hook passes jQuery; both end up here.
+// "Exclude from bridge sync" as a checkbox on an Application V1 actor sheet.
+// Plain DOM rather than jQuery, which v14 no longer ships. V2 sheets get a
+// header-menu entry instead -- see getHeaderControlsActorSheetV2 below.
 function addExcludeToggle(app, root) {
   const actor = app?.actor ?? app?.document;
   if (!actor || !(root instanceof HTMLElement)) return;
@@ -926,5 +966,28 @@ function addExcludeToggle(app, root) {
   target.prepend(group);
 }
 
-Hooks.on("renderActorSheetV2", (app, element) => addExcludeToggle(app, element));
+// v13+ sheets (dnd5e's included): an entry in the window's header menu (the
+// ⋮ button). Injecting a checkbox into the sheet body did not survive dnd5e
+// 6's layout -- the first matching element was a hidden tab -- and the header
+// menu is the API ApplicationV2 provides for exactly this. The hook runs each
+// time the menu opens, so the label always shows the current state.
+Hooks.on("getHeaderControlsActorSheetV2", (app, controls) => {
+  const actor = app?.document ?? app?.actor;
+  if (!actor || !game.user?.isGM || !Array.isArray(controls)) return;
+  const excluded = Boolean(actor.getFlag(MODULE_ID, "excludeFromSync"));
+  controls.push({
+    icon: excluded ? "fa-solid fa-link" : "fa-solid fa-link-slash",
+    label: excluded ? "Include in bridge sync" : "Exclude from bridge sync",
+    visible: true,
+    onClick: async () => {
+      await actor.setFlag(MODULE_ID, "excludeFromSync", !excluded);
+      ui.notifications?.info(
+        `${actor.name}: ${!excluded ? "excluded from" : "included in"} bridge sync`
+      );
+      scheduleSnapshot("actorExcludeToggle");
+    },
+  });
+});
+
+// v10-v12 sheets (Application V1): a checkbox in the sheet itself.
 Hooks.on("renderActorSheet", (app, html) => addExcludeToggle(app, html?.[0] ?? html));
